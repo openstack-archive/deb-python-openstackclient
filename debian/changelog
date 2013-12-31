@@ -1,0 +1,5 @@
+python-openstackclient (0.3.0-1) unstable; urgency=low
+
+  * Initial release. (Closes: #733557)
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Tue, 31 Dec 2013 01:37:38 -0300

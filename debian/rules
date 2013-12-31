@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+UPSTREAM_GIT = https://github.com/openstack/python-openstackclient.git
+include /usr/share/openstack-pkg-tools/pkgos.make
+
+export OSLO_PACKAGE_VERSION=$(VERSION)
+
+%:
+	dh $@ --with python2
+
+override_dh_auto_clean:
+	rm -rf doc/build build python_openstackclient.egg-info
+
+
+override_dh_auto_build:
+	dh_auto_build
+	make -C doc man

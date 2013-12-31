@@ -1,0 +1,40 @@
+Source: python-openstackclient
+Section: python
+Priority: optional
+Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
+Uploaders: gustavo panizzo <gfa@zumbi.com.ar>,
+           Thomas Goirand <zigo@debian.org>
+Build-Depends: debhelper (>= 9), 
+               openstack-pkg-tools,
+               python-setuptools, 
+               python-all (>= 2.6.6-3~), 
+               python-pbr (>= 0.5.21), 
+               python-pbr (<= 1.0), 
+               python-cliff (>= 1.4.3),
+               python-keyring (>= 1.6.1),
+               python-crypto (>= 2.6.0),
+               python-glanceclient (>= 0.9.0),
+               python-keystoneclient (>= 0.4.1),
+               python-novaclient (>= 2.15.0),
+               python-cinderclient (>= 1.0.6),
+               python-requests (>= 1.1),
+               python-six (>= 1.4.1),
+               python-sphinx
+Standards-Version: 3.9.5
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-openstackclient.git
+Vcs-Git: git://anonscm.debian.org/openstack/python-openstackclient.git
+Homepage: http://wiki.openstack.org/OpenStackClient
+
+Package: python-openstackclient
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}
+Recommends: ${python:Recommends}
+Description: OpenStack Command-line Client
+ python-openstackclient is a unified command-line client for the OpenStack APIs.
+ It is a thin wrapper to the stock python-*client modules that implement the
+ actual REST API client actions.
+ .
+ This is an implementation of the design goals shown in
+ http://wiki.openstack.org/UnifiedCLI.  The primary goal is to provide
+ a unified shell command structure and a common language to describe
+ operations in OpenStack.
