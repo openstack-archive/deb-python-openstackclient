@@ -1,0 +1,3133 @@
+commit de27c1b455624b6123b26bfdd022d2763c541a25
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Dec 17 09:22:17 2013 -0600
+
+    Release notes for 0.3.0 release
+    
+    Change-Id: I6f025b745378613eb674e13dd503e57d049a3e50
+
+commit 4595ca136523e6f3f28595e5a7d038beaacc0c44
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Dec 17 09:20:59 2013 -0600
+
+    Remove mox3 requirement
+    
+    mox3 is only used got py3 testing when converting tests from mox,
+    all OSC tests are new so we don't need it.
+    
+    Change-Id: I2fae539e99143f91048c95d1e46cfbd7b0e9bdb0
+
+commit c645049c24340b49b30e5a41ba4566a2d2a9a3d0
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Tue Dec 10 23:45:49 2013 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I065a67d560efca0907da9fcaa8d5ce4712dfa2c1
+
+commit facdc8704e1bc552937657466529e41bc1b4120d
+Merge: cd87088 f2dbe2e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Dec 6 22:48:29 2013 +0000
+
+    Merge "Bring RESTApi closer to ithe imminent keystoneclient.Session"
+
+commit cd870886fc20d531a2c3ddc9cfb0d8808fc5c375
+Merge: b88a7b8 4f1ebe8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Dec 6 22:47:15 2013 +0000
+
+    Merge "Update docs for plugins and release notes"
+
+commit b88a7b8cccbf3eba7abda3ef16ba47dd0b44c3a8
+Merge: e06e1a2 a93cc3f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Dec 5 23:34:31 2013 +0000
+
+    Merge "Add module list command"
+
+commit 4f1ebe8069a9b8e78f05eb4b3a0ccb7069b7c1f3
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Dec 5 13:23:44 2013 -0600
+
+    Update docs for plugins and release notes
+    
+    * Fill out the existing command and man page
+    * Add a plugins page.
+    * Begin the release notes for 0.3.0
+    
+    Change-Id: I4527fed28a10a9d79fc8f6c1d925a4bf0d0a7a36
+
+commit e06e1a2cce0dbe9f7fd7e64467af73e7456a2aa5
+Merge: 74a2705 f227092
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Dec 5 17:22:34 2013 +0000
+
+    Merge "Add missing requests and six requirements"
+
+commit f227092a0687c0af3f55e3f0a2e154a491e4d846
+Author: Sascha Peilicke <speilicke@suse.com>
+Date:   Wed Dec 4 14:44:09 2013 +0100
+
+    Add missing requests and six requirements
+    
+    From global-requirements: requests>=1.1, six>=1.4.1
+    
+    Change-Id: I536adc511931229a268ba81f81aef1aed59b33eb
+
+commit a93cc3fae26a6d4346194ec20ec37c2134801389
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Nov 15 16:48:52 2013 -0600
+
+    Add module list command
+    
+    Lists versions of installed python modules
+    
+    (Origianlly proposed as 'version list')
+    
+    Change-Id: I76a51d3d6783f46ef2daa0a41626019a880a2a50
+
+commit 74a27056b346e04dbad91fd632045223b16ef6ec
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Dec 3 17:24:40 2013 -0600
+
+    Update OSC's CommandManager subclass
+    
+    cliff.commandmanager.CommandManager gained an option, update
+    openstackclient.common.commandmanager.ComamndManager to match.
+    
+    Also add CommandManager.get_command_groups() to return a list of the
+    currently loaded command groups.  I expect this to be useful in
+    upcoming client diagnostic commands for plugins/extensions.
+    
+    If these turn out to be generally useful we'll propose them to
+    upstream cliff.
+    
+    Change-Id: Ic15a7ca0ef975ca679e753be861be7c628b8e10c
+
+commit f2dbe2e43716925f592db831d95fc5783abcecc9
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Nov 25 13:39:30 2013 -0600
+
+    Bring RESTApi closer to ithe imminent keystoneclient.Session
+    
+    Prepare to use the (soon to be) common Session from keystoneclient
+    * Rework RESTApi to eventually be a subclass of keystoneclient.Session
+    
+    Change-Id: I68e610f8b19a3f6267a93f7bf3de54a228be68aa
+
+commit 5dcc3b6164fea72c236ec339938c0117b2330bb6
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Nov 27 14:17:53 2013 -0700
+
+    Add return Closes-Bug: 1246356
+    
+    Change-Id: I70999a91062b9c61e5f420b1ed33a45086b62fd4
+
+commit 935781fdf961d0501b7400acbe4c86bdd9f284f2
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Nov 25 14:46:52 2013 -0600
+
+    Restore Object API name 'object-store'
+    
+    It's used in the service catalog, doh!
+    
+    Change-Id: If8f6db49c84756fd8e58cc68910160da4cd99b5d
+
+commit 9062811d10f2ab660ce38f9bd20be9c52daa9479
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Nov 20 18:02:09 2013 -0600
+
+    Expand support for command extensions
+    
+    Allows client libraries to have complete access to the rest of the
+    OSC ClientManager.  In addition, extension libraries can define
+    global options (for API version options/env vars) and define
+    versioned API entry points similar to the in-repo commands.
+    
+    The changes to ClientManager exposed some issues in the existing
+    object api tests that needed to be cleaned up.
+    
+    Change-Id: Ic9662edf34c5dd130a2f1a69d2454adefc1f8a95
+
+commit d45187a0c163187649e29931d21c4607379d1e73
+Merge: b70b1d0 200ed62
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Nov 20 06:37:25 2013 +0000
+
+    Merge "Add server image create command"
+
+commit b70b1d04e447bb3748fcfd8cf25794fb8ea64b65
+Merge: 56fbf65 6460f1e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Nov 20 06:37:24 2013 +0000
+
+    Merge "Complete basic test infrastructure"
+
+commit 56fbf65941fad27be77078a1bc1972e6c7ce20f5
+Merge: 0b3d695 98eaccc
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Nov 19 17:24:30 2013 +0000
+
+    Merge "change execute to run"
+
+commit 0b3d69599bab3066f178c986cdc2c38891f3d57a
+Merge: 5444641 07bbfd5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Nov 19 17:24:29 2013 +0000
+
+    Merge "Fix typo"
+
+commit 07bbfd5770aa28e272bdba5ac1ed4269905401af
+Author: Noorul Islam K M <noorul@noorul.com>
+Date:   Tue Nov 19 19:57:02 2013 +0530
+
+    Fix typo
+    
+    Change-Id: I7bca8b76c6746121314e688e9ed3825e04350b8d
+
+commit 54446412924d36b6653c404ec0cbfdee3c578003
+Author: Sascha Peilicke <speilicke@suse.com>
+Date:   Tue Nov 19 10:10:54 2013 +0100
+
+    Support building wheels (PEP-427)
+    
+    With that, building and uploading wheels to PyPI is only one "python
+    setup.py bdist_wheel" away.
+    
+    Change-Id: I8c8565f55e7a3434e1a1972a797a6cd7dba8a581
+
+commit 200ed62054847336235288c7785424be416bed06
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Nov 18 17:10:39 2013 -0600
+
+    Add server image create command
+    
+    Translation of 'nova image-create', with tests!
+    
+    Change-Id: I8a833aeff6f291e4774063ed235876eb2ba9c13c
+
+commit 6460f1eb359d37dc43bdbb7d3eacc6c3f5cd7ede
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Nov 15 17:40:09 2013 -0600
+
+    Complete basic test infrastructure
+    
+    This finally gets all of the API tests into a common framework regarding
+    test classes and so forth.
+    
+    Change-Id: If675347129c50dcba0bfc5b6c58f5a2ca57ff46c
+
+commit 98eaccc431865b911d64ee549c226b389315ca5d
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Fri Nov 1 13:54:44 2013 -0600
+
+    change execute to run
+    
+    Change-Id: I23a210c8771c206df14d2713a2e72ccd92402c43
+
+commit c946192e37111aa381097256c1fd1fb91e356783
+Author: Joe Gordon <joe.gordon0@gmail.com>
+Date:   Mon Nov 11 11:09:04 2013 -0800
+
+    Update URL for global hacking doc and fix typos
+    
+    * related to I579e7c889f3addc2cd40bce0c584bbc70bf435e2
+    
+    Change-Id: I519155d0a47564ce18a9cd930378a3c4feaa7a77
+
+commit e118f216dba7e3c1b8d0b17cb0ce9fb2cb63876b
+Merge: 6809461 6ecf5bf
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Fri Nov 8 04:22:36 2013 +0000
+
+    Merge "Updated from global requirements"
+
+commit 68094619be604174a80938a1df8d08635284f262
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Nov 7 20:56:03 2013 -0600
+
+    Remove httpretty from test requirements
+    
+    We don't use it...
+    
+    Change-Id: I41466da5153a8bdd0e4b4dd5774a9711bff3b7f5
+
+commit 6ecf5bf4e3b3e93b0d8c4e86931c8a2a4ec081f9
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Tue Nov 5 09:54:51 2013 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I421ab7a5b0c0224122cc747141956bc1282f2b07
+
+commit 9137cc304d73aa60548fa255d2bf668600aa0ec4
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 11 16:02:53 2013 -0500
+
+    Do lookups for user, project in volume create
+    
+    This required https://review.openstack.org/26323 in keystoneclient,
+    merged long ago...
+    
+    Also adds some tests for 'volume create'
+    
+    Change-Id: I55bededbc20b5dcf2833c59eb2b6b069703d8a9a
+
+commit 1fa1330e1d8bc9361bbe8c88490a20f9b8fddec1
+Author: Dirk Mueller <dirk@dmllr.de>
+Date:   Thu Oct 24 14:24:33 2013 +0200
+
+    Adjust to non-deprecated names in Keyring 1.6.+
+    
+    Keyring 1.1 moved the concrete backend implementations into their
+    own modules. As we depend on 1.6.1+, we can make use of the new
+    name and remove the old one without deprecation-fallback.
+    
+    Change-Id: I0682b13fc9f488b3f3d9fd057f712909fcd48bc4
+
+commit a1bda219a5160acca6423aea932a9f8103049373
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Wed Oct 16 12:21:38 2013 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I2a306dd8edc030d3f989e9947dec784f502b3953
+
+commit 29642c2c3df5da796944b929d11eef86dc22e448
+Merge: b3fd6ad fa649f4
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Oct 13 04:56:38 2013 +0000
+
+    Merge "Sync oslo-incubator for py33 fixes"
+
+commit b3fd6ad6db2de478f44b8e892996648636deb1fb
+Merge: 3f9c68f 916bb68
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Oct 13 04:56:22 2013 +0000
+
+    Merge "Add to clientmanager tests"
+
+commit fa649f4654e49c2c2a25e8ae2d71ead555da9ea7
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Oct 11 11:52:37 2013 -0500
+
+    Sync oslo-incubator for py33 fixes
+    
+    Change-Id: I261ec6bb34b29169ba3547305deab051f85a3d4d
+
+commit 3f9c68f1c6585c1d7f31b75c8719efc47230d86f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Oct 7 12:23:00 2013 -0500
+
+    Add options to support TLS certificate verification
+    
+    Add --os-cacert and --verify|--insecure options using the same
+    sematics as the other project CLIs.  --verify is included for
+    completeness.
+    
+    Bug: 1236608
+    
+    Change-Id: I8a116d790db5aa4cb17a2207efedce7cb229eba3
+
+commit bca4cf95789fc30577c796fdf349d072ef087f25
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Tue Oct 1 16:15:07 2013 +0000
+
+    Updated from global requirements
+    
+    Change-Id: Ic3b5de6a54951b4f9a6449f97aa1ab9c395a2f08
+
+commit ad59b03be6af9da31230689af268139b12b548e7
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Aug 30 17:55:37 2013 -0500
+
+    Add object-store show commands
+    
+    * Add lib.container.show_container() and lib.object.show_object()
+    * Add container and object show commands
+    
+    Change-Id: I963d664c55b59739453345f0f353aa2eaf1bf70e
+
+commit 74f4e3138996e258d4bdce1a162a5dade62a0c15
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Sep 20 10:57:31 2013 -0500
+
+    Update release notes for 0.2.2
+    
+    Change-Id: I59cbee4c147d5f849a7f07224e83ddd751212077
+
+commit ae8d64b337c8b448a3daeddf84edeb522372d9ad
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Sep 20 10:37:50 2013 -0500
+
+    Sort entrypoints in setup.cfg
+    
+    Change-Id: I72b0e069334c290cdc4d46cff0ba66d751c0edb4
+
+commit 1c4d3b320ffcf46140d4475ee2591a45f296268e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Sep 20 10:33:15 2013 -0500
+
+    Fix security group entrypoints
+    
+    Change-Id: I0590dde67b1121523d03742ce57093f2c5bacc72
+
+commit 6fe687fdf662a7495b20a1d94f27bf557525af58
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Sep 12 14:49:41 2013 -0500
+
+    Delay authentication to handle commands that do not require it
+    
+    * Move the auth to OpenStackShell.prepare_to_run_command() and skip it if
+      the command's auth_required == False
+    * Default auth_required = True for all commands
+    * Do authentication up-front for interactive use as
+      OpenStackShell.prepare_to_run_command() is not called
+    
+    Change-Id: Id330092f242af624f430d469882d15f4a22f4e37
+
+commit 8898e020fb874871e4d120e686abac0a94afd392
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Sep 9 14:55:07 2013 -0500
+
+    Identity v3 tests
+    
+    * Add project, user, role and service v3 tests
+    * Fix issues in commands with enable/disable
+    * Make commands and tests more consistent between versions
+    * Make formatting and comments more consistent
+    
+    Change-Id: Id21e7a5abd7e421a7742f937861ec46b53095fc7
+
+commit 7a0a7d67ed639cf664f02e1148c7b4a9348f4672
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Sep 9 14:52:45 2013 -0500
+
+    Prepare for Identity v3 tests
+    
+    * Split identity/fakes.py for v2_0 and v3
+    * Split identity/test_identity.py for v2_0 and v3
+    * Fix issues in commands with enable/disable
+    * Clean up v2 commands
+    
+    Change-Id: I6e536b6a130fc556dbd7dcf9f2e76d939ca1bc1c
+
+commit 916bb68dfdedcd977c9d88fad650c440b8f6a449
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Sep 5 12:54:14 2013 -0500
+
+    Add to clientmanager tests
+    
+    Change-Id: Iea59c494f31de9c3e1d662f89e6e2babcc8fbd61
+
+commit 16edd97007a71129197e4b3df303ed97ccffe436
+Merge: 44c97cc c8723ce
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Sep 5 13:06:45 2013 +0000
+
+    Merge "Update tox.ini for new tox 1.6 config"
+
+commit 44c97cc099a35af2d3d999f9799238fc72be071d
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Aug 27 16:57:30 2013 -0500
+
+    Add Identity v2 role and service tests
+    
+    * Add current auth info (auth_ref) to ClientManager
+    * Fix identity.v2_0.role.ListUserRole to get default user/project
+      from ClientManager.auth_ref
+    * Fix identity.v2_0.role.AddRole call to roles.add_user_role()
+    
+    Change-Id: Ie8bf41c491d97b0292a2b86bdc9b7580989a7f97
+
+commit eb405a88c47e91633ecb110122410aa24c24f9cd
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Aug 28 15:17:45 2013 -0500
+
+    Refactor fake data for projects and users
+    
+    * Move fake data structures into tests/identity/fakes.py
+    * Use fake clients correctly and support multiple client versions
+    
+    Change-Id: Icacbb2ca740b63937bd2c4442af61b620638b53e
+
+commit c8723ce175b48bdde016a6efb4945b6b3766080f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Aug 29 20:39:34 2013 -0500
+
+    Update tox.ini for new tox 1.6 config
+    
+    Change-Id: I4363508f562f62b16c856bc072cdb4b37e37b418
+
+commit 1c495a573cfc7087dd09953c24769819ee44b80c
+Merge: 725e254 5e29928
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Sep 4 19:20:20 2013 +0000
+
+    Merge "Update requirements.txt and test-requirements.txt"
+
+commit 5e29928294f80cb437a9bcf5c459dd2aad1b0d27
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Aug 29 20:39:34 2013 -0500
+
+    Update requirements.txt and test-requirements.txt
+    
+    Change-Id: I9c60d1d9097d35aa7c3d44168e370a9f30fd6621
+
+commit 725e2543efef8913ec9e69769eb45d5bc3d56aad
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Aug 20 15:13:41 2013 -0500
+
+    Object API commands using our REST API layer
+    
+    * Add object-store API to ClientManager
+    * Add object-store client
+    * Add Object API library in openstackclient.object.v1.lib
+    * Add Object API {container,object} list commands
+    * Add library tests
+    * Add command tests
+    
+    This should complete the Object v1 container and object list commands
+    
+    Change-Id: Ib1770d45efa8871959826b85faafa1e0bcef0a03
+
+commit 17f13f7bf4cea80e8e1380fbc8295318de5be383
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Aug 13 17:14:42 2013 -0500
+
+    Create a new base REST API interface
+    
+    * restapi module provides basic REST API support
+      * uses dicts rather than Resource classes
+      * JSON serialization/deserialization
+      * log requests in 'curl' format
+      * basic API boilerplate for create/delete/list/set/show verbs
+    * ignore H302 due to urllib import
+    
+    Change-Id: I3cb91e44e631ee19e9f5dea19b6bac5d599d19ce
+
+commit b440986e6e0e90c220fe3e52f893bc5dd51cae5a
+Merge: 22a6e88 880323e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Aug 23 16:24:20 2013 +0000
+
+    Merge "Re-order oauth commands and sync with keystoneclient"
+
+commit 880323e91d0a71fb599677304fe1a014399ec559
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Wed Aug 21 13:13:45 2013 -0500
+
+    Re-order oauth commands and sync with keystoneclient
+    
+    1) split out token and consumer
+    2) sync parameters with keystoneclient
+    
+    Change-Id: I2d529f0f9087f9939101e963af3d801497fc1171
+
+commit 22a6e8891ef7b50f0c6a4849ea9f6768c394f7ee
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Aug 16 00:03:58 2013 -0500
+
+    Add Identity v2 user tests
+    
+    * implement Identity command tests for v2 user
+    
+    Also re-work the user create and set commands for exclusive options
+    (--enable|--disable) to actually behave properly.  Yay tests!
+    
+    Change-Id: Ie1ec2569b3d85a9d556ee70f2e8f69fd2a3c03c8
+
+commit 493339d4da6b56f46416fff583ff6cc7748570ec
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jul 3 16:47:40 2013 -0500
+
+    Add Identity v2 project tests
+    
+    * establish the the form of cliff command classes
+    * implement some common fake objects
+    * implement Identity command tests for v2 project
+    * fix stdout/stderr capture
+    
+    Also re-work the project create and set commands for exclusive options
+    (--enable|--disable) to actually behave properly.  Yay tests!
+    
+    Change-Id: Icbb313db544c1f8dd3c9af7709971838b5a4d115
+
+commit 93612bbf53500bfeace7460e7cb317ed0073a6d1
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Wed Aug 7 18:54:34 2013 -0300
+
+    Updated from global requirements
+    
+    Change-Id: I1687d51bddb873549163dcf488fc40cdd9edcb29
+    
+    Change-Id: Ic4a43955526fcde313ad2f2afec8fafeb87f37a6
+
+commit 0507e9cf6f435ed6a2d4cbe80e3bd90472e5f57e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Aug 6 12:43:22 2013 -0500
+
+    Add release notes in docs
+    
+    Change-Id: I49dc936a37848745ce3412e810b98348558d1157
+
+commit 3a92ffa823c42daa0d285b01aeefe3543bd420cc
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Sat Aug 3 14:58:43 2013 -0400
+
+    Sync with global requirements
+    
+    Change-Id: I1969b4d74363a8d77cbb5dac661874f3bea2e96c
+
+commit af874890221b145a8cb423d3c1fc5dc133dbef13
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Aug 2 11:57:17 2013 -0500
+
+    Change version reporting to use pbr
+    
+    Gets rid of the hard-coded version string in shell.py
+    
+    Change-Id: I8b818c9a8f1224669079141e7a7caf614e588d20
+
+commit d67524897b55af99adfef0017a071d36a1f6003f
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri Aug 2 01:39:52 2013 -0500
+
+    Modify run_tests.sh to just run tox
+    
+    should fix bug 1203384
+    
+    Change-Id: Ib37b05067624d7ad1a4516f161514565b088bf6b
+
+commit 0cc581112214f638206f82acde28a36af91e6a21
+Merge: f293027 6f9dcc1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Aug 1 22:51:30 2013 +0000
+
+    Merge "Prep for 0.2 release (0.2.rc1)"
+
+commit 6f9dcc13f6beecd6646632fc2174b3edf1b8c5c5
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 29 17:05:02 2013 -0500
+
+    Prep for 0.2 release (0.2.rc1)
+    
+    * rename HACKING to HACKING.rst and refer to the common OpenStack HACKING file
+    * add the barest of pointers to the wiki, etc. to the source docs
+    * add a bare-bones man page
+    
+    Change-Id: I80e5b972af645f14ef17ae87f182ab09cb08dabe
+
+commit f293027815f43371b1133fcdf6283c6a19530556
+Merge: 0f63f46 7d138b9
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 31 22:30:12 2013 +0000
+
+    Merge "Remove tenant round 3 - other commands"
+
+commit 0f63f46a07fcb58fe325e3034eedeffc4a15ad8b
+Merge: cd0f34b c385180
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 31 22:29:03 2013 +0000
+
+    Merge "Remove tenant round 2 - Identity API"
+
+commit cd0f34b2d69a253212f3f73f991b552ec2c078c2
+Merge: ce17a0b 0aa3c20
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 31 22:29:02 2013 +0000
+
+    Merge "Remove tenant round 1 - global options"
+
+commit ce17a0b58877525cf39f0427f4874877fcf804ca
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Wed Jul 31 13:54:39 2013 -0500
+
+    Remove 'oauth authorization show' function from identity v3
+    
+    Remove the mentioned function since I removed it in the client.
+    
+    Change-Id: I45e713a1cdad92d257b895adfaa269404be6e6d8
+
+commit 661da45f58d3a48cce4720aa2f10b6cd616376e8
+Merge: 9ec1cf3 c94e262
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 31 15:16:48 2013 +0000
+
+    Merge "Add security group commands"
+
+commit 7d138b94eccdc30487d3aa95c8bd6338933eefe6
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 29 12:28:53 2013 -0500
+
+    Remove tenant round 3 - other commands
+    
+    Mostly options and help strings:
+    * image, server, project usage, volume
+    
+    Change-Id: I788b0660f8c2daacde53c20a72dd1afc60cf5159
+
+commit c385180df2338a52e89b1dfdf4d59dd698eaba67
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 29 11:29:16 2013 -0500
+
+    Remove tenant round 2 - Identity API
+    
+    Rename everything in the Identity v2 code including the file and classes.
+    * role, tenant, user
+    
+    Change-Id: I0b99c60a24f5875120136d2f216aa3b6bce1c641
+
+commit 0aa3c206a38b681e106ca8bfd82cab27cd7e1861
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 29 11:11:11 2013 -0500
+
+    Remove tenant round 1 - global options
+    
+    Change the global auth options to use 'project', leave the original
+    tenant options in place but silent for compatability with the existing
+    project CLI auth options.  This is the only compatibility for tenant
+    usage in this changeover.
+    
+    Change-Id: I3cce6e552f18822cc9f445ec5f301b0f5d9003f8
+
+commit 9ec1cf385ee1434ebdb13a9de2f35024925ff50f
+Merge: 978c2e7 dfb0e3e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 31 15:05:01 2013 +0000
+
+    Merge "Begin Python 3 compatability"
+
+commit 978c2e7dec712c1dd355cf9f5eb6a7270fa2c385
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Jul 26 16:26:50 2013 -0500
+
+    Add server ssh command
+    
+    Change-Id: I9317ad6a47818d5479a046b4be8c5adbbce613ef
+
+commit dfb0e3e3c1b5b5563279bebfe222ed4762f79494
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jul 3 18:12:58 2013 -0500
+
+    Begin Python 3 compatability
+    
+    * use six.iteritems()
+    * replace basestring with six.string_types
+    * convert print statements to functions (they're all debugging and should
+      be removed eventually anyway)
+    
+    * clean up OpenStack copyright: LLC -> Foundation
+    
+    Change-Id: Icb14212bcb408e63816bfec3922a697bc1a6c946
+
+commit c94e262df8d2d37e6c2043a3c3d0bc1cb78348a5
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Jul 12 15:49:03 2013 -0500
+
+    Add security group commands
+    
+    * Add security group: create, delete, list, set, show
+    * Add server: add secgroup, remove secgroup
+    * Add security group rule: create, delete, list
+    * Add Oslo's strutils and gettextutils
+    
+    * Adds parseractions.RangeAction() to handle option arguments of either a single number
+      or a range of numbers: '--port 25'  or '--port 1024:65535'
+    
+    Blueprint: nova-client
+    
+    Change-Id: Iad2de1b273ba29197709fc4c6a1036b4ae99725f
+
+commit 65d2a14e3e834ce0c57c879ec7d42715058254bf
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jul 25 18:00:33 2013 -0500
+
+    Add server resize command
+    
+    * add server resize
+    * update --wait handling for server create, reboot, rebuild
+    * move _wait_for_status to utils
+    
+    Blueprint: nova-client
+    
+    Rebased after https://review.openstack.org/38162 was committed
+    
+    Change-Id: I7a43b996feecadc7628fcfe20cd5b17333762739
+
+commit 3cc313a60db6d1a5a89c572ed10bca11402912d4
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Jul 26 15:00:21 2013 -0500
+
+    Add server migrate command
+    
+    Blueprint: nova-client
+    
+    Note: I've tested that the API calls are made correctly but do not have an
+    environment with migration proerly enabled to watch it complete...
+    
+    Change-Id: Ideaf0985d43aa2be22390cf0d2850124c549632d
+
+commit 3ff6378c23ab103647310d5d64b1e51bf3cdcf04
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jul 25 12:17:25 2013 -0500
+
+    Add server commands: (un)lock, (un)rescue, (un)set, add/remove volume
+    
+    * server lock/unlock, rescue/unrescue, set/unset
+    * add/remove volume
+    
+    Blueprint: nova-client
+    
+    Change-Id: I3709ecdb297ab15ad44df09d89af840164271a66
+
+commit 22386eb9e621012429e0626044c12b764d2ea273
+Merge: ec9b907 fcc3465
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 26 19:55:52 2013 +0000
+
+    Merge "Add usage command for compute api"
+
+commit ec9b907e780a16a5e4f8b6997b15473e44a93183
+Merge: 3789cdf 61beeb7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 26 18:12:33 2013 +0000
+
+    Merge "Fix --password in server rebuild"
+
+commit fcc34652ecad4029998e45c32016af1b03256fc5
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sun Jul 21 02:52:25 2013 -0500
+
+    Add usage command for compute api
+    
+    As per the blueprint: nova-client, adding usage command for
+    compute
+    
+    Change-Id: Ib694b0b1ebf56b2a62b6f09c67ffaa6959911605
+
+commit 3789cdfebe2d84fd77a4549dbdb08346f5d8e280
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sun Jul 21 03:28:27 2013 -0500
+
+    Add server diagnose for compute api
+    
+    Add server diagnose for compute api as per blueprint: nova-client
+    
+    Change-Id: I0a2c13e36e1e13f61ef4ba00ec146634f9644648
+
+commit e351991d74b9c952dc2d1f46a185a3250fa822d3
+Merge: e313afb 8dd9feb
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jul 23 15:26:29 2013 +0000
+
+    Merge "Change volume manager to volume type, unset property for type"
+
+commit e313afb9f0a59c9a060b996440c250ccc1728a03
+Merge: f175d12 b4904b0
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jul 23 15:26:29 2013 +0000
+
+    Merge "Add password field to set user"
+
+commit f175d122473f0bf94abc694a30e3388597b35e26
+Merge: 7b47579 818c948
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jul 23 15:25:26 2013 +0000
+
+    Merge "Clean up properties (metadata) formatting"
+
+commit 61beeb7e203eda719e167d1fd2740f0b3225e11f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 22 10:23:51 2013 -0500
+
+    Fix --password in server rebuild
+    
+    Use correct attribute to get password in server rebuild command.
+    
+    Fixes bug 1190722
+    
+    Change-Id: Ibe2ccb8840a385319781885b8aadca6e1ba4cc43
+
+commit 8dd9feb6434243c72f8bd27994418be6409c6c96
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sun Jul 21 14:45:22 2013 -0500
+
+    Change volume manager to volume type, unset property for type
+    
+    In the unset method in volume_type, it was calling the volume
+    manager, instead of the volume_type.
+    
+    Bug: 1203561
+    Change-Id: Iea1a9214db90f15815a456955040c0c5a795ff3d
+
+commit 818c94875221f606ed56f276c1cbd320a9106754
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jul 18 11:10:34 2013 -0500
+
+    Clean up properties (metadata) formatting
+    
+    * Reformat default dict output to key='value' using utils.format_dict()
+    * Changes utils.get_item_properties() to pass the specific field to
+      the formatter function rather than the entire resource object, this
+      allows the formatter to handle multiple attributes.
+    * Updates server, volume, volume type commands
+    
+    Change-Id: I90eebf6b84ae200532f09cd925f371598ea54a64
+
+commit b4904b0a4a83db57e9ed70dad5ebefab85201e2f
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sat Jul 20 16:19:43 2013 -0500
+
+    Add password field to set user
+    
+    Noticed this was missing in set user, the password from parsed
+    args wasn't being passed in.
+    
+    Change-Id: I0eb748444b86b374265b6e1dd02f69a922a9b043
+
+commit 7b47579dad1faf0b48a9402cf018de49361d6f12
+Merge: 5d1d738 cdaee1b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Jul 20 20:17:00 2013 +0000
+
+    Merge "Complete Image v1"
+
+commit 5d1d738968d9dd357cc58ab73d933e9f000f8fb3
+Merge: 93eadf6 2cc9963
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 19 20:39:44 2013 +0000
+
+    Merge "Add aggregate commands"
+
+commit 2cc996356c438e45a876a6cb51a332d070044c1e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jul 11 15:41:18 2013 -0500
+
+    Add aggregate commands
+    
+    * Add aggregate: add host, create, delete, list, remove host, set, show
+    
+    * Add list --long option
+    * Filter 'availability_zone' from the metadata fields
+    * Rename 'metadata' column to 'properties' in all output
+    
+    Bug: 1172032
+    Blueprint: nova-client
+    
+    Change-Id: Icd408c2b34af07f5102f53d3778d8546952a12c5
+
+commit 93eadf6eb161f0f77c482ae88bb2ed95c355a358
+Merge: a243b1a 87104a2
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 19 20:20:17 2013 +0000
+
+    Merge "Add quota commands"
+
+commit a243b1afd704f02688008b34cca46d014be98dd1
+Merge: ce72256 6146213
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 19 20:19:45 2013 +0000
+
+    Merge "Add list and delete authorizations for oauth commands"
+
+commit cdaee1b71e21df56e6127689801240274af9d847
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jul 8 16:48:10 2013 -0500
+
+    Complete Image v1
+    
+    * Add v1 versions of image delete, list, save, set, show
+    * Change default Image API to v1
+    
+    Rebased for https://review.openstack.org/#/c/36772/
+    
+    Change-Id: Ie2bfe660aac8a0fcf651c67fd1ea4842e76ce377
+
+commit ce7225692970ee0036d785f540fa2a0dba882cc3
+Merge: aa81b8b bbb71e7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 17 20:11:00 2013 +0000
+
+    Merge "Add --catalog to service show"
+
+commit 87104a28d75bd77df8b7ceb44600cd2b3971b4ae
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jul 3 16:46:00 2013 -0500
+
+    Add quota commands
+    
+    * Add quota set and quota show commands; these work on both
+      the compute and volume APIs
+    * Add the --class variation on the above commands
+    
+    Note: this replaces the existing volume-only quota commands and eliminates quota list
+    
+    Blueprint: cinder-client
+    Bug: 1172064
+    
+    Change-Id: I766d40e410e48f05e36e17e567a4f01a9411b40e
+
+commit aa81b8b8d538b81a21d1161dc047cb5374cfe060
+Merge: f768ea2 75dcdb0
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jul 17 20:07:43 2013 +0000
+
+    Merge "Add show limits command"
+
+commit 6146213e327729a2a48a09de35087ca2be9786e5
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Jul 16 13:52:59 2013 -0500
+
+    Add list and delete authorizations for oauth commands
+    
+    * List user authorizations
+    * Delete user authorization
+    * Grouped the commands with oauth prefix
+    
+    Change-Id: I032ffa25181aad0fb4689f69cdca5a7adc6e29f1
+
+commit bbb71e7ce2cb8bc81318858823018ff494c61a40
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jan 17 14:16:32 2013 -0600
+
+    Add --catalog to service show
+    
+    Shows endpoints from the service catalog rather than the system services.
+    
+    Change-Id: I842916af9f7c0a76c4d3e27e419bf0fec059ec78
+
+commit f768ea2b228257030de4696bfefe61d9fc917723
+Author: Alessio Ababilov <aababilo@yahoo-inc.com>
+Date:   Tue Jul 16 15:20:03 2013 +0300
+
+    Update openstack-common.conf format
+    
+    Change-Id: Ifa6718331d3da91f0e9515a809484808bd6317f9
+
+commit 6cb58fa16b1d13db92b6048fc92ca7dae8cbccce
+Merge: 1a0d5cc 7139083
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jul 15 13:08:34 2013 +0000
+
+    Merge "Add authenticate method to oauth code"
+
+commit 75dcdb0c6637afe5c14e5c60f7719182bda7ab4a
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue Jul 9 17:10:33 2013 -0500
+
+    Add show limits command
+    
+    * This is a combination of the compute and volume API limits as they are
+      very similar.  As such, the command lives in a new command group
+      'openstack.common' that is unversioned.
+    * Implements 'limits show [--absolute|--rate]
+    
+    Updated for https://review.openstack.org/#/c/36772/
+    
+    Bug: 1172057
+    
+    Change-Id: I2bd181cd0d098f7143360ae67944c2f221379af5
+
+commit 1a0d5ccc68f65394292992b48afe20241e89e7b8
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Thu Jul 11 22:40:24 2013 -0500
+
+    Remove api = apiName calls from each method
+    
+    As discussed in https://review.openstack.org/#/c/36352/ for each
+    command, we were setting api = identity or volume... etc,
+    this was for an old way of calling commands that are is no longer
+    used.
+    
+    Also removed openstackclient/common/command.py
+    
+    Change-Id: I2705f35d343f2ae729dc22d6aed0b852b2f8ca19
+
+commit 713908385a183cada8c9e77bb74c2ca381a38660
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Wed Jul 3 15:26:33 2013 -0500
+
+    Add authenticate method to oauth code
+    
+    Forgot to add one last method when I initially checked in
+    the first set of code; the authenticate method will return an
+    actual keystone token that the user may now use.
+    
+    Also, I added some changes to other methods because the client
+    has been updated.
+    
+    Change-Id: Ie2707689e0df1fb1bc92177f932baf23fe1ca920
+
+commit f0d3bf85d8102b9bdfe83852588f9bdc895f32c6
+Merge: d756975 4022e41
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jul 8 23:48:29 2013 +0000
+
+    Merge "Sync install_venv_common from oslo"
+
+commit d75697561408528385bca783031e6a2f4aa87076
+Merge: d7501c3 7298dd5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jul 8 18:45:50 2013 +0000
+
+    Merge "Add EC2 credentials CRUD"
+
+commit 4022e41c6420cb581da619091bd433a3d63af0ea
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Fri Jul 5 22:31:15 2013 -0400
+
+    Sync install_venv_common from oslo
+    
+    Change-Id: I0a57c658e0f89d13963862013793e12ae208c05b
+
+commit d7501c352dc95360ba9b432cdec1f1b8b822b0e6
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Fri Jul 5 22:30:54 2013 -0400
+
+    Update documentation with info about setup.cfg
+    
+    Change-Id: If87df1e6415d0b70b6605b1d89eda639fc44a0b6
+
+commit bf3ee1e9a5e7af4975571b2040659071ec08dcd7
+Merge: a54b88f f29a849
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 5 17:10:22 2013 +0000
+
+    Merge "Finish up v3 role commands"
+
+commit a54b88fa9fd6b6b857ed5f62d91b61677a34429c
+Merge: f18d674 9dbf46b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jul 5 16:41:36 2013 +0000
+
+    Merge "Add methods for user and group interactions"
+
+commit 7298dd5e72700206c4bcabdcbaa3720a4147cbe7
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jul 3 12:10:37 2013 -0500
+
+    Add EC2 credentials CRUD
+    
+    ec2 credentials: create, delete, list, show
+    
+    Change-Id: I82ff84ed433cd9a2da9534bf5f584a2e1a3fe68c
+
+commit f29a849ffcc203e7038fd2a026e0f755dcf2c1fc
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Thu Apr 18 17:49:42 2013 -0500
+
+    Finish up v3 role commands
+    
+    * Add remove role
+    * Add --role to group list
+    * Add --role to user list
+    * Fix groups in AddRole()
+    * Remove the tweaks to utils.find_resource for domains; will address
+      that across domains, projects, users and groups in another patch.
+      I want to nail down the structure of these commands and get that into place
+    
+    Change-Id: I8673dd8221ef88978dada5a2833c187026bdb31a
+
+commit f18d674efa7be25bc448a4f8993cafa5c196cc1c
+Merge: b63e8d5 196daf8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jul 2 14:26:25 2013 +0000
+
+    Merge "Move tests into project package."
+
+commit b63e8d5241387b6e39690d18914f423c9c4b988a
+Merge: 674dd48 108f78d
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jul 2 14:26:15 2013 +0000
+
+    Merge "Remove python3 incompatible exception syntax."
+
+commit 9dbf46b8370becd1100837ee1868c7532e632b81
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Mon Jun 10 09:19:54 2013 -0500
+
+    Add methods for user and group interactions
+    
+    * Add user to group
+    * Contains user in group
+    * Remove user from group
+    
+    Change-Id: If5219fa9d4761d7b97950c39556b3e1b8aab6517
+
+commit 674dd48ad9dd9609966e70d893e46c191245cdec
+Merge: d50b575 dd3aa0b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jul 1 19:19:47 2013 +0000
+
+    Merge "Add OAuth support for Identity V3"
+
+commit 196daf859b1557fba24dbcf9870d3a834da86916
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Sun Jun 30 23:01:17 2013 -0400
+
+    Move tests into project package.
+    
+    There are several reasons for this. One is that the majority of
+    OpenStack packages behave this way. The second is that it makes writing
+    software that extends something easier to test (which is a clear usecase
+    for openstackclient) And third, tests/__init__.py implies a global
+    package named "tests" - which I'm pretty sure we're not providing.
+    
+    Change-Id: Ic708ffd92aea78c2ffc1a8579af0587af4fca4ff
+
+commit 108f78d98994435fbd234196b3f23948b4c8bca6
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Sun Jun 30 23:30:27 2013 -0400
+
+    Remove python3 incompatible exception syntax.
+    
+    Change-Id: I5f0687a83362ceebf03bae4a0a5b109aad7e5200
+
+commit d50b5750640ace3a77e6e0637d6cd24f91db8080
+Merge: 1d7f648 bc3039a
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jun 26 21:56:21 2013 +0000
+
+    Merge "Fix py26 tests: assertDictEqual"
+
+commit dd3aa0b671fec6e6c23ae69016fdc06e7c529297
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue May 21 00:57:19 2013 -0500
+
+    Add OAuth support for Identity V3
+    
+    Added client side support for:
+    * consumer CRUD
+    * create request token
+    * create access token
+    * authroize request token
+    
+    blueprint: delegated-auth-via-oauth
+    
+    Change-Id: I8d325fcab07ac4dfd124a6e55053ded8d6bf662e
+
+commit bc3039a43c5d4f783e8ef435ec43d4eee5e2f83a
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jun 10 14:06:41 2013 -0500
+
+    Fix py26 tests: assertDictEqual
+    
+    assertDictEqual is not present in py26 so shim it in here
+    stolen from python-keystoneclient/tests/test_auth_token_middleware.py
+    
+    Change-Id: Ifd5990a8c03d11ee93cddc2f61653255970d974c
+
+commit 1d7f6488c9bb02887400a4df164cfb093b488931
+Merge: d542def ea31333
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jun 11 20:34:43 2013 +0000
+
+    Merge "Add volume backup commands"
+
+commit d542def039d42d774d61800073bc9d1ba86ff4a2
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Tue Jun 11 11:33:28 2013 -0700
+
+    Remove explicit distribute depend.
+    
+    Causes issues with the recent re-merge with setuptools. Advice from
+    upstream is to stop doing explicit depends.
+    
+    Change-Id: Ic83dca8c17799335b76311d1d657adcd1dc94f01
+
+commit ea31333c49224faac1530f258c15bdeed95a94e8
+Author: Hugh Saunders <hugh@wherenow.org>
+Date:   Mon Jun 3 11:10:09 2013 +0100
+
+    Add volume backup commands
+    
+    Change-Id: Iedccd329ff6fb3155eb29649cd0bc84cfc5ebedf
+    Implements: blueprint volume-backup
+
+commit 7183a11f09f2d1958ed6251ae227afc8cbb8cc45
+Author: Chuck Short <chuck.short@canonical.com>
+Date:   Sat Jun 1 19:58:22 2013 -0500
+
+    python3: Introduce py33 to tox.ini
+    
+    Introduce py33 to tox.ini to make testing with
+    python3 easier.
+    
+    Change-Id: I7a775ac51e0bc0a5929184af47d51ea1cc4e3219
+    Signed-off-by: Chuck Short <chuck.short@canonical.com>
+
+commit f4f85a2f7910fc8f7a7aa79538a4b03a077ad2e4
+Merge: bac0718 ea9ec1c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu May 30 16:25:36 2013 +0000
+
+    Merge "Tweak volume commands and add k=v argparse action"
+
+commit bac0718764ac5e7cc22adf24d035db0be0cf90d9
+Author: Zhenguo Niu <Niu.ZGlinux@gmail.com>
+Date:   Wed May 29 17:36:23 2013 +0800
+
+    Rename requires files to standard names.
+    
+    Rename tools/pip-requires to requirements.txt and tools/test-requires
+    to test-requirements.txt. These are standard files, and tools in the
+    general world are growing intelligence about them.
+    
+    Change-Id: I903213fda94a833335abaa7ad9a90bbb688ec15a
+    Fixes: bug #1179008
+
+commit 443009270621cd6ed26d61315ecbc108cc96916e
+Merge: b7565c2 bf588ed
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 28 15:35:39 2013 +0000
+
+    Merge "Fix identity v2.0 entry point"
+
+commit b7565c297dc95830bf4072b74e2e0de92272e40d
+Merge: d49fcb7 02a4f16
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 28 15:23:40 2013 +0000
+
+    Merge "Add domain and description to user for v3 identity"
+
+commit bf588ed9c4db954316b62133cc936cfcb0ea7de1
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 24 16:59:35 2013 -0500
+
+    Fix identity v2.0 entry point
+    
+    Change-Id: Ifae91a612fcd8b66660b93f6ea81d37e0f1bce1d
+
+commit ea9ec1c6bc00ee90b288808f6d48d2ed420cf4b5
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 11 16:45:34 2013 -0500
+
+    Tweak volume commands and add k=v argparse action
+    
+    Basic cleanups:
+    * change metadata to property
+    * add new KeyValueAction to parse the property options
+    * multiple properties can be set using multiple --property args
+    * consistent formatting
+    * do lookups for volume args
+    
+    Change-Id: Ib6c43f01ad46b395aee8c61e886f42e2a5f5573e
+
+commit 02a4f16f16019a8e4efa20c183d89c030147f0bb
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri May 17 06:42:48 2013 -0500
+
+    Add domain and description to user for v3 identity
+    
+    * splitting the changes seen in 27142 to a few new patches
+    * this one will just update v3 user to have description and domain
+    
+    Change-Id: I9b4c365703da27e26ddc702f37cf5928e19cebdc
+
+commit d49fcb726d078b25566e57c7604d0d52d9998b22
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Tue May 14 08:42:41 2013 -0700
+
+    Migrate to pbr.
+    
+    Fixes bug 1179007
+    
+    Change-Id: Ief74b121dcad28bb1c2b6044ef72e0cbd51e8f65
+
+commit 967d929207fa52c00acaa0a3e1b63bbe8e7f3835
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Tue May 14 08:29:16 2013 -0700
+
+    Migrate to flake8.
+    
+    Fixes bug 1172444
+    
+    Change-Id: Ieca721663aea2fd31753df4abfb5b01a7145b26a
+
+commit 016a0b301e0ecfea5d84b09e7f1e22a86953c1c1
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Tue May 14 08:28:48 2013 -0700
+
+    Fix flake8 errors in anticipation of flake8 patch.
+    
+    Change-Id: Ifdc4322b699f2bd91a6900e55695acd3d736568e
+
+commit d6c760263b5a7f77bbb35e31f92dd5a9140278ee
+Merge: a2e3a16 b16f210
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon May 13 14:57:38 2013 +0000
+
+    Merge "Switch to noun-verb command forms"
+
+commit a2e3a16221915946ee0d847b1e95187c0f628079
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue May 7 11:18:38 2013 -0500
+
+    Rename all instances of 'metadata' to 'property'.
+    
+    Change-Id: I454cbe685dc5afa0a09ecc976a90d6eb6bc57d14
+
+commit b16f210bbf52bbd8f6f7ec9bb48a8a45219beb95
+Author: Doug Hellmann <doug.hellmann@dreamhost.com>
+Date:   Mon Apr 29 21:29:07 2013 -0400
+
+    Switch to noun-verb command forms
+    
+    Reverse the commands to use nouns followed by
+    verbs to allow users to take full advantage of
+    tab completion.
+    
+    Compound nouns (e.g., "floating-ip") are also
+    reversed (e.g., "ip floating list" and "ip fixed list").
+    
+    blueprint nouns-vs-verbs
+    
+    Change-Id: Icf09fb8d7dbd09772bddbbeb74f9a379d9189b72
+    Signed-off-by: Doug Hellmann <doug.hellmann@dreamhost.com>
+
+commit 53bbff67eb5c4e888cfca0bd6c70d868ac300377
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Apr 15 17:32:44 2013 -0500
+
+    Add console commands
+    
+    Adds:
+    * console-log
+    * console-url
+    
+    Part of blueprint nova-client
+    
+    Change-Id: Ibea7f96382283770988d05379d41a148f8cd8c4f
+
+commit 6b478390fba78cab4cb5656de1b62b35ce57c2dc
+Merge: e273691 364769f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 25 19:24:24 2013 +0000
+
+    Merge "Add compute keypair commands"
+
+commit e273691c674292a6b7eaa15a3cf754833ab840ee
+Merge: c5e9048 e9021c2
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 25 19:23:16 2013 +0000
+
+    Merge "Add fixed-ip and floating-ip commands"
+
+commit c5e9048dc43e31b183ae8b1052dedf0d474d924d
+Merge: 3641b03 6da61e0
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 25 18:30:19 2013 +0000
+
+    Merge "Adds image `create` and `delete` functionality."
+
+commit 6da61e03f03f9a65cbc9203ea9fdd47c64990184
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Apr 9 13:59:12 2013 -0500
+
+    Adds image `create` and `delete` functionality.
+    
+    We use the V1 API for `create` since it does not
+    yet exist in the V2 API in glanceclient.
+    
+    For blueprint glance-client.
+    
+    Change-Id: Ifa819c14f6a013f4530d16247a671e5a1c740a28
+
+commit e9021c213b0f98195920e63aa573c040d5a3cf6d
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Sun Apr 14 17:02:45 2013 -0500
+
+    Add fixed-ip and floating-ip commands
+    
+    Adds:
+    * fixed-ip commands: add, remove
+    * floating-ip commands: add, create, delete, list, remove
+    * floating-ip-poo command: list
+    
+    Also uses NAME_ATTR in the Resource class if present to determine
+    the attribute to be used for searching in utils.find_resource()
+    
+    Change-Id: Ifd8fa60f880fc4050dea182ac24553cc2c4bff15
+
+commit 364769f97851828a809d82e28cfec2f6a6fd4560
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Apr 12 17:01:38 2013 -0500
+
+    Add compute keypair commands
+    
+    Add create, delete, list, show keypair commands
+    
+    Part of blueprint nova-client
+    
+    Change-Id: Ieba00d3b3e3a326f875c01ac2a2b9bbd036cd7c9
+
+commit 3641b03690b39c55e570ec15ee2c16d4ec591847
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Apr 8 17:23:50 2013 -0500
+
+    metadata is one word
+    
+    Change-Id: I2baff95c9b6dcc95edf5d5da74814ff37883cd2b
+
+commit 95bf187a4fde78b6d9d93e40a245ddada004c32a
+Merge: e11a703 04af8fa
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Apr 2 15:25:03 2013 +0000
+
+    Merge "Add metadata support for volume"
+
+commit e11a703a1aec54cf745848d4595161eb33961c57
+Merge: 512cccc 76e06d1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Apr 2 15:24:19 2013 +0000
+
+    Merge "Add policy to identity v3"
+
+commit 512cccc78c6435ba5ea608e6cc67659e05105c62
+Merge: 73fb88e 4fd5dd3
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Mar 27 15:04:10 2013 +0000
+
+    Merge "Add a simple extension hook"
+
+commit 76e06d144e70c0f532f0258c7176013e91c20fd2
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri Mar 8 11:15:21 2013 -0600
+
+    Add policy to identity v3
+    
+    use file for data blobs
+    add create/set/delete/show/list policy for v3
+    
+    Change-Id: I5f68ef89dfb2241ea1aca00736ee6df5f6f03a9b
+
+commit 04af8fa8f1b0654dbb2402ecd8158aff7fc77278
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri Mar 22 23:36:13 2013 -0500
+
+    Add metadata support for volume
+    
+    Now able to pass metadata to the create method,
+    as well as update it with set, and remove it with unset.
+    I'm currently passing it as an optional param like the following:
+    --meta-data=key1=value1
+    which seems weird, what about
+    --meta-data=key1:value1
+    I'd have to update type too if that is the case.
+    
+    Change-Id: I0fc8398768da015c1f53c5c564c68a2cfb53e778
+
+commit 73fb88e9317f5f2e5270aca4976ffecd06621b0c
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Mar 21 12:21:55 2013 -0500
+
+    Make entry point strings readable
+    
+    PEP8 E126 wants continued strings to line up vertically, totally destroying the
+    readability and visual indication of the beginning of a string in a list
+    
+    * Ignore PEP8 E126 in order to indent the entry point strings in a readable manner.
+    * Sort the enrty point command strings by object then verb.
+    * Bring other ignores from run_tests.sh to tox.ini
+    
+    Change-Id: I2593de7d6c058322101bc68636317cdba29fe664
+
+commit b175184f239d3933435045505750c0fa1cd8cc0c
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sat Mar 9 00:10:05 2013 -0600
+
+    Add extra-specs support for volume-type
+    
+    changed to volume-type
+    changed command to --long, added a formatter for key=value
+    Just noticed there is an option in cinder for a command called
+    extra-specs-list, only relates to volume-types, to list the
+    meta-data key/value pair. Added that functionality.
+    Also made minor changes so delete/set/unset can be called by name.
+    
+    Change-Id: If534ccd1d8a3abc6d235c60ec9a964b88e3fa66d
+
+commit 95c6e5f11d22ac34d73170e071aceaae6680847b
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Mar 12 10:15:55 2013 -0500
+
+    Add endpoint v3 functionality
+    
+    simple rebase
+    integrated dolphm and dtroyer comments
+    Added create,list,delete,set,show endpoints
+    modified setup.py
+    
+    Change-Id: Id6153db16db44130beb3b44a8e3e2f72e9a01e5f
+
+commit 907dbdb897fe13fc46022f93c1c3e2f7bcec19be
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Mar 12 12:11:20 2013 -0500
+
+    Add service v3 support for identity
+    
+    simple rebase
+    rewrite help for create, remove choices
+    Added create/delete/list/show/set for service
+    Modified setup.py
+    
+    Change-Id: I5ced0e214cc2f7fc70493c66b4381040ce8122fe
+
+commit b26bbae598b00cf44f8dc493d4022f09f73c6807
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Wed Mar 13 15:09:35 2013 -0500
+
+    Add functionality for add-role commands
+    
+    keep the functions sorted
+    Please review carefully as I intend to mimic this logic with
+    list and remove, I'm open to suggestions about handling thigs
+    differently
+    
+    Change-Id: Ia6359134c44447f3b758870c4dc306ec1f970852
+
+commit 4fd5dd3b1afca700073affe313732c1d0540215e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Mar 8 15:39:48 2013 -0600
+
+    Add a simple extension hook
+    
+    This enables stand-alone modules to hook in to the command-line
+    handler in a dedicated API namespace.  These extensions have access
+    to the existing clients via the client manager but no way to add
+    another client to the manager is provided..
+    
+    blueprint client-extensions
+    
+    Change-Id: I4b2eaa780d8ba881db23d950d09b8702e9e314ef
+
+commit 5f283775bfdfd761ae04f54f36c25caad290db5e
+Merge: e2c3dbf f54012c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 15 19:06:56 2013 +0000
+
+    Merge "Removed unused imports."
+
+commit e2c3dbf24d38ef31b8657188b06069c69f2f7b7c
+Merge: 866a0eb e5d9ba5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 15 18:50:06 2013 +0000
+
+    Merge "Add role v3 support to identity in openstack client"
+
+commit f54012cf8ea196eef2a68d0b5faa4684c48efe45
+Author: Josh Kearney <josh@jk0.org>
+Date:   Fri Mar 15 11:10:46 2013 -0500
+
+    Removed unused imports.
+    
+    Change-Id: Ib1bae16f996559c008fb1fe0b74f26b152854ea8
+
+commit 866a0eb0449005dc24217864073545c79f0790c3
+Merge: de8f315 0c49293
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 15 16:03:54 2013 +0000
+
+    Merge "Add snapshot support for v1 volume"
+
+commit de8f3157943c88b3918b5bf3a2e3714c3bfd8ac2
+Merge: ebfad58 211a4bc
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 15 15:56:21 2013 +0000
+
+    Merge "Add optional arguments to volume list command"
+
+commit e5d9ba5491b4764c7a4c8423a8b89b9c0f980b3b
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Mar 12 16:27:53 2013 -0500
+
+    Add role v3 support to identity in openstack client
+    
+    Added create/delete/set/list/show support for roles
+    Broken up to make reviewing easier.
+    Will add more functionality (add/remove) later
+    
+    Change-Id: I95bddd27d8d9d251ad2fd60c3e3ee1e2cbcd7d4b
+
+commit ebfad587b32e31bc08e2e78f36b0b40131745a1e
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Mar 11 18:07:48 2013 -0500
+
+    Added compute hypervisor support.
+    
+    Change-Id: Ib8109550b06d152773394a1d15f6202b9f9b029c
+
+commit 331d64a242856b5c3fb8f466c7ed373966152335
+Merge: 1ddc301 13d8840
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Mar 11 23:02:03 2013 +0000
+
+    Merge "Turn down requests logging level"
+
+commit 211a4bcbf2bb875df490839ab91e8d7a5f1fafd0
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Mon Mar 11 15:08:49 2013 -0500
+
+    Add optional arguments to volume list command
+    
+    Added --name, --all-tenants, and --status as search params
+    
+    Change-Id: Ibaa2a7f6862c2ff7dbe24f6bea971db3e70bc120
+
+commit 13d88407d640e34f2378000a2335db650251bded
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Sat Mar 9 00:20:16 2013 -0600
+
+    Turn down requests logging level
+    
+    Looks like the default is INFO, we don't need to see that unless
+    --debug is specified.
+    
+    Change-Id: Ieee5d4dc5102f11536ecc6330461f86101811f9e
+
+commit 1ddc30100f863c223f3ebef0ca0e56e9c8a9cfbb
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sat Mar 9 00:25:06 2013 -0600
+
+    Add force-delete option for volumes
+    
+    Again, looking thorouhgly through cinders commands, i noticed
+    an force-delete command, which was for volumes only.
+    Decided it would work best as an optional argument for the
+    regular delete case
+    
+    Change-Id: I9de6040ea0ad71c2a9c8edc7be18779d39e7ede0
+
+commit 0c252b615d235e2cc5138cafbd873101115800ae
+Merge: d5a4216 55462e8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 8 22:17:43 2013 +0000
+
+    Merge "add domain, credential to identity v3 api"
+
+commit d5a4216247d077035ec5ea7e3df595fff0946d82
+Merge: 6fae83b 47068b1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 8 22:14:57 2013 +0000
+
+    Merge "Add compute hosts support."
+
+commit 0c4929373e04c48638dc3facd47e39933cc9ac49
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Mon Mar 4 22:27:07 2013 -0600
+
+    Add snapshot support for v1 volume
+    
+    rebase again, and change util to look for display_name too
+    minor changes and rebase
+    add create/delete/list/set/show support for snapshot
+    
+    Change-Id: I80261653fa919555a44ddda07b0a827ccd16e5e0
+
+commit 6fae83b935d36adc6d2accc4f44e498cef5b9848
+Merge: ec91bb6 abbbed5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 8 19:39:30 2013 +0000
+
+    Merge "Add volume support for openstack client"
+
+commit 55462e8f561af31dbd9a34d317758916d1287d72
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Wed Jan 30 18:56:47 2013 -0600
+
+    add domain, credential to identity v3 api
+    
+    moved policy.py to it's own patch
+    minor changes based on comments
+    reworked it now that the domain specs have changed
+    added credential - create, delete, update, show, list
+    added domain - create, delete, update, show, list
+    update setup.py entry points
+    
+    Change-Id: I6bbbb8fdfbc3e76ba75374e9579eb92c96c928fe
+
+commit ec91bb617ebe946b36124f600070434cc658c945
+Merge: 9b8b180 3b765c8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 8 15:47:10 2013 +0000
+
+    Merge "Clean up args and help strings in server commands"
+
+commit 9b8b18053469b0f7c3e4ade87146ad83380342f7
+Merge: 5377da3 989485c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 8 15:45:50 2013 +0000
+
+    Merge "Change create flavor to use default arguments"
+
+commit abbbed534d296c6fe1824ee010ead65292cc3a58
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri Mar 1 16:36:08 2013 -0600
+
+    Add volume support for openstack client
+    
+    fix with dtroyer's comments
+    rebase
+    fix with dhellmann's comments
+    create/list/delete/show/set for volume commands
+    
+    Change-Id: Id8236685d815dbf73873bab2363d82274a9aa556
+
+commit 47068b1dd771f8b3ebce4c52f1de489cb30651e3
+Author: Josh Kearney <josh@jk0.org>
+Date:   Wed Mar 6 15:18:04 2013 -0600
+
+    Add compute hosts support.
+    
+    Change-Id: I51c443512a82729564b76e6f835195ff193232d2
+
+commit 3b765c82531d9c5704854443e49f1accb5995a0e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Mar 6 14:39:48 2013 -0600
+
+    Clean up args and help strings in server commands
+    
+    Help string corrections and align args with wiki at
+    https://wiki.openstack.org/wiki/UnifiedCLI/Mapping#server
+    
+    Change-Id: Ifd6f587d383534142003277e64532f77ecb37106
+
+commit 989485c7f9f685fc2d0fc2c6e7786a087a6042ac
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Sun Feb 24 20:00:39 2013 -0600
+
+    Change create flavor to use default arguments
+    
+    Most of the arguments required by the create flavor API can have
+    reasonable defaults and therefore can be made optional in the CLI.
+    This brings create flavor in line with the documented args in the
+    wiki at https://wiki.openstack.org/wiki/UnifiedCLI/Mapping#flavor
+    
+    Change-Id: Iecb3baf72f9dc3981742ff7989780894e37921c9
+
+commit 5377da34065afdf96f2dd873419d77583844dfdd
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sun Mar 3 20:34:18 2013 -0600
+
+    Add metadata support for volume type
+    
+    rebase
+    added set and unset metadata
+    
+    Change-Id: I8d969e1de305975d7c71a0bad3a62b15f423c3e0
+
+commit 2a39a70ff8289c1e51e42d337c3aaf060ddd9f9f
+Merge: ed809e0 7266c69
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Mar 5 18:01:04 2013 +0000
+
+    Merge "Added compute service support."
+
+commit 7266c695b3bc592558a1170bd00e5904fa3dd303
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Mar 5 10:30:36 2013 -0600
+
+    Added compute service support.
+    
+    Change-Id: I548e35396534b5498f31a45c752984f6d33357c3
+
+commit ed809e059a85f70e8f89d1a59e533064b9e9143e
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Sun Mar 3 00:42:42 2013 -0600
+
+    Add quota v1 support for volume
+    
+    added dhellmann's suggestions
+    created entry points in setup.py
+    added show/set/list quotas for v1 volume
+    
+    Change-Id: I8ed6a9518007b31cafeaa70a54d5bf54a549195b
+
+commit 287c23ca4b023a53898e839dc2247d83b437c7f8
+Merge: 8737539 f67daad
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Mar 1 18:08:46 2013 +0000
+
+    Merge "Added compute flavor support."
+
+commit f67daad71667c85e4cb5621b8755dbed39b23304
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Feb 25 11:22:18 2013 -0600
+
+    Added compute flavor support.
+    
+    Change-Id: Idb1eb2f838074ce5fb3d4aa7b72fd747ac6915c7
+
+commit 87375392a8fd4e6583734be5e5a31801ffa4016d
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Feb 25 11:57:28 2013 -0600
+
+    Remove underscore.
+    
+    Change-Id: Iaf2791b96e81d6a0d4846adb3128e4dff61faf30
+
+commit cca3061e0198cf96c16cd936e7b098283b4c82d6
+Merge: 237f0dd ac8b4ce
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Feb 22 19:43:10 2013 +0000
+
+    Merge "Added compute agent support."
+
+commit ac8b4ce4ac03ef884fde4fed5be00e3f5b42df8e
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Feb 19 12:38:22 2013 -0600
+
+    Added compute agent support.
+    
+    Change-Id: I818a2ea51a773f50da385cbdd71771a4ac923bd7
+
+commit 237f0dd612c426abdc35b9f21c4cca040e3f4264
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Feb 18 12:58:06 2013 -0600
+
+    Correct the version mapping to image service.
+    
+    This was preventing image support from being activated.
+    
+    Change-Id: I1b7ab9174b90c55423b244ca63402d33b4411a49
+
+commit 79001ce88a7c0a2197cad32ae84565822ad9b40e
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Mon Feb 11 16:10:25 2013 -0600
+
+    Add volume test cases and structure
+    
+    add basic unit test for client
+    update/modify test_shell.py to include volume
+    
+    Change-Id: I7d08e15a2711da5e51590b8a82eca3a1234962f8
+
+commit 7072b4f802ff5567f0781f89f360c5be43a7977e
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Fri Feb 1 01:12:05 2013 -0600
+
+    Add Cinder API V1 Support
+    
+    made the changes suggested by dtroyer
+    added client
+    modified setup.py entry points
+    updated pip required
+    added support for create/delete/list volume types
+    openstack list type
+    openstack create type typeName
+    openstack delete type typeNameOrId
+    
+    Change-Id: I43655de151582e37f14dc9550151a66db7a009ab
+
+commit f432131fe7228e05d2873e93f97b7281c756eb01
+Merge: c086030 fbc412e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Feb 7 22:18:10 2013 +0000
+
+    Merge "Multiple API version support"
+
+commit c086030133eb9c23aebeae8f6a4c70cd948864cb
+Merge: 50ceef8 1c44d26
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Feb 6 17:42:42 2013 +0000
+
+    Merge "Update .coveragerc"
+
+commit 50ceef8fb71028474edad654db963f8b1f061dca
+Merge: b26cb5b b675ca4
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Feb 6 17:41:17 2013 +0000
+
+    Merge "Sync latest openstack-common."
+
+commit fbc412e533bd7cb07c6d930e194f660e14b2319f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jan 31 19:30:25 2013 -0600
+
+    Multiple API version support
+    
+    * Use multiple entry point groups to represent each API+version
+      combination supported
+    * Add some tests
+    
+    Try it out:
+    * Right now only '* user' commands have multiple overlapping versions;
+      you can see the selection between v2.0 and v3 by looking at the
+      command help output for 'tenant' vs 'project':
+    
+      os --os-identity-api-version=2.0 help set user
+      os --os-identity-api-version=3 help set user
+    
+    Change-Id: I7114fd246843df0243d354a7cce697810bb7de62
+
+commit 1c44d260dc6d8e911c25219492cfe9ece8e50f8f
+Author: Alessio Ababilov <aababilov@griddynamics.com>
+Date:   Wed Feb 6 16:47:06 2013 +0200
+
+    Update .coveragerc
+    
+    Set up proper source and omit options.
+    
+    Change-Id: Ia067d229eb3d7a5806364de22724c16166950bc1
+    Implements: blueprint update-coveragerc
+
+commit b675ca4f7f254dd24ee9091dcbdf74b2b9d7aa3b
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 31 17:35:47 2013 -0600
+
+    Sync latest openstack-common.
+    
+    This fixes an issue when trying to run install_venv from within
+    the source directory.
+    
+    Change-Id: Id4dcb070319ec52d0a1b466e911fbfdf805db613
+
+commit b26cb5bf683e7f4f03d9704524a188b76ac5e9b9
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 31 13:31:41 2013 -0600
+
+    Upgraded to PEP8 1.3.3 to stay aligned with Nova, etc.
+    
+    Made all the necessary changes to pass new PEP8 standards.
+    
+    Also cleaned up docstrings to conform to the HACKING stanards.
+    
+    Change-Id: Ib8df3030da7a7885655689ab5da0717748c9edbe
+
+commit aa4f12aec1d13d02df2ecc2710d85ebd90d6dfe7
+Merge: 17a87b9 6a785bc
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jan 31 04:00:13 2013 +0000
+
+    Merge "Copy cfg and iniparser from oslo-incubator"
+
+commit 6a785bc6e00b9a585b9058bc7b72d8c38b747f0f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jan 30 21:36:43 2013 -0600
+
+    Copy cfg and iniparser from oslo-incubator
+    
+    https://review.openstack.org/20753 introduced tools/install_venv_common.py
+    but not it's dependencies openstack.common.{cfg,iniparser}
+    
+    Change-Id: I270a1d8f6fd8f93988a5e2ccbc446adda0a6cd81
+
+commit 17a87b9c0270053fc3ecfaade6606d135894e51c
+Author: Josh Kearney <josh@jk0.org>
+Date:   Wed Jan 30 13:56:12 2013 -0600
+
+    Clean up test_shell so that the tests are captured though the test framework.
+    
+    Also makes a small modification to gitignore.
+    
+    Change-Id: Iefbfbcfd35270b06ed65edb34708fa9b4d5bf563
+
+commit 26fcc303b29e5fdfc09baa363ba2ac4a5f77c7eb
+Merge: 6449851 282649c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 30 17:05:42 2013 +0000
+
+    Merge "Remove old/unsupported options from run_tests help message."
+
+commit 6449851a969f356e0c8d13bfbcefd6b2c21fb350
+Merge: 5a9fbc5 67bba28
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 30 15:43:59 2013 +0000
+
+    Merge "Use install_venv_common.py from oslo."
+
+commit 5a9fbc5fcad53cb3dba469289cafda4ca6446049
+Merge: 64cd45b 37b75a1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 30 15:43:58 2013 +0000
+
+    Merge "Updated README to reflect latest changes."
+
+commit 282649ca40a6d91a253d4191380be10db43375f2
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 29 16:44:58 2013 -0600
+
+    Remove old/unsupported options from run_tests help message.
+    
+    Change-Id: Ie0d796ecbd3c98b496a225c2a2c128db94a1831e
+
+commit 67bba28ed1d16300fb23cf3466a503d3fcf7d3b4
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 29 16:12:21 2013 -0600
+
+    Use install_venv_common.py from oslo.
+    
+    This syncs install_venv_common.py from oslo and reworks the
+    tools/install_venv.py script to use the new library.
+    
+    Change-Id: I3426a7f51b0018e074cc6f4b1d70b38e52464a38
+
+commit 37b75a10c253e3be3e34cac9906c9e0ac9556635
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 29 15:12:39 2013 -0600
+
+    Updated README to reflect latest changes.
+    
+    Change-Id: I996d5c0ec6e480fcbdc546bad238eee2e20504d6
+
+commit 64cd45b03d4ca740e9f28688bca9f4032fea9739
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 29 12:06:31 2013 -0600
+
+    Ensure that image and identity clients are constructed properly.
+    
+    Also removed tests that don't test anything.
+    
+    Change-Id: I0cb420248c8a1374110c014063fe029686e90216
+
+commit 4297e5781b03bad1c67cfdaa6cfdb73f6d1385de
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 24 12:33:17 2013 -0600
+
+    First pass at adding compute unit tests.
+    
+    Change-Id: Icf3340d457f75eec89bb0e5c9b4b953c3b81020f
+
+commit 1bb59c53ee8181ece69bed783d6563d8f74a78ad
+Merge: 910ad96 4c91e7c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jan 28 23:50:10 2013 +0000
+
+    Merge "Use the cliff framework's ShowOne as intended for `show image`."
+
+commit 910ad96441a092c3db8933b668a858b74615a91c
+Merge: d8225be def0f8a
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jan 28 23:49:44 2013 +0000
+
+    Merge "Sync latest openstack-common updates."
+
+commit d8225be7ce6453816479c0efa32921e36a268ee4
+Merge: b253534 0a4912f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jan 28 23:49:13 2013 +0000
+
+    Merge "Standardize on a copyright header and ensure all files have them."
+
+commit b25353434873c2586fee5bb3e0180cefe22136bc
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Thu Jan 17 22:11:05 2013 -0500
+
+    v3 identity - group and project api
+    
+    updated with latest comments
+    modified entry points in setup.py
+    added group.py (v3)
+    added project.py (v3)
+    fixed indentation
+    updated to include new headers
+    
+    Change-Id: Ice68b6c5bacb68d2e95321d903043056a9b8e810
+
+commit 72adfc61f228688e2514f32e7d8cfa3aa190cba8
+Author: Ilya Persky <ipersky@yahoo-inc.com>
+Date:   Fri Jan 25 13:49:55 2013 +0200
+
+    Fix test runner run_tests.sh is broken
+    
+    run_tests.sh contains incorrect variable assignment at line 80
+    which makes script to fail when trying to run tests.
+    
+    Fixes: bug #1105000
+    
+    Change-Id: Ib29c50f28d8b7e09935cd4136e709e0e0141ad2a
+
+commit 4c91e7c56e4379fad09d35aa2f0e09c3f3819622
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 24 11:39:18 2013 -0600
+
+    Use the cliff framework's ShowOne as intended for `show image`.
+    
+    Also reformat code to follow newer PEP8 version. Full cleanup
+    and PEP8 version bump coming in later patch.
+    
+    Change-Id: Ida3dd9a89660b9c4a91449846dd2d6e223ef187a
+
+commit def0f8ab7719f86f16424e941247732f8a98b735
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 24 12:08:35 2013 -0600
+
+    Sync latest openstack-common updates.
+    
+    Change-Id: I09adc9b5c01aa97ffba58dff8a696172e8654e3e
+
+commit 0a4912f9fb07a7330a2527af4cc7c8949c685401
+Author: Josh Kearney <josh@jk0.org>
+Date:   Thu Jan 24 12:00:30 2013 -0600
+
+    Standardize on a copyright header and ensure all files have them.
+    
+    Change-Id: I64812bca01ca655c9cf9239a0daea84907082a29
+
+commit 8d64cc2caa4be09a92c8965b54fff2d8fe49f775
+Merge: 63c8bb5 df34db8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 23 21:15:13 2013 +0000
+
+    Merge "Remove incorrect 'raise'."
+
+commit df34db8afbe85e64a4b5d11338ef08b3ed287539
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 22 14:03:35 2013 -0600
+
+    Remove incorrect 'raise'.
+    
+    Fixes bug 1096102.
+    
+    Change-Id: Ibcdccd949566f47bb516c7562149d6b0100fce18
+
+commit 63c8bb5306d15c7679b2cd1d22b6ee556967863d
+Author: Josh Kearney <josh@jk0.org>
+Date:   Tue Jan 22 11:09:11 2013 -0600
+
+    Migrate from nose to testr.
+    
+    Run tests with testr for parallel execution.
+    
+    Part of blueprint grizzly-testtools.
+    
+    Change-Id: I560592186f2f440049a451a32e58067262ab62d0
+
+commit c1ea2989049c102fde0ea22ac06d066a34d7b0db
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Jan 21 13:44:38 2013 -0600
+
+    Clean up test environment and remove unused imports.
+    
+    First round of adding more complete unit test coverage.
+    
+    Change-Id: Ic1979c499ca6fcb784892a95954a3527539c4e53
+
+commit 089f4cf7164053ddda9e94254d5a03df6edba44a
+Author: Josh Kearney <josh@jk0.org>
+Date:   Mon Jan 21 15:36:55 2013 -0600
+
+    Updated gitignore and manifest.
+    
+    Change-Id: Ifcac1c9177865da9d248769961ec17fa8f44e67a
+
+commit d336ce918e76f0d22c76f019f990d10214bc9395
+Merge: 6037133 eb1ae2e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jan 17 01:53:17 2013 +0000
+
+    Merge "Adds Glance API v2 support."
+
+commit eb1ae2e9f23d618069e5eee7abedbd5a049d2878
+Author: Josh Kearney <josh@jk0.org>
+Date:   Wed Dec 26 14:22:23 2012 -0600
+
+    Adds Glance API v2 support.
+    
+    Change-Id: Ib0325e62a7e50aa94e852a73f9a2cb95daa8d5f6
+
+commit 6037133f44d7d6d9f51de091c1b434793ddacb05
+Merge: c6755d5 fe3123b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jan 15 23:54:20 2013 +0000
+
+    Merge "Move from unittest2 to testtools"
+
+commit fe3123b802cae77cf14d161cf6460a3264e6e4c2
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Dec 27 11:50:53 2012 -0600
+
+    Move from unittest2 to testtools
+    
+    Change-Id: I475a082af0660e0ee0e86ca4cd1bf0e2d711e3ed
+
+commit c6755d5c2adfc565bcd09cf2567499ab7f958f8b
+Merge: e758562 0fe3efa
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Dec 27 17:39:52 2012 +0000
+
+    Merge "bug 1091029"
+
+commit e7585624ac2a23dd0c937b16cf2e6b12b9e0125e
+Author: Henry Nash <henryn@linux.vnet.ibm.com>
+Date:   Sat Nov 17 23:51:39 2012 +0000
+
+    Increment minimum required keystoneclient version number
+    
+    The movement of auth_token from keystone to keystoneclient is part
+    of the updated 0.2 version of keystoneclient.  The server still
+    maintains an import back from the client for backward compatibility.
+    However, in order to support this, installations must upgrade to
+    the latest 0.2 version of the client.
+    
+    Change-Id: I1ed1ebebbd56b2ed9c035c9e7d83783c8b2ae5fc
+
+commit 541895994fe3cd51aa29e87030e537e0438fdf54
+Merge: 67e413a 2fad9aa
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Dec 27 17:24:16 2012 +0000
+
+    Merge "Remove upper bounds on openstack dependencies."
+
+commit 0fe3efaacb5a7eb44d950b4ac7d16df2a495a9d6
+Author: Ben Andrews <andrewsben@gmail.com>
+Date:   Sun Dec 16 20:48:36 2012 -0500
+
+    bug 1091029
+    
+    sets version that pip can use for pyparser to one that is for python 2.X. 2.0.0 is only for python 3
+    
+    Change-Id: Ief16981b5e2c7d8716fdf77e15998cc9ffae9779
+    Fixes: bug #1091029
+
+commit 2fad9aa0f61a1ef2f93139000eeb81613a6b4456
+Author: James E. Blair <jeblair@hp.com>
+Date:   Fri Nov 16 16:38:03 2012 -0800
+
+    Remove upper bounds on openstack dependencies.
+    
+    Change-Id: Ib2980bc219aba66cfdbc67b7fc4eafbf6501ef23
+
+commit 67e413a224d8bec7729ec1aa703c6e4c91ee243b
+Author: Alessandro Pilotti <ap@pilotti.it>
+Date:   Mon Nov 5 18:34:15 2012 +0200
+
+    Fixes setup compatibility issue on Windows
+    
+    Fixes Bug #1052161
+    
+    "python setup.py build" fails on Windows due to a hardcoded shell path:
+    /bin/sh
+    
+    setup.py updated using openstack-common/update.py
+    
+    Change-Id: I33d38e0f96b6d124248c4a31959952d61cf1eb16
+
+commit fd85c7e1f4dc1017f784c384a507ce15a81dc327
+Author: Doug Hellmann <doug.hellmann@dreamhost.com>
+Date:   Mon Oct 22 18:48:25 2012 -0400
+
+    Add OpenStack trove classifier for PyPI
+    
+    Add trove classifier to have the client listed among the
+    other OpenStack-related projets on PyPI.
+    
+    Change-Id: I34c47bde5885a3f436c100cda5202d6ad8356131
+    Signed-off-by: Doug Hellmann <doug.hellmann@dreamhost.com>
+
+commit cd140091b5db30e9e3c95929cb5024c3b54ab139
+Merge: 2c512ac 90a1c65
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Sep 18 17:03:37 2012 +0000
+
+    Merge "Update compute client bits"
+
+commit 2c512acedeefd35d26e5351dad7afd33674f99ee
+Merge: 2372142 c49b049
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Sep 8 21:55:12 2012 +0000
+
+    Merge "Add cliff prereqs"
+
+commit c49b049af8654e8a4f89454fc9c706c99c7cbfa0
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Sep 5 11:12:32 2012 -0500
+
+    Add cliff prereqs
+    
+    The real issue is cmd2 not pulling in pyparsing properly on a fresh system.
+    
+    Change-Id: I9bae29f9a664431d0145ebc5a0cc4caec638d739
+
+commit 90a1c65f3ac90b1077eb3ea2f5fbe8a039ee9290
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Aug 20 18:02:30 2012 -0500
+
+    Update compute client bits
+    
+    * add server create, delete, pause, reboot, rebuild
+      resume, suspend, unpause commands
+    
+    Change-Id: I728ec199e4562bd621c3a73106c90d8b790b459a
+
+commit 2372142eaa9c584ba4bb37dc80d7ee6162560a77
+Author: lrqrun <lrqrun@gmail.com>
+Date:   Wed Aug 29 14:17:08 2012 +0800
+
+    Fix PEP8 issues.
+    
+    Fix some pep8 issues in doc/source/conf.py and tests/test_shell.py  make the code looks pretty.
+    
+    Change-Id: I927f03aff4190f1ac30eb56e7c545de555978c31
+
+commit 8010e773accce2d24c04659c88ac0c040c9a1932
+Author: Bhuvan Arumugam <bhuvan@apache.org>
+Date:   Wed Aug 22 15:57:59 2012 -0700
+
+    Document the use of keyring.
+    
+    * README.rst
+      Document the option --os-use-keyring, and environment variable
+      OS_USE_KEYRING, to enable keyring.
+    
+    Change-Id: I54ceb2d2692fecca328da16f6ed14db8d09a6eb7
+
+commit a5aa06c92f8624417fced545fd4799058dd22fdb
+Merge: 5bf1712 f0cefcc
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Aug 22 20:49:54 2012 +0000
+
+    Merge "Keyring support for openstackclient."
+
+commit 5bf17126b908c803e5c2eedb2614ea75a914fb18
+Author: Clark Boylan <clark.boylan@gmail.com>
+Date:   Tue Aug 21 14:37:29 2012 -0700
+
+    Add nosehtmloutput as a test dependency.
+    
+    Adding nosehtmloutput as a test dependency allows nose to output its
+    results to an html file. This will be used by Jenkins to save logs on
+    a different server.
+    
+    Change-Id: I9f7bdf848aeb0fee727da9cd3b651b3a3ce53182
+
+commit f0cefcc77d593198b6e295e92a8bf05fedc8c8ff
+Author: Bhuvan Arumugam <bhuvan@apache.org>
+Date:   Sun Jul 8 16:06:32 2012 -0700
+
+    Keyring support for openstackclient.
+    
+    Bug: 1030440
+    
+    If password is defined in keyring, use it; otherwise, prompt for the
+    password. Keying is configured using command line switch,
+    --os-use-keyring or env(OS_USE_KEYRING).
+    
+    * openstackclient/common/openstackkeyring.py
+      The abstract class for keyring, specifically for openstack. The
+      class is used to store encrypted password in keyring, without
+      prompting for keyring password. The encrypted password is
+      stored in ~/.openstack-keyring.cfg file.
+    
+    * openstack-common.py
+      Update openstackkeyring library from openstack.common.
+    
+    * openstackclient/shell.py
+      OpenStackClient.build_option_parser(): New boolean argument,
+       --os-use-keyring, default to env(OS_USE_KEYRING).
+      OpenStackClient.authenticate_user(): Get password from keyring,
+      if it is defined; otherwise, prompt for the password. If user
+      enter a password and keyring is enabled, store it in keyring.
+      OpenStackClient.init_keyring_backend(): New method to define
+      openstack backend for keyring.
+      OpenStackClient.get_password_from_keyring(): New method to
+      get password from keyring.
+      OpenStackClient.set_password_in_keyring(): New method go set
+      password in keyring.
+    
+    * toos/pip-requires
+      Define keyring and pycrypto as one of dependent.
+    
+    Change-Id: I36d3a63054658c0ef0553d68b38fefbc236930ef
+
+commit 540c4883d6f2de25dd38db0c18d59d568cd35f1e
+Author: Dolph Mathews <dolph.mathews@gmail.com>
+Date:   Fri Jul 13 14:54:24 2012 -0500
+
+    Secure password prompt (docs)
+    
+    Change-Id: I879a8aba13318f1dd660a487cbd1fd20c7ae659b
+
+commit 6d911d2d41dbe91edf2c8a56eebccfb5a1a3469d
+Merge: 2223308 b04d7a9
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jul 5 17:16:38 2012 +0000
+
+    Merge "Use PyPI for client libs."
+
+commit 222330898300676dbadd82d8c000a02ad964d35c
+Merge: fd1b118 39da32b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jul 5 16:56:35 2012 +0000
+
+    Merge "If no password in env or command line, try prompting."
+
+commit b04d7a988c260649a91693b7d0c7f5d200b1c1ed
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Mon Jul 2 17:46:56 2012 -0400
+
+    Use PyPI for client libs.
+    
+    Change-Id: I1a77f2a5973053de0e45b815359ff2fa42318682
+
+commit fd1b11856587167829f51c728066238d64a93e0e
+Merge: 89e21b6 1a5aabf
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jul 2 13:44:28 2012 +0000
+
+    Merge "Fixed a typo in the rst docs."
+
+commit 39da32b3a5d31a022e958c7b2ca752a1b6fbd3a2
+Author: Ken Thomas <krt@yahoo-inc.com>
+Date:   Fri Jun 29 22:29:46 2012 +0000
+
+    If no password in env or command line, try prompting.
+    
+    Implements blueprint password-prompt
+    
+    This logic was recently added to keystone as a short term fix. The long
+    term fix is to have that same logic here. Basically, if no password is
+    present in the env or command line and there's a tty available for us
+    to prompt, then attempt to use getpass.
+    
+    Change-Id: Ia0eec800b96c8f6ca1c2540e21e0e03c3880c713
+
+commit 89e21b6b30a1d3597c7e90ee87080439a8a8ec31
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Tue Jun 26 21:06:04 2012 -0500
+
+    Add read_versioninfo method.
+    
+    Change-Id: Iba12b260a30cc1311967a833e26eaeb9bf3afb47
+
+commit 1a5aabf6fcb9f306d4cb44f0583fac40f219fae7
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Tue Jun 26 16:57:33 2012 -0400
+
+    Fixed a typo in the rst docs.
+    
+    Change-Id: Ie3484f8fe0a63ff5a6815f3ec440adf7dc5d9482
+
+commit 99586e05d7f70e0adb2eddaff7f079ec04b464fd
+Author: Monty Taylor <mordred@inaugust.com>
+Date:   Mon Jun 25 11:31:49 2012 -0500
+
+    Add post-tag versioning.
+    
+    Change-Id: I98e5f7aa788b1ab1a866b21e0a17a63b8d5efae3
+
+commit 01dd4540c5d444274b02f71184a9779012c6c5e6
+Merge: f9aa3f3 3dceacf
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jun 22 17:39:46 2012 +0000
+
+    Merge "Update Contributing blurb in the docs."
+
+commit 3dceacf6cd735c7359e3676c362f609bc374c9ec
+Author: Clark Boylan <clark.boylan@gmail.com>
+Date:   Fri Jun 22 10:24:44 2012 -0700
+
+    Update Contributing blurb in the docs.
+    
+    Contributing blurb previously mentioned social coding and Github.
+    The OpenStack contribution workflow is slightly different. Provide
+    details on Github, LP, and Gerrit.
+    
+    Change-Id: Ie5ecd25e5828de611561f37b3acbccc5cf3f0d04
+
+commit f9aa3f3c844d35998361aa08e8c4f821b5d0bc90
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jun 20 10:05:56 2012 -0500
+
+    Create tests for shell interface
+    
+    * use unittest2
+    * shell: command-line options
+    
+    Change-Id: I558fb10b8607e4f6e5c44d5fcac902546a8748a4
+
+commit 697a5ac6cba6eb5c59e6b479153f4550c537ac3e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Jun 1 11:17:30 2012 -0500
+
+    Refactor cliff.Command.run()
+    
+    * All commands now perform their action in take_action().  Those producing
+      output are derived from DisplayCommandBase.
+    
+    Change-Id: Ic93ba9a2ad449d84242b6aa8624b41379c4fb79a
+
+commit 9be580399350a55202af22cbbd47bb2c67494cbc
+Merge: 6a8302b 77e5ce5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jun 14 13:55:59 2012 +0000
+
+    Merge "Move docs to doc."
+
+commit 6a8302b5321c7a9e81d9c458fc72f18663e04187
+Author: Clark Boylan <clark.boylan@gmail.com>
+Date:   Wed Jun 13 10:49:43 2012 -0700
+
+    Fix pep8 issues.
+    
+    Fix several pep8 issues and pin the pep8 test to pep8 version 1.1.
+    This should prevent future changes from being unmergable by the pep8
+    gate after a pep8 upgrade.
+    
+    Change-Id: I4678a9179579fb5c7afe795fb43a8a89a99ad717
+
+commit 77e5ce57fd0a5c912ac1c270cb94ac43bb637389
+Author: Clark Boylan <clark.boylan@gmail.com>
+Date:   Mon Jun 11 14:37:02 2012 -0700
+
+    Move docs to doc.
+    
+    To better facilitate the building and publishing of sphinx
+    documentation by Jenkins we are moving all openstack projects with
+    sphinx documentation to a common doc tree structure. Documentation
+    goes in project/doc/source and build results go in project/doc/build.
+    
+    Change-Id: I925e687254bac9e06c2c520f4fc35a083e21c4ca
+
+commit 64f685ad635a78ef4e1cb237652425c818219532
+Author: Matt Joyce <matt.joyce@cloudscaling.com>
+Date:   Tue May 29 14:29:45 2012 -0700
+
+    minor fixes
+    
+    Change-Id: Ib5601e1a932e0bfaa0341909416415d1e81ee915
+
+commit 8d089518f087a6072b75fdce8b69d7e302cfb374
+Author: Matt Joyce <matt.joyce@cloudscaling.com>
+Date:   Wed May 23 12:18:53 2012 -0700
+
+    removing print call in roles get_data
+    
+    Change-Id: I2aebf6099821212d4bd4b4b6d78b9752085168b2
+
+commit 3acb1c6a855527a384393d4caf92483bdc6562d1
+Merge: 23b42e2 ec586a7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 22 13:59:31 2012 +0000
+
+    Merge "Fix 'set user' command"
+
+commit 23b42e2e4ef3cf27ba3c4f73ff2e5b09882add80
+Merge: 14ffd1c a4aaac7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon May 21 16:48:25 2012 +0000
+
+    Merge "Add role CRUD commands"
+
+commit 14ffd1c1df80fa771d9defc36a6b7ff082f2f810
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Sat May 19 23:19:52 2012 -0400
+
+    Documented python setup.py develop
+    
+    Change-Id: Ic17f17e6c80f54a633676b7e17a899748038f8d6
+
+commit ec586a75f40c722f1b06172d2369858716ad12a5
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 18 17:19:10 2012 -0500
+
+    Fix 'set user' command
+    
+    * missing --name arguemnt in parser for SetUser()
+    * correct Identity api call for SetUser()
+    
+    Fix bug 1001384
+    
+    Change-Id: I51169a0585c1bfe106ddd2e390269f69fc32852c
+
+commit a4aaac78a90e2e2e8855a2d506182558e92e89ce
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 16 16:22:03 2012 -0500
+
+    Add role CRUD commands
+    
+    * add {add|create|delete|list|remove|show|user-list} role commands
+    
+    Change-Id: I27129168a9f58154fcdb062a533fa926737f822f
+
+commit 0c4e131c6ea6f6756e0d6cb2f5dd6e2a399d7829
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon May 14 17:43:30 2012 -0500
+
+    Add endpoint CRUD commands
+    
+    * add {create|delete|list|show} endpoint commands
+    
+    Change-Id: Ife9fa789d5818d63288b09687b43d802b1b97858
+
+commit f3dd77f30aedf6abb47a2790baaa68b07a06805c
+Merge: a7fe774 fad694e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 16 17:17:16 2012 +0000
+
+    Merge "Added :: to readme.rst to format correctly."
+
+commit a7fe774554aa620950ac2f88e25c7a4e1da8dad0
+Merge: b8ce565 c4d00b1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 16 17:16:23 2012 +0000
+
+    Merge "Moved test related packages to test-requires"
+
+commit fad694e42838d058f83e395d4c7111195e08be1b
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Wed May 16 13:05:18 2012 -0400
+
+    Added :: to readme.rst to format correctly.
+    
+    Also zapped a trailing bit of whitespace
+    
+    Change-Id: I49d0306c0e73f096d091c27ba54705d9dbe9c0ca
+
+commit b8ce56584b590b639e6a797bf1a078ce2c9c2408
+Merge: df5927a 4109bdb
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 16 17:05:30 2012 +0000
+
+    Merge "Added conf.py so Sphinx docs will build"
+
+commit df5927a0938ba65e96f7b3516791f45290769758
+Merge: e1afa4c 90f9f1d
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 16 17:04:44 2012 +0000
+
+    Merge "Clean up tenant and server"
+
+commit 90f9f1dfa086f24975b4a11df9c7b46a07c430af
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 16 11:25:34 2012 -0500
+
+    Clean up tenant and server
+    
+    * remove '_' from class names
+    * add class name to log instances
+    * some cleanups to HACKING
+    
+    Change-Id: I1f6334318ee0d7d83cd3cea0e71ba4f05dd2b5c5
+
+commit 4109bdb5a08af0e41664d9318db6dc888f228e6b
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Wed May 16 12:08:09 2012 -0400
+
+    Added conf.py so Sphinx docs will build
+    
+    Change-Id: I4f88dfe0056ce724a152713719abdf3910663ead
+
+commit e1afa4c7cc19054844aee607ccc87d683375a9d8
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Wed May 16 12:02:18 2012 -0400
+
+    Document how to install the client
+    
+    This documents a workaround for bug 993390.
+    
+    Change-Id: I6d930aa9ad142096cdc2790df4be31f0b1570199
+
+commit c4d00b179802b1768d801e559c7f942ae7b0b5ff
+Author: Lorin Hochstein <lorin@nimbisservices.com>
+Date:   Wed May 16 11:56:16 2012 -0400
+
+    Moved test related packages to test-requires
+    
+    Change-Id: Ib4a4394b279188aa969c504b52b19c26746a97e1
+
+commit d6a27627464a36f86ce63a81c733132231064536
+Merge: d6a4fb8 0740d85
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 16 14:29:23 2012 +0000
+
+    Merge "Add user CRUD commands"
+
+commit d6a4fb836f7be64793f8d42b0a811eb81c50f455
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 11 17:19:08 2012 -0500
+
+    Update service commands
+    
+    * add {create|delete} service
+    * allow 'service' arg to also search type attribute in show command
+    
+    Change-Id: I992359dc95fab1fbdab0666d5cbb75e44ba6e0f3
+
+commit 0740d85c209ec0d0aa2d81ff1d66222020c6db46
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 10 16:25:31 2012 -0500
+
+    Add user CRUD commands
+    
+    * add {create|delete|list|set|show} user commands
+    * fix pep8 issues
+    
+    Change-Id: I46fe2375b8b4f95b82d8ba31ee8fb660a067d50a
+
+commit fd8197de6d8178ded323fd6e0bcc0c0b59ff30f3
+Merge: 25051a7 8939d26
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 15 19:12:33 2012 +0000
+
+    Merge "fix authentication setup in interactive mode and improve error handling so tracebacks are not printed twice"
+
+commit 25051a733da7dbcaf8a06d3bc8c3b2397e178494
+Author: Matt Joyce <matt.joyce@cloudscaling.com>
+Date:   Mon May 14 17:01:46 2012 -0700
+
+    Updating Readme Document
+    
+    Change-Id: I0c0f5c86b0bfa96ab4d7236eb2e7e7efab6fbac0
+
+commit 732863b9b7039de9de3bb686db2b70a1a4879b87
+Author: Matt Joyce <matt.joyce@cloudscaling.com>
+Date:   Tue May 8 10:09:53 2012 -0700
+
+    correcting ordering of imports
+    
+    undoing ordering patch.  adding more explicit descreption of
+    ordering rules to HACKING document.
+    
+    Change-Id: I7b7d755f44e382b54f237914e654a05766ec5c2c
+
+commit 8939d26a5bb055b7b818463ce3894d85ecc532eb
+Author: Doug Hellmann <doug.hellmann@dreamhost.com>
+Date:   Mon May 14 10:50:25 2012 -0400
+
+    fix authentication setup in interactive mode and improve error handling so tracebacks are not printed twice
+    
+    Change-Id: I59fb07369edad3b2f2abddba3c0d0f6bbce1eab1
+
+commit f485d71222179b442470667934af7dff4f34d244
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 11 15:11:07 2012 -0500
+
+    Revise command boolean flags
+    
+    * use --enable|--disable form for boolean 'enabled' value
+    * clean up logging strings
+    
+    Change-Id: Ib4016bbef1763c27ec5a9edf36b926dc0d0b265c
+
+commit fa4a4a37d6ce931a9832677dea1edffd228300a4
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 10 16:25:31 2012 -0500
+
+    Move get_client_class() to common.utils
+    
+    * add constants for API_NAME
+    
+    Change-Id: I8ccf72f032227e0a452d96303181549b1b11a5d1
+
+commit 5378322906a636bc2b9685e7403950549ef213f5
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 10 16:25:31 2012 -0500
+
+    Add tenant CRUD commands
+    
+    * add {create|delete|set} tenant commands
+    
+    * move get_XXXX_properties() to common.utils.get_item_properties()
+      add mixed_case_fields as an optional arg
+    
+    Change-Id: I7b3bd9cefb08e39730886b31213cbe422b5a8453
+
+commit 712a8c7f9c5c89071f7f3d87a8d4484921581cf6
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 10 15:47:59 2012 -0500
+
+    Add API versioning support
+    
+    * Specific versions supported are managed in XXXXXX.client.py with a
+      mapping from version to client class.  This is based on the scheme
+      that is included in novaclient; none of the other client libs have
+      that capability.
+    
+    Change-Id: I930b197f1189e7f52c3b0096e73e0773cf925542
+
+commit 9d224b3bf811c9c0b41246b7bfe937dd172ed95e
+Merge: bf582a2 cc0adad
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu May 10 20:18:51 2012 +0000
+
+    Merge "Add tenant commands, work on service"
+
+commit bf582a2d56e6eaaaf20f8b399dd6bdd7789e056f
+Author: Doug Hellmann <doug.hellmann@dreamhost.com>
+Date:   Thu May 10 15:20:40 2012 -0400
+
+    look at the command the user is going to run before trying to authenticate them
+    
+    Change-Id: I4edc6a0f1e16be4cd80fe01f62869094b50ef120
+
+commit 3b2129f0b8e7e71797aec1b6280f3867a7128bcf
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 10 14:58:16 2012 -0500
+
+    Add copyright notices and update dates
+    
+    Change-Id: I54a7d99328143205ab97ea930aeeeb69fe92c76c
+
+commit cc0adad81ec48de27c1cbb6eac5563b13439d368
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 9 17:17:04 2012 -0500
+
+    Add tenant commands, work on service
+    
+    * adds {list|show} tenant
+    * fleshes out service commands (still WIP)
+    
+    Change-Id: I9dabb6ed3f128a30f140146928320f033d097a06
+
+commit 6fb1a4e496f6860c800f08e68c05b7e95be36c3b
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 9 17:15:43 2012 -0500
+
+    More identity client config
+    
+    * move auth option checking back to OpenStackShell() to keep the shell-level
+      interaction at that level; add checking for token flow options
+    
+    * make identity.client.make_client() configure keystoneclient.v2_0.Client()
+      properly for both password flow and token flow auth
+    
+    * eliminated ClientManager.init_token(), set _service_catalog in __init__()
+    
+    * compute client handles token flow
+    
+    Change-Id: I42481b5424489387798c4ec6d3e2a723ab1e6067
+
+commit a7da2b8008c7429eab270aa937f563dfa3353afa
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon May 7 11:13:19 2012 -0500
+
+    Remove printt
+    
+    Remove unused common.utils functions
+    prettyprint 0.6 removed printt at the last minute, our references
+    to it turned out to be in unused code; remove it.
+    
+    Change-Id: I38a4d9a169beaecfd53eafc5b10f06201bac0c31
+
+commit 70b3246a1983700736b7ce4c83e9381d987cc598
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 4 12:28:35 2012 -0500
+
+    Add Identity to ClientManager
+    
+    * Make the Identity client in identity.client.make_client()
+    * Auth via ClientManager.identity
+    * Skip extra auth roundtrip in compute client
+    
+    Change-Id: I0190639e38f83997c233195f6cc27ff3afdfba10
+
+commit 5e4032150d360a305397e0220e51c5a66f2f5313
+Author: Doug Hellmann <doug.hellmann@dreamhost.com>
+Date:   Wed May 2 17:02:08 2012 -0400
+
+    Fix "help" command and implement "list server" and "show server"
+    
+    blueprint client-manager
+    blueprint nova-client
+    bug 992841
+    
+    Move the authentication logic into a new ClientManager class so that only commands that need to authenticate will trigger that code.
+    Implement "list server" and "show server" commands as examples of using the ClientManager, Lister, and ShowOne classes.
+    
+    Change-Id: I9845b70b33bae4b193dbe41871bf0ca8e286a727
+
+commit b5a809d8e39e856a4b5e60383f5f35065a48fd12
+Author: Matt Joyce <matt.joyce@cloudscaling.com>
+Date:   Wed May 2 22:09:29 2012 -0700
+
+    Adding HACKING doc to project
+    
+    Change-Id: I57594c0845def5591a01384be9740089b4722075
+
+commit ee5ebd6be5fd5048836f6404acad19e1ff25c833
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 2 09:45:32 2012 -0500
+
+    Change binary name to 'openstack'
+    
+    Change-Id: I4fae0b2101a73637b7f8a300ac1b5c3a9de0471b
+
+commit 3c7350b3c97fcbc4d2dbad9cd49b50282a4a4047
+Author: Bhuvan Arumugam <bhuvan@apache.org>
+Date:   Tue May 1 16:27:58 2012 -0700
+
+    Auto generate AUTHORS for python-openstackclient.
+    
+    Bug: 976267
+    
+    Now that git commits are gated by CLA, we shouldn't enforce
+    committers to add an entry in AUTHORS file. The AUTHORS file
+    should be generated automatically, based on git commits.
+    
+    This commit fixes the problem.
+    
+    * AUTHORS
+      Remove this file.
+    
+    * tests/test_authors.py
+      Remove this test case.
+    
+    * .gitignore
+      Add AUTHORS file.
+    
+    * openstackclient/openstack/common/setup.py
+      generate_authors(): New method to create AUTHORS file. If
+      AUTHORS.in file exists, append it's content to AUTHORS file.
+    
+    * setup.py
+      Import the new method.
+      Generate AUTHORS file before creating the package.
+    
+    Change-Id: Ia5488a43f88e13a0fb1f7a5d8d10a576b9034dc8
+
+commit 67ea436a990154e54ebb25444d580d0eca886ad2
+Author: Matt Joyce <matt@nycresistor.com>
+Date:   Tue May 1 15:49:18 2012 -0700
+
+    Adding name to Authors and updating a bad URL.  More to get my gerrit workflow up.
+    
+    Change-Id: I3270dd6bd8ff1ed0d7458966b364134542a2471f
+
+commit 3c48fe0dca2a0454271425c06132d36e6c2a09fd
+Merge: de299f8 7b768ae
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 1 20:23:18 2012 +0000
+
+    Merge "Reset project version to 0.1"
+
+commit de299f8b7e81af251f65dc1a1a4d139e3a96cd8f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue May 1 08:37:38 2012 -0500
+
+    Shell init & logging
+    
+    * Split global app init to initialize_app()
+    * Set up logging & eliminate debug prints
+    
+    Change-Id: I7c1e1f6fa336a4ff828007e240c890282cbd3015
+
+commit 7b768ae5536c0f5d328bd37cdcbd5a485808b957
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Tue May 1 14:59:19 2012 -0500
+
+    Reset project version to 0.1
+    
+    Using a 2012.x version format commits us to the OpenStack release schedule.
+    The project is young and not core, we want to work independant of that at
+    least for a while.
+    
+    Change-Id: I43569630cbfd94d45dfc490cba26991f9238e475
+
+commit 95c2f27fa46d44f9eacfc44954b74ce9cc4becd3
+Author: James E. Blair <jeblair@hp.com>
+Date:   Sat Apr 28 22:21:53 2012 +0000
+
+    Add openstack-common and test infrastructure.
+    
+    Fix pep8 errors (project is pep8 clean now).
+    
+    Update setup.py to use openstack-common style dependencies.
+    
+    Remove the unused novaclient dependency.
+    
+    Change the keystoneclient dependency to a git URL.
+    
+    Add test-requires, and move some pip-requires dependencies
+    into it.
+    
+    Remove the test_utils unit test which wasn't testing anything
+    that is actually present in the project.
+    
+    Add the test_authors unit test.
+    
+    Use tox for running tests locally.
+    
+    See: http://wiki.openstack.org/ProjectTestingInterface
+    
+    Tox can manage virtualenvs, and is currently doing so for running
+    tests in Jenkins. It's just as, or more, useful for running tests
+    locally, so this starts the migration from the run_tests system to
+    tox. The goal is to reduce duplicate testing infrastructure, and
+    get what's running locally on developer workstations as close to
+    what is run by Jenkins as possible.
+    
+    Run_tests.sh will now call tox to facilitate the transition for
+    developers used to typing "run_tests.sh".
+    
+    Developers will need tox installed on their workstations. It can
+    be installed from PyPI with "pip install tox". run_tests.sh outputs
+    those instructions if tox is not present.
+    
+    New facilities are available using tox directly, including:
+    
+    tox -e py26 # run tests under python 2.6
+    tox -e py27 # run tests under python 2.7
+    tox -e pep8 # run pep8 tests
+    tox # run all of the above
+    tox -e venv foo # run the command "foo" inside a virtualenv
+    
+    The OpenStack nose plugin is used when running tox from the
+    command line, so the enhanced, colorized output is visible to
+    developers running the test suite locally. However, when Jenkins
+    runs tox, xunit output will be used instead, which is natively
+    understood by jenkins and much more readable in that context.
+    
+    Change-Id: Ib627be3b37b5a09d3795006d412ddcc35f8c6c1e
+
+commit 9c945bee7995f1853d7c8c2f55087ce4c00fa42d
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Apr 27 12:25:25 2012 -0500
+
+    Cleanup auth client path
+
+commit 04730e6f409e94a8b41c296e9e660d147bf0a17f
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Apr 27 11:53:06 2012 -0500
+
+    Add 'list service' command and common modules
+
+commit 2f2191b9edc324f7a064a2229e2037bb0d6f4dcb
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Apr 27 11:49:01 2012 -0500
+
+    Add token auth to shell and README
+
+commit 60ed9aaa8aa72ecff420d303765d29f24a78bbc2
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 26 17:18:37 2012 -0500
+
+    Begin to add Keystone auth
+
+commit d8c6415c66b55182505f997fa4f55566d9d43a11
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 26 10:31:14 2012 -0500
+
+    Change to argparse to match cliff 0.2
+
+commit ba81c1d04a9896f1e24ca43592b93b26047705ef
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 26 10:33:06 2012 -0500
+
+    Clean up command output
+
+commit 4ceef3b693613eb4968c1e1909165a7c75eb930e
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Apr 25 16:48:19 2012 -0500
+
+    Use cliff
+
+commit 06f82305b56015df6496bf9a2d40ef4f93726454
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Apr 25 16:10:05 2012 -0500
+
+    Set up common utils
+
+commit 11d3ba457018ac2179669309c65d806c53476649
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Apr 19 22:41:44 2012 -0500
+
+    Add openstackclient bits
+
+commit f4b5ef39f6f84e66af532583040c9be7556e9b69
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Apr 18 13:16:39 2012 -0500
+
+    First commit
