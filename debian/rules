@@ -15,3 +15,8 @@ override_dh_auto_clean:
 override_dh_auto_build:
 	dh_auto_build
 	make -C doc man
+
+ifeq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+override_dh_auto_test:
+	python setup.py testr || true
+endif
