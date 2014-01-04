@@ -2,24 +2,30 @@ Source: python-openstackclient
 Section: python
 Priority: optional
 Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
-Uploaders: gustavo panizzo <gfa@zumbi.com.ar>,
-           Thomas Goirand <zigo@debian.org>
-Build-Depends: debhelper (>= 9), 
+Uploaders: gustavo panizzo <gfa@zumbi.com.ar>, Thomas Goirand <zigo@debian.org>
+Build-Depends: debhelper (>= 9),
                openstack-pkg-tools,
-               python-setuptools, 
-               python-all (>= 2.6.6-3~), 
-               python-pbr (>= 0.5.21), 
-               python-pbr (<= 1.0), 
-               python-cliff (>= 1.4.3),
-               python-keyring (>= 1.6.1),
-               python-crypto (>= 2.6.0),
-               python-glanceclient (>= 0.9.0),
-               python-keystoneclient (>= 0.4.1),
-               python-novaclient (>= 2.15.0),
-               python-cinderclient (>= 1.0.6),
-               python-requests (>= 1.1),
-               python-six (>= 1.4.1),
-               python-sphinx
+               python-all (>= 2.6.6-3~),
+               python-pbr (>= 0.5.21),
+               python-setuptools
+Build-Depends-Indep: python-babel (>= 1.3),
+                     python-cinderclient (>= 1:1.0.6),
+                     python-cliff (>= 1.4.3),
+                     python-coverage (>= 3.6),
+                     python-crypto (>= 2.6.0),
+                     python-fixtures (>= 0.3.14),
+                     python-glanceclient (>= 1:0.9.0),
+                     python-hacking,
+                     python-keyring (>= 1.6.1),
+                     python-keystoneclient (>= 1:0.4.1),
+                     python-mock (>= 1.0),
+                     python-novaclient (>= 2:2.15.0),
+                     python-requests (>= 1.1),
+                     python-six (>= 1.4.1),
+                     python-sphinx (>= 1.1.2),
+                     python-testtools (>= 0.9.32),
+                     python-webob (>= 1.2.3),
+                     testrepository (>= 0.0.17)
 Standards-Version: 3.9.5
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-openstackclient.git
 Vcs-Git: git://anonscm.debian.org/openstack/python-openstackclient.git
@@ -27,7 +33,17 @@ Homepage: http://wiki.openstack.org/OpenStackClient
 
 Package: python-openstackclient
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}
+Depends: python-cinderclient (>= 1:1.0.6),
+         python-cliff (>= 1.4.3),
+         python-crypto (>= 2.6.0),
+         python-glanceclient (>= 1:0.9.0),
+         python-keyring (>= 1.6.1),
+         python-keystoneclient (>= 1:0.4.1),
+         python-novaclient (>= 2:2.15.0),
+         python-requests (>= 1.1),
+         python-six (>= 1.4.1),
+         ${misc:Depends},
+         ${python:Depends}
 Recommends: ${python:Recommends}
 Description: OpenStack Command-line Client
  python-openstackclient is a unified command-line client for the OpenStack APIs.
