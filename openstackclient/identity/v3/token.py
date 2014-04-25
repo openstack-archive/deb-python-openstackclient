@@ -185,6 +185,24 @@ class CreateRequestToken(show.ShowOne):
         return zip(*sorted(six.iteritems(request_token)))
 
 
+class CreateToken(show.ShowOne):
+    """Create token command"""
+
+    log = logging.getLogger(__name__ + '.CreateToken')
+
+    def get_parser(self, prog_name):
+        parser = super(CreateToken, self).get_parser(prog_name)
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug('take_action(%s)' % parsed_args)
+        identity_client = self.app.client_manager.identity
+        token = identity_client.service_catalog.get_token()
+        if 'tenant_id' in token:
+            token['project_id'] = token.pop('tenant_id')
+        return zip(*sorted(six.iteritems(token)))
+
+
 class DeleteAccessToken(command.Command):
     """Delete access token command"""
 
@@ -195,12 +213,12 @@ class DeleteAccessToken(command.Command):
         parser.add_argument(
             'user',
             metavar='<user>',
-            help='Name or Id of user',
+            help='Name or ID of user',
         )
         parser.add_argument(
             'access_key',
             metavar='<access-key>',
-            help='Access Token to be deleted',
+            help='Access token to be deleted',
         )
         return parser
 
@@ -225,7 +243,7 @@ class ListAccessToken(lister.Lister):
         parser.add_argument(
             'user',
             metavar='<user>',
-            help='Name or Id of user',
+            help='Name or ID of user',
         )
         return parser
 

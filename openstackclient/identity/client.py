@@ -40,12 +40,21 @@ def make_client(instance):
         LOG.debug('instantiating identity client: token flow')
         client = identity_client(
             endpoint=instance._url,
-            token=instance._token)
+            token=instance._token,
+            cacert=instance._cacert,
+            insecure=instance._insecure,
+        )
     else:
         LOG.debug('instantiating identity client: password flow')
         client = identity_client(
             username=instance._username,
             password=instance._password,
+            user_domain_id=instance._user_domain_id,
+            user_domain_name=instance._user_domain_name,
+            project_domain_id=instance._project_domain_id,
+            project_domain_name=instance._project_domain_name,
+            domain_id=instance._domain_id,
+            domain_name=instance._domain_name,
             tenant_name=instance._project_name,
             tenant_id=instance._project_id,
             auth_url=instance._auth_url,
@@ -64,4 +73,4 @@ class IdentityClientv2_0(identity_client_v2_0.Client):
         if name == "projects":
             return self.tenants
         else:
-            raise AttributeError, name
+            raise AttributeError(name)

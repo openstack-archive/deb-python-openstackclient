@@ -17,6 +17,7 @@
 
 import datetime
 import logging
+import sys
 
 from cliff import lister
 
@@ -34,7 +35,7 @@ class ListUsage(lister.Lister):
             "--start",
             metavar="<start>",
             default=None,
-            help="Usage range start date ex 2012-01-20"
+            help="Usage range start date, ex 2012-01-20"
                 " (default: 4 weeks ago)."
         )
         parser.add_argument(
@@ -95,8 +96,10 @@ class ListUsage(lister.Lister):
             pass
 
         if len(usage_list) > 0:
-            print("Usage from %s to %s:" % (start.strftime(dateformat),
-                                            end.strftime(dateformat)))
+            sys.stdout.write("Usage from %s to %s:" % (
+                start.strftime(dateformat),
+                end.strftime(dateformat),
+            ))
 
         return (column_headers,
                 (utils.get_item_properties(

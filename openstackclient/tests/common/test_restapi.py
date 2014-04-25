@@ -19,6 +19,7 @@ import json
 import mock
 
 import requests
+import six
 
 from openstackclient.common import restapi
 from openstackclient.tests import utils
@@ -55,13 +56,15 @@ fake_headers = {
 
 
 class FakeResponse(requests.Response):
-    def __init__(self, headers={}, status_code=None, data=None, encoding=None):
+    def __init__(self, headers={}, status_code=200, data=None, encoding=None):
         super(FakeResponse, self).__init__()
 
         self.status_code = status_code
 
         self.headers.update(headers)
         self._content = json.dumps(data)
+        if not isinstance(self._content, six.binary_type):
+            self._content = self._content.encode()
 
 
 @mock.patch('openstackclient.common.restapi.requests.Session')

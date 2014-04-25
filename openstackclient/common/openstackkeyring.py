@@ -13,7 +13,7 @@
 #   under the License.
 #
 
-"""Keyring backend for Openstack, to store encrypted password in a file."""
+"""Keyring backend for OpenStack, to store encrypted password in a file."""
 
 from Crypto.Cipher import AES
 
@@ -24,8 +24,8 @@ import os
 KEYRING_FILE = os.path.join(os.path.expanduser('~'), '.openstack-keyring.cfg')
 
 
-class OpenstackKeyring(keyring.backends.file.BaseKeyring):
-    """Openstack Keyring to store encrypted password."""
+class OpenStackKeyring(keyring.backends.file.BaseKeyring):
+    """OpenStack Keyring to store encrypted password."""
     filename = KEYRING_FILE
 
     def supported(self):
@@ -37,7 +37,7 @@ class OpenstackKeyring(keyring.backends.file.BaseKeyring):
         block_size = 32
         padding = '0'
 
-        # init the cipher with the class name, upto block_size
+        # init the cipher with the class name, up to block_size
         password = __name__[block_size:]
         password = password + (block_size - len(password) %
                                block_size) * padding
@@ -56,5 +56,5 @@ class OpenstackKeyring(keyring.backends.file.BaseKeyring):
 
 def os_keyring():
     """Initialize the openstack keyring."""
-    keyring = 'openstackclient.common.openstackkeyring.OpenstackKeyring'
-    return keyring.core.load_keyring(None, keyring)
+    ring = 'openstackclient.common.openstackkeyring.OpenStackKeyring'
+    return keyring.core.load_keyring(None, ring)

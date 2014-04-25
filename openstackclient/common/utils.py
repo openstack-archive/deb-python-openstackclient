@@ -15,6 +15,8 @@
 
 """Common client utilities"""
 
+import getpass
+import logging
 import os
 import six
 import sys
@@ -215,3 +217,31 @@ def wait_for_status(status_f,
             callback(progress)
         time.sleep(sleep_time)
     return retval
+
+
+def get_effective_log_level():
+    """Returns the lowest logging level considered by logging handlers
+
+    Retrieve an return the smallest log level set among the root
+    logger's handlers (in case of multiple handlers).
+    """
+    root_log = logging.getLogger()
+    min_log_lvl = logging.CRITICAL
+    for handler in root_log.handlers:
+        min_log_lvl = min(min_log_lvl, handler.level)
+    return min_log_lvl
+
+
+def get_password(stdin):
+    if hasattr(stdin, 'isatty') and stdin.isatty():
+        try:
+            while True:
+                first_pass = getpass.getpass("User password: ")
+                second_pass = getpass.getpass("Repeat user password: ")
+                if first_pass == second_pass:
+                    return first_pass
+                print("The passwords entered were not the same")
+        except EOFError:  # Ctl-D
+            raise exceptions.CommandError("Error reading password.")
+    raise exceptions.CommandError("There was a request to be prompted for a"
+                                  " password and a terminal was not detected.")
