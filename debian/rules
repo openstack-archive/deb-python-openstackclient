@@ -6,16 +6,22 @@ include /usr/share/openstack-pkg-tools/pkgos.make
 export OSLO_PACKAGE_VERSION=$(VERSION)
 
 %:
-	dh $@ --with python2
+	dh $@ --with python2,sphinxdoc
 
 override_dh_auto_clean:
 	rm -rf doc/build build python_openstackclient.egg-info .testrepository
 
 override_dh_auto_build:
 	dh_auto_build
-	make -C doc man
 
 ifeq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:
 	python setup.py testr || true
+endif
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
+	sphinx-build -b man doc/source doc/build/man
+	PYTHONPATH=. sphinx-build -b html doc/source $(CURDIR)/debian/python-openstackclient/usr/share/doc/python-openstackclient/html
+	dh_sphinxdoc -O--buildsystem=python2
 endif

@@ -43,7 +43,8 @@ Depends: python-cinderclient (>= 1:1.0.6),
          python-requests (>= 1.1),
          python-six (>= 1.4.1),
          ${misc:Depends},
-         ${python:Depends}
+         ${python:Depends},
+         ${sphinxdoc:Depends}
 Recommends: ${python:Recommends}
 Description: OpenStack Command-line Client
  python-openstackclient is a unified command-line client for the OpenStack APIs.
