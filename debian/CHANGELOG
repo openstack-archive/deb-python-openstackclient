@@ -1,3 +1,452 @@
+commit b7f673cb81f1a6539739dc6d12eaef7455bf63fd
+Merge: 8be3e24 eddab62
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Feb 26 23:18:34 2014 +0000
+
+    Merge "Fix volume commands with multiple regions"
+
+commit 8be3e249b6bb63188e8f31874827bb9c4b45ff40
+Author: Jamie Lennox <jamielennox@redhat.com>
+Date:   Wed Feb 26 13:26:45 2014 +1000
+
+    Use cacert values when creating identity client
+    
+    These were ignored when the client was created with a username and
+    password.
+    
+    Change-Id: Id7557a5b07a41c7f79ab1a05ede385da31889940
+    Closes-Bug: #1284957
+
+commit 125393210bd40d70d77a4667922a4a33f569a7ef
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Sun Feb 23 09:31:55 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: Icad0fcf4125b4aefac7ed8f0df5bef2c6ee64594
+
+commit 8fe50fc75d4fa26557662af0759c44cb22c5fb79
+Merge: 034a9d1 5043293
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Feb 23 06:17:49 2014 +0000
+
+    Merge "Fix some help strings"
+
+commit 034a9d158f27bb9bd1a7430c09d1826196215093
+Merge: 8b494f0 033f27f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Feb 22 06:00:18 2014 +0000
+
+    Merge "Add ability to prompt for passwords for user create and set"
+
+commit eddab621094e5da9f9c6bf2ae27a872625c8e135
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Fri Feb 21 17:22:26 2014 -0700
+
+    Fix volume commands with multiple regions
+    
+    The region_name was not passed into the the client causing volume
+    commands to fail if there were multiple regions.
+    
+    Change-Id: I066dbbc4852f412e017daeeb16a3f186d3f91d2f
+    Closes-Bug: #1241177
+
+commit 033f27fe4dc4455c2f07978a273fd65faa653b67
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Feb 19 19:30:56 2014 -0700
+
+    Add ability to prompt for passwords for user create and set
+    
+    * Add get_password method to the utilities
+    * Add --password-prompt option
+    * Call the get_password method if a prompt is requested
+    * Various tests
+    
+    Change-Id: I1786ad531e2a2fbcc21b8bc86aac0ccd7985995a
+    Closes-Bug: 1100116
+
+commit 50432931562ca697a2b88db2bb2f0b1da91fb28a
+Author: Andreas Jaeger <aj@suse.de>
+Date:   Fri Feb 21 19:22:32 2014 +0100
+
+    Fix some help strings
+    
+    This fixes some errors and inconsistencies I found reviewing the
+    help strings:
+    * Capitalize help strings
+    * Add missing space between words (in multi-line strings)
+    * Improve wording
+    
+    Change-Id: I2fb31ab4191c330146e31c1a9651115a6657769a
+
+commit 8b494f08b2d60b487b37de6603349db66496b955
+Merge: 2cae50c 99cea54
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Feb 21 18:27:51 2014 +0000
+
+    Merge "Update oslo incubator bits"
+
+commit 2cae50c442337826216d68832a1cb387f3cc1341
+Merge: 2958421 d8bdd2b
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Feb 21 01:36:26 2014 +0000
+
+    Merge "Rename Openstack to OpenStack"
+
+commit 99cea54741fa9364bd1790cdc0bc85e1ba19ef75
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Jan 8 10:42:49 2014 -0600
+
+    Update oslo incubator bits
+    
+    * update gettextutils.py, strutils.py, install_venv_common.py
+    * remove cfg.py, openstackkeyring
+    
+    oslo-incubator commit 630d3959b9d001ca18bd2ed1cf757f2eb44a336f
+    
+    Change-Id: I0ae9b9dc72ec88ed64a8c353b9c51734ee2cd24c
+
+commit 295842175540df01ea4a2ab5de08f79398e6e12b
+Merge: 5f9e7d0 ecc4fb3
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Feb 20 20:00:59 2014 +0000
+
+    Merge "Glance client no longer isa http client"
+
+commit 5f9e7d09cb0c6efd01816253611092c1bbc51495
+Author: Cyril Roelandt <cyril.roelandt@enovance.com>
+Date:   Tue Feb 18 00:49:10 2014 +0100
+
+    Python 3: the content of a FakeResponse must be bytes
+    
+    Encode '_content' if necessary.
+    
+    Change-Id: I25c1e1cd5330f0519bf062be840045d0ef520b28
+
+commit d8bdd2b5ed2c890df84718be6f977a8d93eddb86
+Author: tanlin <lin.tan@intel.com>
+Date:   Thu Feb 13 16:42:04 2014 +0800
+
+    Rename Openstack to OpenStack
+    
+    Change-Id: I9e5b245141290a4b642900fbc46b98bd4f44c321
+
+commit 2f5e8232aa07a9031231ad7b4678b7c52c1effc4
+Merge: e068cd0 eaa4c3e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Feb 11 21:36:46 2014 +0000
+
+    Merge "Python 3: fix a syntax error"
+
+commit e068cd0d715711e39ee0e564aca7e1dca819fb4a
+Merge: c8354b8 9dc3eb5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Feb 11 21:35:55 2014 +0000
+
+    Merge "FakeResponse: use a default status code"
+
+commit c8354b8d8310dce9b0296597e41f9a355d7067c0
+Merge: 9aa207e 8aa0b07
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Feb 11 18:44:30 2014 +0000
+
+    Merge "Fix misspellings in python openstackclient"
+
+commit 9dc3eb5b18612831cba7f44b592481056635a476
+Author: Cyril Roelandt <cyril.roelandt@enovance.com>
+Date:   Tue Feb 11 17:31:37 2014 +0100
+
+    FakeResponse: use a default status code
+    
+    When running some tests from test_restapi.py, the following error happens:
+    
+        TypeError: unorderable types: NoneType() < int()
+    
+    In Python 2, comparing NoneType and integers is possible:
+    
+        >>> None < 2
+        True
+    
+    But in Python 3, it's not allowed. Fix this by using a default status code.
+    
+    Change-Id: Ic0fad5c68f3bf2dd8a2b98423549903f982192c9
+
+commit 9aa207eb9d66ae3240606a9b497b253b37566c95
+Merge: 380d78c 3a5abf7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Feb 11 15:41:40 2014 +0000
+
+    Merge "Use six.iteritems() rather than dict.iteritems()"
+
+commit eaa4c3e1a6a4d2fd3139695db88a9f28d64a506f
+Author: Cyril Roelandt <cyril.roelandt@enovance.com>
+Date:   Tue Feb 11 15:44:54 2014 +0100
+
+    Python 3: fix a syntax error
+    
+    "raise AttributeError, name" is invalid in Python 3.
+    
+    Change-Id: Id61bd3747f49c2bd810cbfeae56506e7ed9d2bd0
+
+commit 3a5abf743c66f36faf45f710720fe28546b04ea2
+Author: Cyril Roelandt <cyril.roelandt@enovance.com>
+Date:   Tue Feb 11 02:22:20 2014 +0100
+
+    Use six.iteritems() rather than dict.iteritems()
+    
+    This is compatible with both Python 2 and 3.
+    
+    Change-Id: I6fe3e9bf9ece699badbdb9933118af90642a91e9
+
+commit 380d78c8564ca81c60d46176af622fd92a7b1582
+Author: Jeremy Stanley <fungi@yuggoth.org>
+Date:   Mon Feb 10 03:10:52 2014 +0000
+
+    Remove tox locale overrides
+    
+    * tox.ini: The LANG, LANGUAGE and LC_ALL environment overrides were
+    introduced originally during the testr migration in an attempt to be
+    conservative about the possibility that locale settings in the
+    calling environment could cause consistency problems for test runs.
+    In actuality, this should be unnecessary and any place where it does
+    cause issues ought to be considered an actual bug. Also, having
+    these in the configuration actively causes older pip to have
+    problems with non-ASCII content in some package metadata files under
+    Python 3, so drop it now.
+    
+    Change-Id: I89ff5c22be053f09defb04b3ec589d74bffcae9d
+    Closes-Bug: #1277495
+
+commit ecc4fb330dea487b7ac86050eb971d97cea895d6
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Tue Jan 21 10:45:52 2014 -0700
+
+    Glance client no longer isa http client
+    
+    If the client has-a http_client, then is must not be an is-a.  This has been tested with the current version of glanceclient and the master branch.
+    
+    Closes-Bug: #1269821
+    Change-Id: I14d67eb094bfb4c2dbc07106343488298b6a9409
+
+commit 8aa0b07fbc4dd3cd2c7d99513407b652eaa39d85
+Author: Shane Wang <shane.wang@intel.com>
+Date:   Fri Feb 7 13:25:43 2014 +0800
+
+    Fix misspellings in python openstackclient
+    
+    Fix misspellings detected by:
+    * pip install misspellings
+    * git ls-files | grep -v locale | misspellings -f -
+    
+    Change-Id: Ic0d3efa26eb9a05ce16a8319c142f5bd1ce23821
+    Closes-Bug: #1257295
+
+commit 632363328b6bcdfb562e2822cd033967adcf4b6c
+Merge: 0aeb357 a8d828f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jan 31 17:28:02 2014 +0000
+
+    Merge "Add token create subcommand for identity v3 api"
+
+commit a8d828f330119502fc18107c264f2944548a7fb9
+Author: Qiu Yu <qiuyu@ebaysf.com>
+Date:   Wed Jan 29 15:57:18 2014 +0800
+
+    Add token create subcommand for identity v3 api
+    
+    Implements token create subcommand which is an equivalent of keystone
+    token-get command. Original "wrap" parameter for keystone token-get is
+    not implemented yet due to cliff Bug #1269299
+    
+    This is a part of: blueprint add-identity-token-support
+    
+    Change-Id: I2255021c9d1f10f757686583b1ebe40b5f3a9ecb
+
+commit 0aeb357fc24b312c6ba8632cc8019f7ea3ec32fd
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Fri Jan 24 22:40:56 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I98929876d5a21a990009398d9a8259c54d893e7e
+
+commit 0076f694acd7bc02ce1fb26ec0f1974ba68e0cf3
+Merge: cb2fd0a bc2395e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jan 23 17:38:15 2014 +0000
+
+    Merge "Fix keyring issue where there were name space problems"
+
+commit cb2fd0af8301648e88f30c8cb449333be5ba1cb0
+Merge: 9e9bbad ad43678
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jan 23 17:38:15 2014 +0000
+
+    Merge "Remove copyright from empty files"
+
+commit bc2395eb473a203d11df52d48968b6ab61e2c95e
+Author: Terry Howe <thowe@hp.com>
+Date:   Thu Jan 23 09:33:06 2014 -0700
+
+    Fix keyring issue where there were name space problems
+    
+    The import of keyring conflicted with a string named keyring
+    
+    Change-Id: I7416ea1cf453a126dd03dba8bc2900cad35ed2da
+    Closes-bug: #1271987
+
+commit 9e9bbad120e16d2c490b7c65de35e15cb233411a
+Merge: ebfa669 350718f
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jan 23 04:09:53 2014 +0000
+
+    Merge "Remove remaining print statements"
+
+commit 350718f3bbad1e3b5da45bbb4e61e4af5a11e944
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed Dec 4 18:37:50 2013 -0600
+
+    Remove remaining print statements
+    
+    I think these are the last two stragglers, including debugging lines
+    
+    Change-Id: Ic3dd98480211d0f7d3cc951bec5cd54f902a101f
+
+commit ebfa6698a1a714c437cbedfc99348d501e68efa1
+Merge: 81d33a5 4848d3c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 22 08:13:42 2014 +0000
+
+    Merge "Add token create subcommand for identity v2 api"
+
+commit ad4367839f53f1d00cde80bfcb396cfc3d8f9c7d
+Author: Alexander Ignatov <aignatov@mirantis.com>
+Date:   Mon Jan 20 17:27:02 2014 +0400
+
+    Remove copyright from empty files
+    
+    According to policy change in HACKING:
+    http://docs.openstack.org/developer/hacking/#openstack-licensing
+    empty files should no longer contain copyright notices.
+    
+    Change-Id: Iba09a00f24dfbd1cd03c1c9f70ea216788e64d93
+    Closes-Bug: #1262424
+
+commit 4848d3ca3aff4d148fb1b0aa0aa54e1eb3f3600f
+Author: Qiu Yu <qiuyu@ebaysf.com>
+Date:   Wed Jan 15 17:03:59 2014 +0800
+
+    Add token create subcommand for identity v2 api
+    
+    Implements token create subcommand which is an equivalent of keystone
+    token-get command. Original "wrap" parameter for keystone token-get is
+    not implemented yet due to cliff Bug #1269299
+    
+    This is a part of: blueprint add-identity-token-support
+    
+    Change-Id: I9e4de93306f2f5959717b5219621da03961524d8
+
+commit 81d33a524dd53f233bf72ea1eae4bea1058ceeaf
+Author: Sascha Peilicke <saschpe@gmx.de>
+Date:   Thu Jan 16 09:21:39 2014 +0100
+
+    Sync with global requirements
+    
+    Change-Id: Ie47804617ab9a11a91efd96c7989f0207e47e120
+
+commit a53ed797b7778e05e6dfc21305d632fe66618dbf
+Merge: b00bbaa 7b999d7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jan 10 17:27:50 2014 +0000
+
+    Merge "Fix image set properties error"
+
+commit b00bbaa062e90124f4c6542e522d96b7da1d6468
+Merge: 6ad0511 9e31f8e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jan 10 17:27:48 2014 +0000
+
+    Merge "Fix errant underscores"
+
+commit 6ad05112f47cee2f2f5e8310dc9e05de33263b0c
+Merge: e821a6b a5e087e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jan 10 17:07:12 2014 +0000
+
+    Merge "Displaying curl commands for nova and cinder calls"
+
+commit 9e31f8ea147cc51e2a8b22658f50e769e9866fdb
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jan 9 16:54:40 2014 -0600
+
+    Fix errant underscores
+    
+    Change-Id: I71b8c8df14b85e3042220e3593a9732ee6cefe15
+
+commit e821a6b97fcc5484ceae3f228f851be30a26ed76
+Merge: 202c3e3 420b10e
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jan 8 16:40:34 2014 +0000
+
+    Merge "Add support for specifying custom domains"
+
+commit 420b10ee6dc8c40a7936001381080e4b6628e900
+Author: Paul Belanger <paul.belanger@polybeacon.com>
+Date:   Mon Dec 9 20:01:04 2013 -0500
+
+    Add support for specifying custom domains
+    
+    Add the ability to pass user_domain_id / user_domain_name, domain_id
+    / domain_name, and project_domain_id / project_domain_name to keystone.
+    These parameters are the first step needed to getting multi-domain
+    support working via the CLI.
+    
+    Closes-Bug: #1198171
+    Change-Id: I81a8534913978ff1cce01ec02741ae477e8c5fa4
+    Signed-off-by: Paul Belanger <paul.belanger@polybeacon.com>
+    Signed-off-by: Bo Tang <btang@cs.utsa.edu>
+
+commit 7b999d786c827922ea66b61a41c89123417ed407
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Mon Jan 6 09:42:40 2014 -0600
+
+    Fix image set properties error
+    
+    Change-Id: Ia290935c8a040221caf1a46ca29a7bb2e5df1ce6
+
+commit a5e087e7a9b88e2ce698ddc32d89e1462509fbb5
+Author: Florent Flament <florent.flament-ext@cloudwatt.com>
+Date:   Wed Dec 18 15:07:03 2013 +0000
+
+    Displaying curl commands for nova and cinder calls
+    
+    When using the -v option, displays curl equivalent commands and http
+    messages exchanged with the nova and cinder API servers. Displays the
+    same messages as those displayed with the --debug option of
+    python-novaclient and python-cinderclient.
+    
+    Implements: blueprint curl-commands-in-debugging-messages for nova and
+    cinder related calls
+    
+    Change-Id: Ibc8ef79d874334585b81d652b9c7df9e874fffa9
+
+commit 202c3e375bf3ac528a5e8e1a1d1d83d45b57b9bf
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Dec 25 09:30:05 2013 -0700
+
+    Closes-Bug: #1262322 Make links clickable
+    
+    Change-Id: I61302ff5274cdaa09801cb9b0dc9bfd353ac687f
+
+commit 12f31eed2f9f12e7fd60c238a338bb45eaee3516
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu Dec 19 20:06:54 2013 -0700
+
+    Closes-Bug: #1262321
+    Remove the unimplemented post_process method call
+    
+    Change-Id: Iaed526cc25a651008a66ad7f0050070ab2b4c595
+
 commit de27c1b455624b6123b26bfdd022d2763c541a25
 Author: Dean Troyer <dtroyer@gmail.com>
 Date:   Tue Dec 17 09:22:17 2013 -0600
