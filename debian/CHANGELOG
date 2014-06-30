@@ -1,3 +1,839 @@
+commit a732bfae491f8189f234e1bd5c2cbbff3daab4bc
+Merge: 23f64a4 3fa5fa5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jun 20 20:05:58 2014 +0000
+
+    Merge "Update docs and release notes for 0.4.0"
+
+commit 3fa5fa5ba745cec0ee96f1031fadff0d5e7820f0
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 15 09:05:37 2014 -0500
+
+    Update docs and release notes for 0.4.0
+    
+    Change-Id: Iad6cfe5dee63adb9e60a0ea9811217b3175eb99c
+
+commit 23f64a469a5ba77b2d06e10dc4e6c7d318f11835
+Merge: 3019f11 9dd3a53
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jun 20 15:46:39 2014 +0000
+
+    Merge "Complete Identity v3 list command filters"
+
+commit 3019f11032459c10efea152186bd630479867f37
+Author: OpenStack Proposal Bot <openstack-infra@lists.openstack.org>
+Date:   Fri Jun 20 03:38:56 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I708fe9d2f10e53d61e67130ff41b0f92cddef64d
+
+commit 9dd3a5326c0fe04df3b4224754fd02351a4623c9
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu Jun 19 12:38:30 2014 -0500
+
+    Complete Identity v3 list command filters
+    
+    Complete the 'group list' and 'user list' filter options following
+    the refactor in https://review.openstack.org/69878
+    
+    Change-Id: Ib4af417c56d4f7da4b88852f191af615cc7fa2ec
+
+commit c6cc1d72d50404b5921b9d451afcb513ad98ff9a
+Merge: 0a491b2 f78a3f1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Jun 19 17:14:03 2014 +0000
+
+    Merge "Refactor role list subcommand for identity v3 api"
+
+commit 0a491b2ac82553d5bec10e782c582fca3a88c148
+Merge: 982b418 25d6955
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jun 18 22:44:24 2014 +0000
+
+    Merge "Change the token verb to issue/revoke"
+
+commit 25d6955bb477241af0926ca90969b9e0c1ec5647
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Jun 18 11:19:31 2014 -0600
+
+    Change the token verb to issue/revoke
+    
+    Change the token verb to issue/revoke as documented in:
+    
+    https://wiki.openstack.org/wiki/OpenStackClient/Commands#token
+    https://wiki.openstack.org/wiki/OpenStackClient/Commands#Actions
+    
+    Change-Id: I44f77f98ad3269c4f2149301c204804dcb75ac81
+
+commit 982b418da78e5d729ba0c4f3113bb691eb78b7c7
+Merge: ddcc668 deaff72
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jun 18 15:40:04 2014 +0000
+
+    Merge "Update docs template"
+
+commit ddcc66839372506f607d8f65b9a085b181291f2b
+Merge: 1f2189d 89cbdd1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jun 18 15:38:49 2014 +0000
+
+    Merge "Add a docs job to tox.ini"
+
+commit 1f2189d6ded9a13637608cf13b7e82591c39b99b
+Merge: 0b2987f d6321c0
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Jun 18 15:37:40 2014 +0000
+
+    Merge "Add token delete command for identity v2"
+
+commit deaff7274e4d0782a7ddedb5c7d371fe5a9bb141
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Jun 17 23:42:25 2014 -0400
+
+    Update docs template
+    
+    To make things more consistent across all openstack projects, the
+    developer docs should be upgraded to the newer template used by
+    keystone and keystoneclient (and other projects).
+    
+    I dropped in the necessary static files and themes, and updated
+    the config file to make the changes at build time.
+    
+    Change-Id: I5a268cff3cd5af29ad712705d540b9d1d6667d56
+    Partial-Bug: #1331304
+
+commit 89cbdd1ae1f0ed2e55ffdc43fbed07e417751455
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Jun 17 23:24:55 2014 -0400
+
+    Add a docs job to tox.ini
+    
+    A noticed that there wasn't a docs option when running tox.
+    Thought it would be a good idea to add one.
+    
+    Partial-Bug: #1331304
+    Change-Id: I5af9ff5d5986ad546146c0fa73eb98256fd00c5f
+
+commit 0b2987fef389603b95b2ba7b788492b8baa56745
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu May 22 17:38:41 2014 -0600
+
+    Fix find_resource for keystone and cinder
+    
+    The find_resource method had two hacks in in to support cinder
+    and keystone and I have removed those in favor of a monkey patch
+    for cinder.
+    
+    The find_resource method used to attempt to UUID parse the id, but
+    it would do a manager.get anyway.  I changed it to skip the UUID
+    parsing.  This will make things run minorly faster and it supports
+    LDAP for keystone.
+    
+    The find_resource used to attempt to use display_name=name_or_id
+    when finding.  This was a hack for cinder support, but it breaks
+    keystone because keystone totally messes up with the bogus filter
+    and keystone refuses to fix it.
+    
+    Change-Id: I66e45a6341f704900f1d5321a0e70eac3d051665
+    Closes-Bug: #1306699
+
+commit 6380b8b95918a42cee63c21b90f7d8d55854d0c8
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 8 11:09:22 2014 -0500
+
+    Image create and set command updates and tests
+    
+    Refactor image create and set commands to properly handle properties.
+    This is particularly tricky with exclusive booleans as in this case leaving
+    both choices off the command line should NOT assume a default value but
+    leave the existing value unchanged.
+    
+    Properties were not being updated correctly in the 'image set' command.
+    Refactor it to use the same pattern as in other SetXxx commands.
+    Add tests for arg handling.
+    
+    Change-Id: I123a64c9b4feecab25a3e2013cc047f55b1c9967
+
+commit aba1fb2268b3e5a2c785742861d7ae086b18e9a7
+Merge: fbb9e7a d5aaba9
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jun 17 01:23:25 2014 +0000
+
+    Merge "Refactor oauth1 code for updates"
+
+commit fbb9e7aefa3838f6c03b1d17111011c76ece7706
+Merge: 5c2d9f3 67354f6
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Jun 16 21:32:31 2014 +0000
+
+    Merge "Clean up logging levels"
+
+commit 5c2d9f386b99c04b2d9683d658d952473885b9a8
+Merge: 0da5bfe 5805596
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Jun 15 00:17:45 2014 +0000
+
+    Merge "Updated from global requirements"
+
+commit d5aaba9d8284ea1cafe137b367ef9c9297b31e75
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Mon Dec 9 17:50:07 2013 -0600
+
+    Refactor oauth1 code for updates
+    
+    The keystoneclient code for oauth1 support has changed.
+    As such, we should remove the delete, list and authenticate
+    functions, since they are not in keystoneclient.
+    
+    Also, we must now pass in the project id when creating a
+    request token. Additionally we must now pass in roles
+    when authorizing a request token.
+    
+    Added functional tests to ensure output and input args
+    are the same.
+    
+    bp add-oauth-support
+    Change-Id: I559c18a73ad95a0c8b7a6a95f463b78334186f61
+
+commit 0da5bfe42875457a26a0c5040fcc3b0e1ffb5d2a
+Merge: 99e7660 0059f04
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Jun 14 18:37:12 2014 +0000
+
+    Merge "Ignore most of the new hacking 0.9.2 rules"
+
+commit 99e7660d56431d5480999c2674b1aa12254732b2
+Merge: 497a389 4ae4dc3
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Jun 14 06:25:38 2014 +0000
+
+    Merge "Add support for extension list"
+
+commit 5805596013435835842f9b050485f554e8758a02
+Author: OpenStack Proposal Bot <openstack-infra@lists.openstack.org>
+Date:   Fri Jun 13 22:57:28 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I44f13a22528824a8b24ffb3b0e3075e870e5ee58
+
+commit 67354f651b064c7c67ad749bf75196d59b851d18
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Wed May 7 10:54:38 2014 -0500
+
+    Clean up logging levels
+    
+    The following logging levels are set according to the combination of
+    --verbose, --quiet and --debug options:
+    
+    verbose_level   logging level       options
+    0               --quiet             ERROR
+    1               (none)              WARNING
+    2               --verbose           INFO
+    3+              --verbose --verbose DEBUG
+                    or --debug
+    
+    Logging levels for the requests and iso8601 modules are forced to ERROR.
+    
+    This is the first step in bp use-logging-not-print
+    
+    The difference between '--debug' and '--verbose --verbose' is --debug triggers
+    cliff's exception handling and traceback display.
+    
+    Change-Id: Ide2233b3316471d279260fb1e7255a6ca2072023
+
+commit 0059f045a9958b1748fcec51799d8cffc0831440
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Jun 13 16:56:32 2014 -0500
+
+    Ignore most of the new hacking 0.9.2 rules
+    
+    So we can update requriements.txt.  But fix a couple of easy ones:
+    * Fix E251 (1 occurrance)
+    * Fix E131 (1 occurrance)
+    
+    Change-Id: I62aaa423aa6da9e9f0ca026ec586b51cc6a6df03
+
+commit 497a38903c4a282975b2f197bc4af22c15d8ab21
+Merge: 7f6a901 58f80e4
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Jun 13 20:56:27 2014 +0000
+
+    Merge "Add role assignments list support to identity v3"
+
+commit f78a3f1653c634e40071fb96750b9ca64865c058
+Author: Qiu Yu <qiuyu@ebaysf.com>
+Date:   Wed Jan 29 22:54:01 2014 +0800
+
+    Refactor role list subcommand for identity v3 api
+    
+    Currently parts of user list and group list command are actually
+    functioning as role listing, which is quite counter intuitive and
+    misleading.
+    
+    This refactor change move role related logic to a single place of role
+    list command. It now allows role grants listing for user/group +
+    domain/project combinations.
+    
+    If no user or group specified, it will list all roles in the system,
+    which is the default behaviour.
+    
+    Change-Id: I4ced6df4b76f018d01000d28b4281ad9f252ffcc
+
+commit 4ae4dc35bda42a972c1d1480e89cda67bf39636d
+Author: Matt Fischer <matt@mattfischer.com>
+Date:   Tue May 13 13:04:02 2014 -0400
+
+    Add support for extension list
+    
+     - Add support in the common section for extension list. This only
+       supports Identity for now. Once the APIs for volume and compute
+       are supported in the respective APIs, they will be added. Once
+       network is added to this client, it will be added (the API already
+       supports it).
+     - Include extension fakes for volume and compute for pre-enablement.
+    
+    Change-Id: Iebb0156a779887d2ab06488a2a27b70b56369376
+    Closes-Bug: #1319115
+
+commit 7f6a901d011ae366a5dea6fa7e532ab941125e9e
+Merge: 3b925e9 dc44ec1
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jun 10 02:27:55 2014 +0000
+
+    Merge "Add tests for identity endpoints"
+
+commit 3b925e9806cb942c6333d4038ebdad65cd9390df
+Merge: fb65652 3b485de
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue Jun 10 02:27:54 2014 +0000
+
+    Merge "replace string format arguments with function parameters"
+
+commit 58f80e4c7544c0ee064c1629b3f128a628fc71d8
+Author: henriquetruta <henrique@lsd.ufcg.edu.br>
+Date:   Wed May 28 11:09:46 2014 -0300
+
+    Add role assignments list support to identity v3
+    
+    The assignments manager and its test class were created.
+    Some fake stubs were also added on the fakes.py module.
+    
+    The "openstack role assignment list" command was created.
+    
+    Change-Id: Iae94f4fee608ea3e09ff38961ad22edc38efb89c
+    Implements: blueprint roles-assignment-list
+    Closes-Bug: 1246310
+
+commit fb656527530444c116dce493abd85cc69e8902fb
+Merge: 7ceff0e a8087a6
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 28 23:05:54 2014 +0000
+
+    Merge "Fixed several typos throughout the codebase"
+
+commit 7ceff0eafc01c038ac5264d91701ee6384ff0b31
+Merge: 870e7dd da5e31d
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 28 22:05:53 2014 +0000
+
+    Merge "Fix server image create"
+
+commit d6321c0893d529af1548da79a985f337bce7069f
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Fri May 23 10:17:42 2014 -0600
+
+    Add token delete command for identity v2
+    
+    Identity v2 has undocumented support for token delete and
+    keystoneclient also has support.
+    
+    Change-Id: Ib98d17958ceb88f7b63471691dee71fdb884ce2e
+    Closes-Bug: #1318442
+
+commit a8087a6c8b5946ecf25f019e183b26579c3475a8
+Author: Alex Gaynor <alex.gaynor@gmail.com>
+Date:   Wed May 21 07:47:29 2014 -0700
+
+    Fixed several typos throughout the codebase
+    
+    Change-Id: I048ee857fc1215fea7f60978364894e1b5abdf66
+
+commit 3b485de6b0495d1e9f6d659463a187d73a783594
+Author: Christian Berendt <berendt@b1-systems.de>
+Date:   Tue May 20 13:11:19 2014 +0200
+
+    replace string format arguments with function parameters
+    
+    There are files containing string format arguments inside
+    logging messages. Using logging function parameters should
+    be preferred.
+    
+    Change-Id: Ic749ac9eb55564ed631d57055a5a4dfc3aebd169
+
+commit dc44ec1ddf09177430d79f7c91c9ba36c3a44a9d
+Author: Matt Fischer <matt@mattfischer.com>
+Date:   Thu May 15 12:20:30 2014 -0400
+
+    Add tests for identity endpoints
+    
+    Change-Id: If15cc74fafbbe52fa86aa353f2598aa31daf0695
+    Closes-Bug: #1319450
+
+commit 870e7ddbcce5d5f1b1bd36bb3ad95665565b3ced
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri May 9 09:28:53 2014 -0500
+
+    Change volume create --volume-type to --type
+    
+    This makes it consistent with the other --type options in OSC.  Also
+    add a few more volume_create tests.
+    
+    Change-Id: I50ef927932cabf157ecdfd6c4faa1914b4fdf413
+
+commit a93851d6af899e18638039aee06465c025e1e037
+Merge: 03b9a72 ef9496a
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri May 9 21:38:20 2014 +0000
+
+    Merge "Implement CRUD operations for Identity Providers"
+
+commit da5e31dbb629c26f54e476ca3587455c3a17cdcb
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Thu May 8 10:58:17 2014 -0500
+
+    Fix server image create
+    
+    The final find_resource() call errored because servers.create_image()
+    returns an image ID rather than an Image resource.  Reset expectations
+    and arguments.
+    
+    Change-Id: I1b9132f66091f9df76198724156acb7a6fb2f6fe
+
+commit 03b9a7282ba94eeb901c758d825ba1616006050c
+Merge: 3b57117 f7f8fe4
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed May 7 16:40:41 2014 +0000
+
+    Merge "Fix help message for `ip floating delete`"
+
+commit 3b57117f8efc0c945f730c5e8a598768ac774114
+Author: Yejia Xu <yejia@unitedstack.com>
+Date:   Wed May 7 01:49:15 2014 +0000
+
+    Display all server log when --lines option is None
+    
+    Without --lines option, `console log show xxx`
+    cmd will break.
+    
+    Change-Id: I4027aacac245e6916c1808fd9f878fb708c8a5f0
+    Closes-Bug: #1316870
+
+commit f7f8fe4e7c4229562bed04faf21a1cf6e7d3a56b
+Author: Yejia Xu <yejia@unitedstack.com>
+Date:   Wed May 7 02:13:03 2014 +0000
+
+    Fix help message for `ip floating delete`
+    
+    Previously, the help message incorrectly had the
+    string "IP address to add to server". This should
+    probably read "IP address to delete".
+    
+    Change-Id: If592b736448199f84c30e0cbc8110a0a76e2c140
+    Closes-Bug: #1316877
+
+commit 834867b8bfaab1dcbad5f1e88e10f8a10c48f626
+Merge: 2cc3a2f 37231b5
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Tue May 6 06:27:28 2014 +0000
+
+    Merge "volume type create should display properties"
+
+commit 37231b5801162c9fcbd2a704a6660021dda6327d
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Tue Apr 22 09:08:52 2014 -0600
+
+    volume type create should display properties
+    
+    The volume type create command should properly output the
+    properties.  The code was doing a create on the volume type and
+    then setting the properties, but it was printing out the volume
+    object from the create.
+    
+    Change-Id: I23c8a0182e77bb71903ad87c1b01ba2b62405f3b
+    Closes-Bug: #1303978
+
+commit 2cc3a2fdbddb10cc26ffb49e4a7cfa114a1e9e53
+Author: Yejia Xu <yejia@unitedstack.com>
+Date:   Mon May 5 00:11:17 2014 +0000
+
+    Skip auth in cinderclient
+    
+    cinderclient can't work well with keystone v3 auth
+    info. We should do it in openstackclient just like
+    compute extension.
+    
+    Closes-Bug: #1315963
+    Change-Id: I46f794c5315f6a9fe1d9a0e5dc7b84f067d7f792
+
+commit 6c5f2e39e23a11236986b119974b90bf15f73878
+Author: OpenStack Proposal Bot <openstack-infra@lists.openstack.org>
+Date:   Thu May 1 13:50:49 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: Idde32a0bdcee8843c09a968dff69b246b5e784f7
+
+commit ef9496a4fc9b8600dac88666b7159119e663642c
+Author: Marek Denis <marek.denis@cern.ch>
+Date:   Wed Apr 9 19:05:36 2014 +0200
+
+    Implement CRUD operations for Identity Providers
+    
+    Operations for:
+        * adding Identity Provider
+        * listing Identity Providers
+        * showing Identity Provider
+        * updating Identity Provider
+        * deleting Identity Provider
+    
+    Change-Id: I4557168309f93e4670116b5c3c0e29252ff0c40f
+    Implements: bp/add-openstackclient-federation-crud
+
+commit c744abdbdaf2e3dbce028b5535cb6da0632f3284
+Merge: 2643df7 dde02b8
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Apr 23 23:11:50 2014 +0000
+
+    Merge "Updated from global requirements"
+
+commit 2643df740514376c66b38032fb64a30a73eabe0b
+Merge: 845f670 bea6e6a
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Apr 23 23:11:49 2014 +0000
+
+    Merge "Make endpoint commands more consistent"
+
+commit 845f6705bf65725830b1a7bba22870f177668d86
+Merge: 8ec78a1 e72072a
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Wed Apr 23 23:11:48 2014 +0000
+
+    Merge "Fix the project option to user list so it filters"
+
+commit dde02b8a38daa46e3680bd512ea549d265faa00c
+Author: OpenStack Proposal Bot <openstack-infra@lists.openstack.org>
+Date:   Sun Apr 20 09:59:03 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: Ib4416938530bd1037cc4b7e84bf81475d91e6b16
+
+commit 8ec78a10f8ee35b607c4a7c0260de31178cdf5b0
+Merge: 3c3f212 022b6d9
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 17 02:40:36 2014 +0000
+
+    Merge "Pass arguments to v3 keystoneclient by kwarg"
+
+commit 3c3f212d8b3646e4cd05c4ac6051636fa3a8a671
+Merge: 398dc6c 211cd31
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 17 02:06:11 2014 +0000
+
+    Merge "Make bash comple command best effort to authorize"
+
+commit 398dc6c0bdb1ceb3211a748e0c076930fb81a7d1
+Merge: 01db6d9 e9015b9
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Apr 17 02:04:18 2014 +0000
+
+    Merge "In anticipation of network agents, rename compute"
+
+commit 01db6d977f518d6a348a89549ca566c4aa780e79
+Author: Steve Martinelli <stevemar@ca.ibm.com>
+Date:   Tue Apr 1 10:30:03 2014 -0500
+
+    move read_blob_file_contents to utils
+    
+    Thinking ahead, a few other upcoming keystone features could
+    benefit from reading contents from a file. Thus, moving the
+    function from policy to utils.
+    
+    Change-Id: I713ab0e5a00c949ad996daf83b775a7c19044888
+
+commit 022b6d95d167405fa6534680c8a7fe449b35ce77
+Author: Jamie Lennox <jamielennox@redhat.com>
+Date:   Fri Apr 4 08:09:43 2014 +1000
+
+    Pass arguments to v3 keystoneclient by kwarg
+    
+    Keystoneclient has added the positional decorator which emits a warning
+    if arguments aren't passed by keyword. This means we are getting
+    warnings in certain places in openstackclient.
+    
+    Change-Id: Ic5446cd6f122cbb56fce543011386d53bc31fe18
+    Closes-Bug: #1302199
+
+commit e72072adc3b62b5ef8e3076169fed19dea9995f7
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Mon Mar 31 14:48:42 2014 -0600
+
+    Fix the project option to user list so it filters
+    
+    The --project option to the user list command was not implemented
+    * Allow users to be filted by project
+    * Support id or name of project with the find_resource command
+    * Make sure the report does not contain duplicates
+    
+    Change-Id: Ic0e10cccd7749d38a7d4b80bbdc68e61a660084b
+    Closes-Bug: #1177255
+
+commit bea6e6ac23e893a85f4b0a49bab52934aca86726
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Mar 12 11:51:17 2014 -0600
+
+    Make endpoint commands more consistent
+    
+    Make endpoints more consistent across create, show, etc
+    * Make the name option required for create
+    * Use a common function to fetch services by id, name or type
+    * Have show work by endpoint id or by service id, type or name
+    * Have show display all the fields by default
+    * Remove capability to filter queries by attribute value pairs
+    
+    Change-Id: Idaa4b8d930ba859fd62de777e44a10b1ed58c79b
+    Partial-Bug: #1184012
+
+commit ee22070473dab8bfa3e89d47f1f5a77918c2b026
+Merge: 4900c64 8117256
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Mar 23 18:43:24 2014 +0000
+
+    Merge "Correct display of project/tenant id on display of credentials"
+
+commit 8117256d7dc1464e86382db5c480d33b01131854
+Author: Chris Johnson <wchrisjohnson@gmail.com>
+Date:   Fri Mar 21 11:16:25 2014 -0400
+
+    Correct display of project/tenant id on display of credentials
+    
+    This change corrects the display of ec2 credentails within the
+    ListEC2Creds method. Added explicit headers and corrected data listt o
+    specify tenant_id instead of project id.
+    
+    Change-Id: I2ea579082bee800d774f202bdc38e2d546e57e77
+    Closes-Bug: #1292337
+
+commit 4900c64d091ffe4ec9050cd71845b12db49bd293
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Mon Mar 17 17:32:41 2014 -0600
+
+    Produce a useful error message for NoUniqueMatch
+    
+    Most of the CLIs use a NoUniqueMatch, so produce a useful
+    error message if that happens.  Added some tests for
+    find_resource as well.
+    
+    Change-Id: I85ba61d5f6d1be5bd336a1cc4b02501492905f33
+    Closes-Bug: #1293846
+
+commit 0c0803d363aeae9e8a6eb2cdaf4b5baedee416dc
+Author: Steven Hardy <shardy@redhat.com>
+Date:   Fri Mar 7 18:25:41 2014 +0000
+
+    identity v3 allow project list filtering by domain
+    
+    The underlying keystoneclient interface allows filtering by domain,
+    so support it in the cli interface because it makes project list
+    much nicer to use in a multi-domain deployment.
+    
+    Change-Id: If3f5cf1205c1e9cf314f8286a3ae81bda4456b8f
+    Closes-Bug: #1289513
+
+commit ce63fa01219cf4a6e1fab8c3be7e5d20d35f08e1
+Merge: 65f094e 70e6333
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Thu Mar 13 06:33:24 2014 +0000
+
+    Merge "Add ability to set key value pairs in projects"
+
+commit 65f094e73802380b967c75c126c0938281973707
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Mon Mar 10 21:37:10 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: I73f40a5fd569d0a5e341aabbece1885a7478d7f5
+
+commit cf8506d2bdbde02a731afb16a839e0660b71a89b
+Merge: 4632238 27ebdeb
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Mon Mar 10 16:40:50 2014 +0000
+
+    Merge "Fix 'keypair show' command output"
+
+commit 46322387b6e8a6957c50655dffb227452b36c628
+Merge: 3293138 00188f0
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Mar 8 03:50:55 2014 +0000
+
+    Merge "Fixed spelling error, compatability to compatibility"
+
+commit 3293138121c0ad1b91d63eae219c9aae41d758c3
+Merge: b03680a e6e0dbf
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Mar 8 03:50:54 2014 +0000
+
+    Merge "Add --volume option to image create command"
+
+commit b03680aea5a3759e38d8b46b0c99df65738f98d7
+Merge: b0c0b48 9766707
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Mar 8 00:33:11 2014 +0000
+
+    Merge "Fixed Spelling errors - compatability to compatibility"
+
+commit b0c0b48fdc1a26196b5838db33e3bc0683566b3d
+Merge: 3435f18 14548aa
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sat Mar 8 00:33:10 2014 +0000
+
+    Merge "Fixed spelling errors - occurance to occurence"
+
+commit 27ebdeb57dd78564770ef92b95bc659b25e10a69
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Mar 7 15:34:28 2014 -0600
+
+    Fix 'keypair show' command output
+    
+    The attempt to get the data dict out of the keypair resource object uses a
+    key 'keypair. This is incorrect, no key is required.
+    
+    Closes-Bug: 1289594
+    Change-Id: I7887119c1d800d389cb6f63ea7847bea1e25bb52
+
+commit 3435f188a400b21891981c4024c26bcefc7be861
+Author: Dolph Mathews <dolph.mathews@gmail.com>
+Date:   Wed Feb 19 14:44:03 2014 -0600
+
+    add interface and url to endpoint list
+    
+    endpoint list is not terribly useful without these details
+    
+    Change-Id: I65b0bdf7667d73ceaad5856171678cabcde003f3
+
+commit 00188f092c76fd5bfaf0f6a67cd0b52ed473313b
+Author: Alex Holden <alex@alexjonasholden.com>
+Date:   Fri Mar 7 09:40:29 2014 -0800
+
+    Fixed spelling error, compatability to compatibility
+    
+    Change-Id: I72c1254666a741ffe1070cf8275af889fa323f52
+
+commit 97667079dc286f4b32c7ce4f0440bb9109758772
+Author: Alex Holden <alex@alexjonasholden.com>
+Date:   Fri Mar 7 09:39:02 2014 -0800
+
+    Fixed Spelling errors - compatability to compatibility
+    
+    Change-Id: I9da380cef8b798e21fd35882763bd05f5cf1e33e
+
+commit 14548aa69a25f6a57c0d5bbccae2d5243a99dfef
+Author: Alex Holden <alex@alexjonasholden.com>
+Date:   Fri Mar 7 09:37:59 2014 -0800
+
+    Fixed spelling errors - occurance to occurence
+    
+    Change-Id: Ie0550a1168448d85043d9b4943edd732b1f10307
+
+commit 211cd31d7ac2c7768cc871ac7c9228f7713b8dfc
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu Mar 6 13:56:10 2014 -0700
+
+    Make bash comple command best effort to authorize
+    
+    If authorization fails for the complete command, generate the bash complete anyway.
+    * Added best_effort flag to command
+    * Attempts to authorize for bash complete, but if it fails, it tries anyway
+    
+    Change-Id: I796258f8044f42abc6a51164d920a26f73397962
+    Partial-Bug: #1283550
+
+commit 70e6333e7d4b3fa87496ff3a888527693875273b
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu Mar 6 12:50:37 2014 -0700
+
+    Add ability to set key value pairs in projects
+    
+    Add supporto of extra key value pairs for projects (aka tenants)
+    * Added option --property key=value to create and set commands
+    * Support for versions v2 and v3
+    
+    Change-Id: I84064b8b308579d1b66c83b1ed3d1a37614ec087
+    Closes-Bug: #1220280
+
+commit 64a33b0aa59a1d22fadc41bffebfab04dd6c2cc7
+Author: OpenStack Jenkins <jenkins@openstack.org>
+Date:   Wed Mar 5 19:30:08 2014 +0000
+
+    Updated from global requirements
+    
+    Change-Id: Ic90d9682a9c15795928c0c5b64c41bd06d74243a
+
+commit e6e0dbf754c4dbc631e5c797b50d8032481a1a27
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Wed Feb 26 12:13:01 2014 -0700
+
+    Add --volume option to image create command
+    
+    Add ability to create an image from a volume.
+    * Added --volume command to image create
+    * Added --force option to image create
+    * Added block to access volume manager in image create
+    * Tests added for the volume option
+    
+    Change-Id: I3910a2b5e04acd0d15dd230747ba6ebca07aa316
+    Closes-Bug: #1207615
+
+commit 808fa652109e8d0141f88b258df05874e6676d98
+Merge: 9ccaacb 038269c
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Feb 28 23:14:51 2014 +0000
+
+    Merge "Update release notes for 0.3.1"
+
+commit 9ccaacbe2760012ee916b517035a24160fcf7b91
+Merge: b7f673c ada9d35
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Fri Feb 28 01:44:48 2014 +0000
+
+    Merge "Fix format errors in nova security group rule list"
+
+commit 038269cf7fbbfad9ccc9d85a762e2ff4f7d97d11
+Author: Dean Troyer <dtroyer@gmail.com>
+Date:   Fri Feb 21 12:46:07 2014 -0600
+
+    Update release notes for 0.3.1
+    
+    * update README
+    * update man page
+    * fix doc errors
+    
+    Change-Id: I5682654bf482289879c8ba9016e348f2b2782971
+
+commit e9015b94f91d3ff6972109fb21a2b5e7fd3b9a79
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu Feb 27 10:55:37 2014 -0700
+
+    In anticipation of network agents, rename compute
+    
+    Rename the compute agents in anticipation of network agents
+    
+    Change-Id: I201121915638d89dfbe46a7e0026aa4c2777e590
+    Closes-Bug: #1285800
+
 commit b7f673cb81f1a6539739dc6d12eaef7455bf63fd
 Merge: 8be3e24 eddab62
 Author: Jenkins <jenkins@review.openstack.org>
@@ -92,6 +928,20 @@ Author: Jenkins <jenkins@review.openstack.org>
 Date:   Fri Feb 21 01:36:26 2014 +0000
 
     Merge "Rename Openstack to OpenStack"
+
+commit ada9d35cbe477d7225d217c6c1926b5fb8aa0a92
+Author: Terry Howe <terrylhowe@gmail.com>
+Date:   Thu Feb 20 09:29:38 2014 -0700
+
+    Fix format errors in nova security group rule list
+    
+    * port range was throwing exception for None to/from ports
+    * ip_range didn't always have cidr causing error
+    * ip_protocol None at times and looked bad
+    
+    Closes-Bug #1256935
+    
+    Change-Id: I451a0f038a3e9646bca3f278c5d6f6d7e3097a83
 
 commit 99cea54741fa9364bd1790cdc0bc85e1ba19ef75
 Author: Dean Troyer <dtroyer@gmail.com>
