@@ -24,7 +24,14 @@ volume_id = 'vvvvvvvv-vvvv-vvvv-vvvvvvvv'
 volume_name = 'nigel'
 volume_description = 'Nigel Tufnel'
 volume_size = 120
-volume_metadata = {}
+volume_type = 'to-eleven'
+volume_zone = 'stonehenge'
+volume_metadata = {
+    'Alpha': 'a',
+    'Beta': 'b',
+    'Gamma': 'g',
+}
+volume_metadata_str = "Alpha='a', Beta='b', Gamma='g'"
 
 VOLUME = {
     'id': volume_id,
@@ -33,7 +40,29 @@ VOLUME = {
     'size': volume_size,
     'status': '',
     'attach_status': 'detached',
+    'availability_zone': volume_zone,
+    'volume_type': volume_type,
     'metadata': volume_metadata,
+}
+
+extension_name = 'SchedulerHints'
+extension_namespace = 'http://docs.openstack.org/'\
+    'block-service/ext/scheduler-hints/api/v2'
+extension_description = 'Pass arbitrary key/value'\
+    'pairs to the scheduler.'
+extension_updated = '2014-02-07T12:00:0-00:00'
+extension_alias = 'OS-SCH-HNT'
+extension_links = '[{"href":'\
+    '"https://github.com/openstack/block-api", "type":'\
+    ' "text/html", "rel": "describedby"}]'
+
+EXTENSION = {
+    'name': extension_name,
+    'namespace': extension_namespace,
+    'description': extension_description,
+    'updated': extension_updated,
+    'alias': extension_alias,
+    'links': extension_links,
 }
 
 
@@ -43,6 +72,8 @@ class FakeVolumev1Client(object):
         self.volumes.resource_class = fakes.FakeResource(None, {})
         self.services = mock.Mock()
         self.services.resource_class = fakes.FakeResource(None, {})
+        self.extensions = mock.Mock()
+        self.extensions.resource_class = fakes.FakeResource(None, {})
         self.auth_token = kwargs['token']
         self.management_url = kwargs['endpoint']
 

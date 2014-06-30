@@ -24,6 +24,7 @@ import traceback
 
 from cliff import app
 from cliff import command
+from cliff import complete
 from cliff import help
 
 import openstackclient
@@ -64,8 +65,10 @@ class OpenStackShell(app.App):
     def __init__(self):
         # Patch command.Command to add a default auth_required = True
         command.Command.auth_required = True
+        command.Command.best_effort = False
         # But not help
         help.HelpCommand.auth_required = False
+        complete.CompleteCommand.best_effort = True
 
         super(OpenStackShell, self).__init__(
             description=__doc__.strip(),
@@ -119,6 +122,50 @@ class OpenStackShell(app.App):
                     default=False,
                     help="Show this help message and exit",
                 )
+
+    def configure_logging(self):
+        """Configure logging for the app
+
+        Cliff sets some defaults we don't want so re-work it a bit
+        """
+
+        if self.options.debug:
+            # --debug forces verbose_level 3
+            # Set this here so cliff.app.configure_logging() can work
+            self.options.verbose_level = 3
+
+        super(OpenStackShell, self).configure_logging()
+        root_logger = logging.getLogger('')
+
+        # Requests logs some stuff at INFO that we don't want
+        # unless we have DEBUG
+        requests_log = logging.getLogger("requests")
+        requests_log.setLevel(logging.ERROR)
+
+        # Other modules we don't want DEBUG output for so
+        # don't reset them below
+        iso8601_log = logging.getLogger("iso8601")
+        iso8601_log.setLevel(logging.ERROR)
+
+        # Set logging to the requested level
+        self.dump_stack_trace = False
+        if self.options.verbose_level == 0:
+            # --quiet
+            root_logger.setLevel(logging.ERROR)
+        elif self.options.verbose_level == 1:
+            # This is the default case, no --debug, --verbose or --quiet
+            root_logger.setLevel(logging.WARNING)
+        elif self.options.verbose_level == 2:
+            # One --verbose
+            root_logger.setLevel(logging.INFO)
+        elif self.options.verbose_level >= 3:
+            # Two or more --verbose
+            root_logger.setLevel(logging.DEBUG)
+            requests_log.setLevel(logging.DEBUG)
+
+        if self.options.debug:
+            # --debug forces traceback
+            self.dump_stack_trace = True
 
     def run(self, argv):
         try:
@@ -398,15 +445,6 @@ class OpenStackShell(app.App):
 
         super(OpenStackShell, self).initialize_app(argv)
 
-        # Set requests logging to a useful level
-        requests_log = logging.getLogger("requests")
-        if self.options.debug:
-            requests_log.setLevel(logging.DEBUG)
-            self.dump_stack_trace = True
-        else:
-            requests_log.setLevel(logging.WARNING)
-            self.dump_stack_trace = False
-
         # Save default domain
         self.default_domain = self.options.os_default_domain
 
@@ -419,13 +457,14 @@ class OpenStackShell(app.App):
             ver = getattr(self.options, mod.API_VERSION_OPTION, None)
             if ver:
                 self.api_version[mod.API_NAME] = ver
-                self.log.debug('%s API version %s' % (mod.API_NAME, ver))
+                self.log.debug('%(name)s API version %(version)s',
+                               {'name': mod.API_NAME, 'version': ver})
 
         # Add the API version-specific commands
         for api in self.api_version.keys():
             version = '.v' + self.api_version[api].replace('.', '_')
             cmd_group = 'openstack.' + api.replace('-', '_') + version
-            self.log.debug('command group %s' % cmd_group)
+            self.log.debug('command group %s', cmd_group)
             self.command_manager.add_command_group(cmd_group)
 
         # Commands that span multiple APIs
@@ -465,7 +504,15 @@ class OpenStackShell(app.App):
         """Set up auth and API versions"""
         self.log.debug('prepare_to_run_command %s', cmd.__class__.__name__)
 
-        if cmd.auth_required:
+        if not cmd.auth_required:
+            return
+        if cmd.best_effort:
+            try:
+                self.authenticate_user()
+                self.restapi.set_auth(self.client_manager.identity.auth_token)
+            except Exception:
+                pass
+        else:
             self.authenticate_user()
             self.restapi.set_auth(self.client_manager.identity.auth_token)
         return

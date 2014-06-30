@@ -46,7 +46,7 @@ class CreateEC2Creds(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.project:
@@ -93,7 +93,7 @@ class DeleteEC2Creds(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.user:
@@ -123,7 +123,7 @@ class ListEC2Creds(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.user:
@@ -135,9 +135,11 @@ class ListEC2Creds(lister.Lister):
             # Get the user from the current auth
             user = identity_client.auth_user_id
 
-        columns = ('Access', 'Secret', 'Project ID', 'User ID')
+        columns = ('access', 'secret', 'tenant_id', 'user_id')
+        column_headers = ('Access', 'Secret', 'Project ID', 'User ID')
         data = identity_client.ec2.list(user)
-        return (columns,
+
+        return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
                     formatters={},
@@ -164,7 +166,7 @@ class ShowEC2Creds(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.user:

@@ -70,13 +70,14 @@ class TestProjectCreate(TestProject):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': None,
             'description': None,
             'enabled': True,
         }
-        # ProjectManager.create(name, domain, description=, enabled=, **kwargs)
+        # ProjectManager.create(name=, domain=, description=,
+        #                       enabled=, **kwargs)
         self.projects_mock.create.assert_called_with(
-            identity_fakes.project_name,
-            None,
             **kwargs
         )
 
@@ -109,13 +110,14 @@ class TestProjectCreate(TestProject):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': None,
             'description': 'new desc',
             'enabled': True,
         }
-        # ProjectManager.create(name, domain, description=, enabled=, **kwargs)
+        # ProjectManager.create(name=, domain=, description=,
+        #                       enabled=, **kwargs)
         self.projects_mock.create.assert_called_with(
-            identity_fakes.project_name,
-            None,
             **kwargs
         )
 
@@ -148,13 +150,14 @@ class TestProjectCreate(TestProject):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': identity_fakes.domain_id,
             'description': None,
             'enabled': True,
         }
-        # ProjectManager.create(name, domain, description=, enabled=, **kwargs)
+        # ProjectManager.create(name=, domain=, description=,
+        #                       enabled=, **kwargs)
         self.projects_mock.create.assert_called_with(
-            identity_fakes.project_name,
-            identity_fakes.domain_id,
             **kwargs
         )
 
@@ -186,13 +189,14 @@ class TestProjectCreate(TestProject):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': None,
             'description': None,
             'enabled': True,
         }
-        # ProjectManager.create(name, domain, description=, enabled=, **kwargs)
+        # ProjectManager.create(name=, domain=, description=,
+        #                       enabled=, **kwargs)
         self.projects_mock.create.assert_called_with(
-            identity_fakes.project_name,
-            None,
             **kwargs
         )
 
@@ -224,13 +228,55 @@ class TestProjectCreate(TestProject):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': None,
             'description': None,
             'enabled': False,
         }
-        # ProjectManager.create(name, domain, description=, enabled=, **kwargs)
+        # ProjectManager.create(name=, domain=,
+        #                       description=, enabled=, **kwargs)
         self.projects_mock.create.assert_called_with(
+            **kwargs
+        )
+
+        collist = ('description', 'domain_id', 'enabled', 'id', 'name')
+        self.assertEqual(columns, collist)
+        datalist = (
+            identity_fakes.project_description,
+            identity_fakes.domain_id,
+            True,
+            identity_fakes.project_id,
             identity_fakes.project_name,
-            None,
+        )
+        self.assertEqual(data, datalist)
+
+    def test_project_create_property(self):
+        arglist = [
+            '--property', 'fee=fi',
+            '--property', 'fo=fum',
+            identity_fakes.project_name,
+        ]
+        verifylist = [
+            ('property', {'fee': 'fi', 'fo': 'fum'}),
+            ('name', identity_fakes.project_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+
+        # Set expected values
+        kwargs = {
+            'name': identity_fakes.project_name,
+            'domain': None,
+            'description': None,
+            'enabled': True,
+            'fee': 'fi',
+            'fo': 'fum',
+        }
+        # ProjectManager.create(name=, domain=, description=,
+        #                       enabled=, **kwargs)
+        self.projects_mock.create.assert_called_with(
             **kwargs
         )
 
@@ -333,6 +379,35 @@ class TestProjectList(TestProject):
             identity_fakes.domain_id,
             identity_fakes.project_description,
             True,
+        ), )
+        self.assertEqual(tuple(data), datalist)
+
+    def test_project_list_domain(self):
+        arglist = [
+            '--domain', identity_fakes.domain_name,
+        ]
+        verifylist = [
+            ('domain', identity_fakes.domain_name),
+        ]
+
+        self.domains_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.DOMAIN),
+            loaded=True,
+        )
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.projects_mock.list.assert_called_with(
+            domain=identity_fakes.domain_id)
+
+        collist = ('ID', 'Name')
+        self.assertEqual(columns, collist)
+        datalist = ((
+            identity_fakes.project_id,
+            identity_fakes.project_name,
         ), )
         self.assertEqual(tuple(data), datalist)
 
@@ -482,6 +557,35 @@ class TestProjectSet(TestProject):
             'domain': identity_fakes.domain_id,
             'enabled': False,
             'name': identity_fakes.project_name,
+        }
+        self.projects_mock.update.assert_called_with(
+            identity_fakes.project_id,
+            **kwargs
+        )
+
+    def test_project_set_property(self):
+        arglist = [
+            '--property', 'fee=fi',
+            '--property', 'fo=fum',
+            identity_fakes.project_name,
+        ]
+        verifylist = [
+            ('property', {'fee': 'fi', 'fo': 'fum'}),
+            ('project', identity_fakes.project_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.run(parsed_args)
+        self.assertEqual(result, 0)
+
+        # Set expected values
+        kwargs = {
+            'description': identity_fakes.project_description,
+            'domain': identity_fakes.domain_id,
+            'enabled': True,
+            'name': identity_fakes.project_name,
+            'fee': 'fi',
+            'fo': 'fum',
         }
         self.projects_mock.update.assert_called_with(
             identity_fakes.project_id,

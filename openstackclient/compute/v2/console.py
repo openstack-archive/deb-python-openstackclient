@@ -48,16 +48,20 @@ class ShowConsoleLog(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
 
         server = utils.find_resource(
             compute_client.servers,
             parsed_args.server,
         )
-        # NOTE(dtroyer): get_console_output() appears to shortchange the
-        #                output by one line
-        data = server.get_console_output(length=parsed_args.lines + 1)
+        length = parsed_args.lines
+        if length:
+            # NOTE(dtroyer): get_console_output() appears to shortchange the
+            #                output by one line
+            length += 1
+
+        data = server.get_console_output(length=length)
         sys.stdout.write(data)
         return
 
@@ -100,7 +104,7 @@ class ShowConsoleURL(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
             compute_client.servers,

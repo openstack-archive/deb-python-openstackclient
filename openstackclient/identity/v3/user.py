@@ -17,7 +17,6 @@
 
 import logging
 import six
-import sys
 
 from cliff import command
 from cliff import lister
@@ -83,7 +82,7 @@ class CreateUser(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.project:
@@ -107,7 +106,7 @@ class CreateUser(show.ShowOne):
             parsed_args.password = utils.get_password(self.app.stdin)
 
         user = identity_client.users.create(
-            parsed_args.name,
+            name=parsed_args.name,
             domain=domain_id,
             default_project=project_id,
             password=parsed_args.password,
@@ -136,7 +135,7 @@ class DeleteUser(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         user = utils.find_resource(
@@ -149,34 +148,21 @@ class DeleteUser(command.Command):
 
 
 class ListUser(lister.Lister):
-    """List users and optionally roles assigned to users"""
+    """List users"""
 
     log = logging.getLogger(__name__ + '.ListUser')
 
     def get_parser(self, prog_name):
         parser = super(ListUser, self).get_parser(prog_name)
         parser.add_argument(
-            'user',
-            metavar='<user>',
-            nargs='?',
-            help='Name or ID of user to list [required with --role]',
-        )
-        parser.add_argument(
-            '--role',
-            action='store_true',
-            default=False,
-            help='List the roles assigned to <user>',
-        )
-        domain_or_project = parser.add_mutually_exclusive_group()
-        domain_or_project.add_argument(
             '--domain',
             metavar='<domain>',
-            help='Filter list by <domain> [Only valid with --role]',
+            help='Filter group list by <domain>',
         )
-        domain_or_project.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Filter list by <project> [Only valid with --role]',
+        parser.add_argument(
+            '--group',
+            metavar='<group>',
+            help='List memberships of <group> (name or ID)',
         )
         parser.add_argument(
             '--long',
@@ -187,76 +173,43 @@ class ListUser(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        if parsed_args.role:
-            # List roles belonging to user
-
-            # User is required here, bail if it is not supplied
-            if not parsed_args.user:
-                sys.stderr.write('Error: User must be specified')
-                return ([], [])
-
-            user = utils.find_resource(
-                identity_client.users,
-                parsed_args.user,
-            )
-
-            # List a user's roles
-            if not parsed_args.domain and not parsed_args.project:
-                columns = ('ID', 'Name')
-                data = identity_client.roles.list(
-                    user=user,
-                    domain='default',
-                )
-            # List a user's roles on a domain
-            elif parsed_args.user and parsed_args.domain:
-                columns = ('ID', 'Name', 'Domain', 'User')
-                domain = utils.find_resource(
-                    identity_client.domains,
-                    parsed_args.domain,
-                )
-                data = identity_client.roles.list(
-                    user=user,
-                    domain=domain,
-                )
-                for user_role in data:
-                    user_role.user = user.name
-                    user_role.domain = domain.name
-            # List a user's roles on a project
-            elif parsed_args.user and parsed_args.project:
-                columns = ('ID', 'Name', 'Project', 'User')
-                project = utils.find_resource(
-                    identity_client.projects,
-                    parsed_args.project,
-                )
-                data = identity_client.roles.list(
-                    user=user,
-                    project=project,
-                )
-                for user_role in data:
-                    user_role.user = user.name
-                    user_role.project = project.name
-            else:
-                # TODO(dtroyer): raise exception here, this really is an error
-                sys.stderr.write("Error: Must specify --domain or --project "
-                                 "with --role\n")
-                return ([], [])
+        if parsed_args.domain:
+            domain = utils.find_resource(
+                identity_client.domains,
+                parsed_args.domain,
+            ).id
         else:
-            # List users
-            if parsed_args.long:
-                columns = ('ID', 'Name', 'Project Id', 'Domain Id',
-                           'Description', 'Email', 'Enabled')
-            else:
-                columns = ('ID', 'Name')
-            data = self.app.client_manager.identity.users.list()
+            domain = None
 
-        return (columns,
-                (utils.get_item_properties(
-                    s, columns,
-                    formatters={},
-                ) for s in data))
+        if parsed_args.group:
+            group = utils.find_resource(
+                identity_client.groups,
+                parsed_args.group,
+            ).id
+        else:
+            group = None
+
+        # List users
+        if parsed_args.long:
+            columns = ('ID', 'Name', 'Project Id', 'Domain Id',
+                       'Description', 'Email', 'Enabled')
+        else:
+            columns = ('ID', 'Name')
+        data = identity_client.users.list(
+            domain=domain,
+            group=group,
+        )
+
+        return (
+            columns,
+            (utils.get_item_properties(
+                s, columns,
+                formatters={},
+            ) for s in data)
+        )
 
 
 class SetUser(command.Command):
@@ -321,7 +274,7 @@ class SetUser(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.password_prompt:
@@ -385,7 +338,7 @@ class ShowUser(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         user = utils.find_resource(

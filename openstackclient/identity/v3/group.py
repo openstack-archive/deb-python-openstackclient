@@ -46,7 +46,7 @@ class AddUserToGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         user_id = utils.find_resource(identity_client.users,
@@ -84,7 +84,7 @@ class CheckUserInGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         user_id = utils.find_resource(identity_client.users,
@@ -125,7 +125,7 @@ class CreateGroup(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         if parsed_args.domain:
             domain = utils.find_resource(identity_client.domains,
@@ -133,7 +133,7 @@ class CreateGroup(show.ShowOne):
         else:
             domain = None
         group = identity_client.groups.create(
-            parsed_args.name,
+            name=parsed_args.name,
             domain=domain,
             description=parsed_args.description)
 
@@ -156,7 +156,7 @@ class DeleteGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         group = utils.find_resource(identity_client.groups, parsed_args.group)
         identity_client.groups.delete(group.id)
@@ -164,34 +164,21 @@ class DeleteGroup(command.Command):
 
 
 class ListGroup(lister.Lister):
-    """List groups and optionally roles assigned to groups"""
+    """List groups"""
 
     log = logging.getLogger(__name__ + '.ListGroup')
 
     def get_parser(self, prog_name):
         parser = super(ListGroup, self).get_parser(prog_name)
         parser.add_argument(
-            'group',
-            metavar='<group>',
-            nargs='?',
-            help='Name or ID of group to list [required with --role]',
-        )
-        parser.add_argument(
-            '--role',
-            action='store_true',
-            default=False,
-            help='List the roles assigned to <group>',
-        )
-        domain_or_project = parser.add_mutually_exclusive_group()
-        domain_or_project.add_argument(
             '--domain',
             metavar='<domain>',
-            help='Filter list by <domain> [Only valid with --role]',
+            help='Filter group list by <domain>',
         )
-        domain_or_project.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Filter list by <project> [Only valid with --role]',
+        parser.add_argument(
+            '--user',
+            metavar='<user>',
+            help='List group memberships for <user> (name or ID)',
         )
         parser.add_argument(
             '--long',
@@ -202,74 +189,42 @@ class ListGroup(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        if parsed_args.role:
-            # List roles belonging to group
-
-            # Group is required here, bail if it is not supplied
-            if not parsed_args.group:
-                sys.stderr.write('Error: Group must be specified')
-                # TODO(dtroyer): This lists the commands...I want it to
-                # show the help for _this_ command.
-                self.app.DeferredHelpAction(
-                    self.app.parser,
-                    self.app.parser,
-                    None,
-                    None,
-                )
-                return ([], [])
-
-            group = utils.find_resource(
-                identity_client.groups,
-                parsed_args.group,
-            )
-
-            if parsed_args.domain:
-                columns = ('ID', 'Name', 'Domain', 'Group')
-                domain = utils.find_resource(
-                    identity_client.domains,
-                    parsed_args.domain,
-                )
-                data = identity_client.roles.list(
-                    group=group,
-                    domain=domain,
-                )
-                for group_role in data:
-                    group_role.group = group.name
-                    group_role.domain = domain.name
-            elif parsed_args.project:
-                columns = ('ID', 'Name', 'Project', 'Group')
-                project = utils.find_resource(
-                    identity_client.projects,
-                    parsed_args.project,
-                )
-                data = identity_client.roles.list(
-                    group=group,
-                    project=project,
-                )
-                for group_role in data:
-                    group_role.group = group.name
-                    group_role.project = project.name
-            else:
-                # TODO(dtroyer): raise exception here, this really is an error
-                sys.stderr.write("Error: Must specify --domain or --project "
-                                 "with --role\n")
-                return ([], [])
+        if parsed_args.domain:
+            domain = utils.find_resource(
+                identity_client.domains,
+                parsed_args.domain,
+            ).id
         else:
-            # List groups
-            if parsed_args.long:
-                columns = ('ID', 'Name', 'Domain ID', 'Description')
-            else:
-                columns = ('ID', 'Name')
-            data = identity_client.groups.list()
+            domain = None
 
-        return (columns,
-                (utils.get_item_properties(
-                    s, columns,
-                    formatters={},
-                ) for s in data))
+        if parsed_args.user:
+            user = utils.find_resource(
+                identity_client.users,
+                parsed_args.user,
+            ).id
+        else:
+            user = None
+
+        # List groups
+        if parsed_args.long:
+            columns = ('ID', 'Name', 'Domain ID', 'Description')
+        else:
+            columns = ('ID', 'Name')
+        data = identity_client.groups.list(
+            domain=domain,
+            user=user,
+        )
+
+        return (
+            columns,
+            (utils.get_item_properties(
+                s, columns,
+                formatters={},
+            ) for s in data)
+        )
 
 
 class RemoveUserFromGroup(command.Command):
@@ -292,7 +247,7 @@ class RemoveUserFromGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         user_id = utils.find_resource(identity_client.users,
@@ -336,7 +291,7 @@ class SetGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         group = utils.find_resource(identity_client.groups, parsed_args.group)
         kwargs = {}
@@ -370,7 +325,7 @@ class ShowGroup(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         group = utils.find_resource(identity_client.groups, parsed_args.group)
 

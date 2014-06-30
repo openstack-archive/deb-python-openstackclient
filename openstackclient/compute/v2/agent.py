@@ -26,7 +26,7 @@ from openstackclient.common import utils
 
 
 class CreateAgent(show.ShowOne):
-    """Create agent command"""
+    """Create compute agent command"""
 
     log = logging.getLogger(__name__ + ".CreateAgent")
 
@@ -60,7 +60,7 @@ class CreateAgent(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)" % parsed_args)
+        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
         args = (
             parsed_args.os,
@@ -75,7 +75,7 @@ class CreateAgent(show.ShowOne):
 
 
 class DeleteAgent(command.Command):
-    """Delete agent command"""
+    """Delete compute agent command"""
 
     log = logging.getLogger(__name__ + ".DeleteAgent")
 
@@ -88,14 +88,14 @@ class DeleteAgent(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)" % parsed_args)
+        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
         compute_client.agents.delete(parsed_args.id)
         return
 
 
 class ListAgent(lister.Lister):
-    """List agent command"""
+    """List compute agent command"""
 
     log = logging.getLogger(__name__ + ".ListAgent")
 
@@ -108,7 +108,7 @@ class ListAgent(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)" % parsed_args)
+        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
         columns = (
             "Agent ID",
@@ -127,7 +127,7 @@ class ListAgent(lister.Lister):
 
 
 class SetAgent(show.ShowOne):
-    """Set agent command"""
+    """Set compute agent command"""
 
     log = logging.getLogger(__name__ + ".SetAgent")
 
@@ -152,7 +152,7 @@ class SetAgent(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)" % parsed_args)
+        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
         args = (
             parsed_args.id,

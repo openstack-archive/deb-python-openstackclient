@@ -24,6 +24,7 @@ from cliff import lister
 from cliff import show
 
 from openstackclient.common import utils
+from openstackclient.identity import common
 
 
 class CreateEndpoint(show.ShowOne):
@@ -67,17 +68,16 @@ class CreateEndpoint(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
-        service = utils.find_resource(identity_client.services,
-                                      parsed_args.service)
+        service = common.find_service(identity_client, parsed_args.service)
 
         endpoint = identity_client.endpoints.create(
-            service.id,
-            parsed_args.url,
-            parsed_args.interface,
-            parsed_args.region,
-            parsed_args.enabled
+            service=service.id,
+            url=parsed_args.url,
+            interface=parsed_args.interface,
+            region=parsed_args.region,
+            enabled=parsed_args.enabled
         )
 
         info = {}
@@ -101,7 +101,7 @@ class DeleteEndpoint(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         endpoint_id = utils.find_resource(identity_client.endpoints,
                                           parsed_args.endpoint).id
@@ -114,28 +114,15 @@ class ListEndpoint(lister.Lister):
 
     log = logging.getLogger(__name__ + '.ListEndpoint')
 
-    def get_parser(self, prog_name):
-        parser = super(ListEndpoint, self).get_parser(prog_name)
-        parser.add_argument(
-            '--long',
-            action='store_true',
-            default=False,
-            help='List additional fields in output')
-        return parser
-
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
-        if parsed_args.long:
-            columns = ('ID', 'Region', 'Service Name', 'Service Type',
-                       'Enabled', 'Interface', 'URL')
-        else:
-            columns = ('ID', 'Region', 'Service Name', 'Enabled')
+        columns = ('ID', 'Region', 'Service Name', 'Service Type',
+                   'Enabled', 'Interface', 'URL')
         data = identity_client.endpoints.list()
 
         for ep in data:
-            service = utils.find_resource(
-                identity_client.services, ep.service_id)
+            service = common.find_service(identity_client, ep.service_id)
             ep.service_name = service.name
             ep.service_type = service.type
         return (columns,
@@ -190,12 +177,11 @@ class SetEndpoint(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         endpoint = utils.find_resource(identity_client.endpoints,
                                        parsed_args.endpoint)
-        service = utils.find_resource(identity_client.services,
-                                      parsed_args.service)
+        service = common.find_service(identity_client, parsed_args.service)
 
         if (not parsed_args.interface and not parsed_args.url
                 and not parsed_args.service and not parsed_args.region):
@@ -204,11 +190,11 @@ class SetEndpoint(command.Command):
 
         identity_client.endpoints.update(
             endpoint.id,
-            service.id,
-            parsed_args.url,
-            parsed_args.interface,
-            parsed_args.region,
-            parsed_args.enabled
+            service=service.id,
+            url=parsed_args.url,
+            interface=parsed_args.interface,
+            region=parsed_args.region,
+            enabled=parsed_args.enabled
         )
 
         return
@@ -228,13 +214,12 @@ class ShowEndpoint(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         endpoint = utils.find_resource(identity_client.endpoints,
                                        parsed_args.endpoint)
 
-        service = utils.find_resource(identity_client.services,
-                                      endpoint.service_id)
+        service = common.find_service(identity_client, endpoint.service_id)
 
         info = {}
         info.update(endpoint._info)

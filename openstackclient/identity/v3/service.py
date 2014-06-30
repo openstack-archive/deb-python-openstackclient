@@ -23,6 +23,7 @@ from cliff import lister
 from cliff import show
 
 from openstackclient.common import utils
+from openstackclient.identity import common
 
 
 class CreateService(show.ShowOne):
@@ -56,7 +57,7 @@ class CreateService(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         enabled = True
@@ -64,9 +65,9 @@ class CreateService(show.ShowOne):
             enabled = False
 
         service = identity_client.services.create(
-            parsed_args.name,
-            parsed_args.type,
-            enabled,
+            name=parsed_args.name,
+            type=parsed_args.type,
+            enabled=enabled,
         )
 
         return zip(*sorted(six.iteritems(service._info)))
@@ -87,13 +88,10 @@ class DeleteService(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        service = utils.find_resource(
-            identity_client.services,
-            parsed_args.service,
-        )
+        service = common.find_service(identity_client, parsed_args.service)
 
         identity_client.services.delete(service.id)
         return
@@ -105,7 +103,7 @@ class ListService(lister.Lister):
     log = logging.getLogger(__name__ + '.ListService')
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
 
         columns = ('ID', 'Name', 'Type', 'Enabled')
         data = self.app.client_manager.identity.services.list()
@@ -152,7 +150,7 @@ class SetService(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if (not parsed_args.name
@@ -161,10 +159,7 @@ class SetService(command.Command):
                 and not parsed_args.disable):
             return
 
-        service = utils.find_resource(
-            identity_client.services,
-            parsed_args.service,
-        )
+        service = common.find_service(identity_client, parsed_args.service)
 
         kwargs = service._info
         if parsed_args.type:
@@ -200,12 +195,9 @@ class ShowService(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        service = utils.find_resource(
-            identity_client.services,
-            parsed_args.service,
-        )
+        service = common.find_service(identity_client, parsed_args.service)
 
         return zip(*sorted(six.iteritems(service._info)))

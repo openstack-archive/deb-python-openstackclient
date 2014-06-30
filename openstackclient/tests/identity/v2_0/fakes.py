@@ -80,6 +80,46 @@ TOKEN = {
     'user_id': user_id,
 }
 
+endpoint_name = service_name
+endpoint_adminurl = 'https://admin.example.com/v2/UUID'
+endpoint_region = 'RegionOne'
+endpoint_internalurl = 'https://internal.example.com/v2/UUID'
+endpoint_type = service_type
+endpoint_id = '11b41ee1b00841128b7333d4bf1a6140'
+endpoint_publicurl = 'https://public.example.com/v2/UUID'
+endpoint_service_id = service_id
+
+ENDPOINT = {
+    'service_name': endpoint_name,
+    'adminurl': endpoint_adminurl,
+    'region': endpoint_region,
+    'internalurl': endpoint_internalurl,
+    'service_type': endpoint_type,
+    'id': endpoint_id,
+    'publicurl': endpoint_publicurl,
+    'service_id': endpoint_service_id,
+}
+
+extension_name = 'OpenStack Keystone User CRUD'
+extension_namespace = 'http://docs.openstack.org/identity/'\
+    'api/ext/OS-KSCRUD/v1.0'
+extension_description = 'OpenStack extensions to Keystone v2.0 API'\
+    ' enabling User Operations.'
+extension_updated = '2013-07-07T12:00:0-00:00'
+extension_alias = 'OS-KSCRUD'
+extension_links = '[{"href":'\
+    '"https://github.com/openstack/identity-api", "type":'\
+    ' "text/html", "rel": "describedby"}]'
+
+EXTENSION = {
+    'name': extension_name,
+    'namespace': extension_namespace,
+    'description': extension_description,
+    'updated': extension_updated,
+    'alias': extension_alias,
+    'links': extension_links,
+}
+
 
 class FakeIdentityv2Client(object):
     def __init__(self, **kwargs):
@@ -90,10 +130,16 @@ class FakeIdentityv2Client(object):
         self.services.resource_class = fakes.FakeResource(None, {})
         self.tenants = mock.Mock()
         self.tenants.resource_class = fakes.FakeResource(None, {})
+        self.tokens = mock.Mock()
+        self.tokens.resource_class = fakes.FakeResource(None, {})
         self.users = mock.Mock()
         self.users.resource_class = fakes.FakeResource(None, {})
         self.ec2 = mock.Mock()
         self.ec2.resource_class = fakes.FakeResource(None, {})
+        self.endpoints = mock.Mock()
+        self.endpoints.resource_class = fakes.FakeResource(None, {})
+        self.extensions = mock.Mock()
+        self.extensions.resource_class = fakes.FakeResource(None, {})
         self.auth_token = kwargs['token']
         self.management_url = kwargs['endpoint']
 

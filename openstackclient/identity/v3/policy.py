@@ -47,12 +47,12 @@ class CreatePolicy(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
-        blob = _read_blob_file_contents(parsed_args.blob_file)
+        self.log.debug('take_action(%s)', parsed_args)
+        blob = utils.read_blob_file_contents(parsed_args.blob_file)
 
         identity_client = self.app.client_manager.identity
         policy = identity_client.policies.create(
-            blob, type=parsed_args.type
+            blob=blob, type=parsed_args.type
         )
 
         return zip(*sorted(six.iteritems(policy._info)))
@@ -73,7 +73,7 @@ class DeletePolicy(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         identity_client.policies.delete(parsed_args.policy)
         return
@@ -95,7 +95,7 @@ class ListPolicy(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         if parsed_args.include_blob:
             columns = ('ID', 'Type', 'Blob')
         else:
@@ -133,12 +133,12 @@ class SetPolicy(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         blob = None
 
         if parsed_args.blob_file:
-            blob = _read_blob_file_contents(parsed_args.blob_file)
+            blob = utils.read_blob_file_contents(parsed_args.blob_file)
 
         kwargs = {}
         if blob:
@@ -168,15 +168,9 @@ class ShowPolicy(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         policy = utils.find_resource(identity_client.policies,
                                      parsed_args.policy)
 
         return zip(*sorted(six.iteritems(policy._info)))
-
-
-def _read_blob_file_contents(blob_file):
-    with open(blob_file) as file:
-        blob = file.read().strip()
-    return blob

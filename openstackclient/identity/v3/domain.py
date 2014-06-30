@@ -58,11 +58,11 @@ class CreateDomain(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         domain = identity_client.domains.create(
-            parsed_args.name,
-            parsed_args.description,
+            name=parsed_args.name,
+            description=parsed_args.description,
             enabled=parsed_args.enabled,
         )
 
@@ -84,7 +84,7 @@ class DeleteDomain(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         domain = utils.find_resource(identity_client.domains,
                                      parsed_args.domain)
@@ -98,7 +98,7 @@ class ListDomain(lister.Lister):
     log = logging.getLogger(__name__ + '.ListDomain')
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         columns = ('ID', 'Name', 'Enabled', 'Description')
         data = self.app.client_manager.identity.domains.list()
         return (columns,
@@ -147,7 +147,7 @@ class SetDomain(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         domain = utils.find_resource(identity_client.domains,
                                      parsed_args.domain)
@@ -181,7 +181,7 @@ class ShowDomain(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         domain = utils.find_resource(identity_client.domains,
                                      parsed_args.domain)

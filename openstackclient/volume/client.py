@@ -15,8 +15,13 @@
 
 import logging
 
+from cinderclient.v1 import volume_snapshots
+from cinderclient.v1 import volumes
 from openstackclient.common import utils
 
+# Monkey patch for v1 cinderclient
+volumes.Volume.NAME_ATTR = 'display_name'
+volume_snapshots.Snapshot.NAME_ATTR = 'display_name'
 
 LOG = logging.getLogger(__name__)
 
@@ -51,6 +56,17 @@ def make_client(instance):
         region_name=instance._region_name,
         http_log_debug=http_log_debug
     )
+
+    # Populate the Cinder client to skip another auth query to Identity
+    if instance._url:
+        # token flow
+        client.client.management_url = instance._url
+    else:
+        # password flow
+        client.client.management_url = instance.get_endpoint_for_service_type(
+            API_NAME)
+        client.client.service_catalog = instance._service_catalog
+    client.client.auth_token = instance._token
 
     return client
 

@@ -34,9 +34,9 @@ class TestUser(identity_fakes.TestIdentityv3):
         self.projects_mock = self.app.client_manager.identity.projects
         self.projects_mock.reset_mock()
 
-        # Get a shortcut to the RoleManager Mock
-        self.roles_mock = self.app.client_manager.identity.roles
-        self.roles_mock.reset_mock()
+        # Get a shortcut to the GroupManager Mock
+        self.groups_mock = self.app.client_manager.identity.groups
+        self.groups_mock.reset_mock()
 
         # Get a shortcut to the UserManager Mock
         self.users_mock = self.app.client_manager.identity.users
@@ -85,6 +85,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -93,10 +94,9 @@ class TestUserCreate(TestUser):
             'password': None,
         }
 
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -131,6 +131,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -138,10 +139,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': 'secret',
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -179,6 +179,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -186,10 +187,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': 'abc123',
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -223,6 +223,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -230,10 +231,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': None,
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -282,6 +282,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': identity_fakes.PROJECT_2['id'],
             'description': None,
             'domain': None,
@@ -289,10 +290,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': None,
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -326,6 +326,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': identity_fakes.domain_id,
@@ -333,10 +334,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': None,
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -369,6 +369,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -376,10 +377,9 @@ class TestUserCreate(TestUser):
             'enabled': True,
             'password': None,
         }
-        # UserManager.create(name, domain=, project=, password=, email=,
+        # UserManager.create(name=, domain=, project=, password=, email=,
         #   description=, enabled=, default_project=)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -412,6 +412,7 @@ class TestUserCreate(TestUser):
 
         # Set expected values
         kwargs = {
+            'name': identity_fakes.user_name,
             'default_project': None,
             'description': None,
             'domain': None,
@@ -419,9 +420,8 @@ class TestUserCreate(TestUser):
             'enabled': False,
             'password': None,
         }
-        # users.create(name, password, email, tenant_id=None, enabled=True)
+        # users.create(name=, password, email, tenant_id=None, enabled=True)
         self.users_mock.create.assert_called_with(
-            identity_fakes.user_name,
             **kwargs
         )
 
@@ -476,33 +476,6 @@ class TestUserList(TestUser):
     def setUp(self):
         super(TestUserList, self).setUp()
 
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.DOMAIN),
-            loaded=True,
-        )
-
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
-        self.projects_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.PROJECT),
-                loaded=True,
-            ),
-        ]
-
-        self.roles_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.ROLE),
-                loaded=True,
-            ),
-        ]
-
         self.users_mock.get.return_value = fakes.FakeResource(
             None,
             copy.deepcopy(identity_fakes.USER),
@@ -516,6 +489,18 @@ class TestUserList(TestUser):
             ),
         ]
 
+        self.domains_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.DOMAIN),
+            loaded=True,
+        )
+
+        self.groups_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.GROUP),
+            loaded=True,
+        )
+
         # Get the command object to test
         self.cmd = user.ListUser(self.app, None)
 
@@ -527,7 +512,15 @@ class TestUserList(TestUser):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.users_mock.list.assert_called_with()
+        # Set expected values
+        kwargs = {
+            'domain': None,
+            'group': None,
+        }
+
+        self.users_mock.list.assert_called_with(
+            **kwargs
+        )
 
         collist = ('ID', 'Name')
         self.assertEqual(columns, collist)
@@ -535,29 +528,7 @@ class TestUserList(TestUser):
             identity_fakes.user_id,
             identity_fakes.user_name,
         ), )
-        self.assertEqual(tuple(data), datalist)
-
-    def test_user_list_project(self):
-        arglist = [
-            '--project', identity_fakes.project_id,
-        ]
-        verifylist = [
-            ('project', identity_fakes.project_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        self.users_mock.list.assert_called_with()
-
-        collist = ('ID', 'Name')
-        self.assertEqual(columns, collist)
-        datalist = ((
-            identity_fakes.user_id,
-            identity_fakes.user_name,
-        ), )
-        self.assertEqual(tuple(data), datalist)
+        self.assertEqual(datalist, tuple(data))
 
     def test_user_list_domain(self):
         arglist = [
@@ -571,7 +542,45 @@ class TestUserList(TestUser):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.users_mock.list.assert_called_with()
+        # Set expected values
+        kwargs = {
+            'domain': identity_fakes.domain_id,
+            'group': None,
+        }
+
+        self.users_mock.list.assert_called_with(
+            **kwargs
+        )
+
+        collist = ('ID', 'Name')
+        self.assertEqual(columns, collist)
+        datalist = ((
+            identity_fakes.user_id,
+            identity_fakes.user_name,
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    def test_user_list_group(self):
+        arglist = [
+            '--group', identity_fakes.group_name,
+        ]
+        verifylist = [
+            ('group', identity_fakes.group_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+
+        # Set expected values
+        kwargs = {
+            'domain': None,
+            'group': identity_fakes.group_id,
+        }
+
+        self.users_mock.list.assert_called_with(
+            **kwargs
+        )
 
         collist = ('ID', 'Name')
         self.assertEqual(columns, collist)
@@ -579,111 +588,7 @@ class TestUserList(TestUser):
             identity_fakes.user_id,
             identity_fakes.user_name,
         ), )
-        self.assertEqual(tuple(data), datalist)
-
-    def test_user_list_role_user(self):
-        arglist = [
-            '--role',
-            identity_fakes.user_id,
-        ]
-        verifylist = [
-            ('role', True),
-            ('user', identity_fakes.user_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # Set expected values
-        kwargs = {
-            'domain': 'default',
-            'user': self.users_mock.get(),
-        }
-        # RoleManager.list(user=, group=, domain=, project=, **kwargs)
-        self.roles_mock.list.assert_called_with(
-            **kwargs
-        )
-
-        collist = ('ID', 'Name')
-        self.assertEqual(columns, collist)
-        datalist = ((
-            identity_fakes.role_id,
-            identity_fakes.role_name,
-        ), )
-        self.assertEqual(tuple(data), datalist)
-
-    def test_user_list_role_domain(self):
-        arglist = [
-            '--domain', identity_fakes.domain_name,
-            '--role',
-            identity_fakes.user_id,
-        ]
-        verifylist = [
-            ('domain', identity_fakes.domain_name),
-            ('role', True),
-            ('user', identity_fakes.user_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # Set expected values
-        kwargs = {
-            'domain': self.domains_mock.get(),
-            'user': self.users_mock.get(),
-        }
-        # RoleManager.list(user=, group=, domain=, project=, **kwargs)
-        self.roles_mock.list.assert_called_with(
-            **kwargs
-        )
-
-        collist = ('ID', 'Name', 'Domain', 'User')
-        self.assertEqual(columns, collist)
-        datalist = ((
-            identity_fakes.role_id,
-            identity_fakes.role_name,
-            identity_fakes.domain_name,
-            identity_fakes.user_name,
-        ), )
-        self.assertEqual(tuple(data), datalist)
-
-    def test_user_list_role_project(self):
-        arglist = [
-            '--project', identity_fakes.project_name,
-            '--role',
-            identity_fakes.user_id,
-        ]
-        verifylist = [
-            ('project', identity_fakes.project_name),
-            ('role', True),
-            ('user', identity_fakes.user_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # Set expected values
-        kwargs = {
-            'project': self.projects_mock.get(),
-            'user': self.users_mock.get(),
-        }
-        # RoleManager.list(user=, group=, domain=, project=, **kwargs)
-        self.roles_mock.list.assert_called_with(
-            **kwargs
-        )
-
-        collist = ('ID', 'Name', 'Project', 'User')
-        self.assertEqual(columns, collist)
-        datalist = ((
-            identity_fakes.role_id,
-            identity_fakes.role_name,
-            identity_fakes.project_name,
-            identity_fakes.user_name,
-        ), )
-        self.assertEqual(tuple(data), datalist)
+        self.assertEqual(datalist, tuple(data))
 
     def test_user_list_long(self):
         arglist = [
@@ -697,7 +602,15 @@ class TestUserList(TestUser):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.users_mock.list.assert_called_with()
+        # Set expected values
+        kwargs = {
+            'domain': None,
+            'group': None,
+        }
+
+        self.users_mock.list.assert_called_with(
+            **kwargs
+        )
 
         collist = (
             'ID',
@@ -718,7 +631,7 @@ class TestUserList(TestUser):
             identity_fakes.user_email,
             True,
         ), )
-        self.assertEqual(tuple(data), datalist)
+        self.assertEqual(datalist, tuple(data))
 
 
 class TestUserSet(TestUser):

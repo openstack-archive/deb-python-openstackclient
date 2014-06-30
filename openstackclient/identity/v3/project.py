@@ -22,6 +22,7 @@ from cliff import command
 from cliff import lister
 from cliff import show
 
+from openstackclient.common import parseractions
 from openstackclient.common import utils
 
 
@@ -58,10 +59,17 @@ class CreateProject(show.ShowOne):
             action='store_true',
             help='Disable project',
         )
+        parser.add_argument(
+            '--property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help='Property to add for this project '
+                 '(repeat option to set multiple properties)',
+        )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if parsed_args.domain:
@@ -75,12 +83,16 @@ class CreateProject(show.ShowOne):
         enabled = True
         if parsed_args.disable:
             enabled = False
+        kwargs = {}
+        if parsed_args.property:
+            kwargs = parsed_args.property.copy()
 
         project = identity_client.projects.create(
-            parsed_args.name,
-            domain,
+            name=parsed_args.name,
+            domain=domain,
             description=parsed_args.description,
             enabled=enabled,
+            **kwargs
         )
 
         info = {}
@@ -103,7 +115,7 @@ class DeleteProject(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         project = utils.find_resource(
@@ -128,15 +140,27 @@ class ListProject(lister.Lister):
             default=False,
             help='List additional fields in output',
         )
+        parser.add_argument(
+            '--domain',
+            metavar='<project-domain>',
+            help='Filter by a specific domain',
+        )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
+        identity_client = self.app.client_manager.identity
         if parsed_args.long:
             columns = ('ID', 'Name', 'Domain ID', 'Description', 'Enabled')
         else:
             columns = ('ID', 'Name')
-        data = self.app.client_manager.identity.projects.list()
+        kwargs = {}
+        if parsed_args.domain:
+            kwargs['domain'] = utils.find_resource(
+                identity_client.domains,
+                parsed_args.domain,
+            ).id
+        data = identity_client.projects.list(**kwargs)
         return (columns,
                 (utils.get_item_properties(
                     s, columns,
@@ -182,16 +206,24 @@ class SetProject(command.Command):
             action='store_true',
             help='Disable project',
         )
+        parser.add_argument(
+            '--property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help='Property to add for this project '
+                 '(repeat option to set multiple properties)',
+        )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
         if (not parsed_args.name
                 and not parsed_args.description
                 and not parsed_args.domain
                 and not parsed_args.enable
+                and not parsed_args.property
                 and not parsed_args.disable):
             return
 
@@ -214,10 +246,12 @@ class SetProject(command.Command):
             kwargs['enabled'] = True
         if parsed_args.disable:
             kwargs['enabled'] = False
+        if parsed_args.property:
+            kwargs.update(parsed_args.property)
         if 'id' in kwargs:
             del kwargs['id']
         if 'domain_id' in kwargs:
-            # Hack around borken Identity API arg names
+            # Hack around broken Identity API arg names
             kwargs.update(
                 {'domain': kwargs.pop('domain_id')}
             )
@@ -240,7 +274,7 @@ class ShowProject(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
+        self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         project = utils.find_resource(identity_client.projects,
                                       parsed_args.project)
