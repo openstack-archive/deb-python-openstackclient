@@ -1,3 +1,9 @@
+python-openstackclient (0.4.0-1) unstable; urgency=medium
+
+  * New upstream release. 
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Mon, 30 Jun 2014 00:55:59 -0300
+
 python-openstackclient (0.3.1-1) unstable; urgency=medium
 
   * New upstream release. 
