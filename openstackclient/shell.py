@@ -31,10 +31,8 @@ import openstackclient
 from openstackclient.common import clientmanager
 from openstackclient.common import commandmanager
 from openstackclient.common import exceptions as exc
-from openstackclient.common import openstackkeyring
-from openstackclient.common import restapi
+from openstackclient.common import timing
 from openstackclient.common import utils
-from openstackclient.identity import client as identity_client
 
 
 KEYRING_SERVICE = 'openstack'
@@ -61,6 +59,7 @@ class OpenStackShell(app.App):
     CONSOLE_MESSAGE_FORMAT = '%(levelname)s: %(name)s %(message)s'
 
     log = logging.getLogger(__name__)
+    timing_data = []
 
     def __init__(self):
         # Patch command.Command to add a default auth_required = True
@@ -75,6 +74,8 @@ class OpenStackShell(app.App):
             version=openstackclient.__version__,
             command_manager=commandmanager.CommandManager('openstack.cli'))
 
+        self.api_version = {}
+
         # Until we have command line arguments parsed, dump any stack traces
         self.dump_stack_trace = True
 
@@ -85,10 +86,14 @@ class OpenStackShell(app.App):
         # Assume TLS host certificate verification is enabled
         self.verify = True
 
-        # Get list of extension modules
+        # Get list of base modules
         self.ext_modules = clientmanager.get_extension_modules(
-            'openstack.cli.extension',
+            'openstack.cli.base',
         )
+        # Append list of extension modules
+        self.ext_modules.extend(clientmanager.get_extension_modules(
+            'openstack.cli.extension',
+        ))
 
         # Loop through extensions to get parser additions
         for mod in self.ext_modules:
@@ -304,35 +309,18 @@ class OpenStackShell(app.App):
             metavar='<url>',
             default=env('OS_URL'),
             help='Defaults to env[OS_URL]')
-
-        env_os_keyring = env('OS_USE_KEYRING', default=False)
-        if type(env_os_keyring) == str:
-            if env_os_keyring.lower() in ['true', '1']:
-                env_os_keyring = True
-            else:
-                env_os_keyring = False
-        parser.add_argument('--os-use-keyring',
-                            default=env_os_keyring,
-                            action='store_true',
-                            help='Use keyring to store password, '
-                                 'default=False (Env: OS_USE_KEYRING)')
-
         parser.add_argument(
-            '--os-identity-api-version',
-            metavar='<identity-api-version>',
-            default=env(
-                'OS_IDENTITY_API_VERSION',
-                default=identity_client.DEFAULT_IDENTITY_API_VERSION),
-            help='Identity API version, default=' +
-                 identity_client.DEFAULT_IDENTITY_API_VERSION +
-                 ' (Env: OS_IDENTITY_API_VERSION)')
+            '--timing',
+            default=False,
+            action='store_true',
+            help="Print API call timing info",
+        )
 
         return parser
 
     def authenticate_user(self):
-        """Make sure the user has provided all of the authentication
-        info we need.
-        """
+        """Verify the required authentication credentials are present"""
+
         self.log.debug('validating authentication options')
         if self.options.os_token or self.options.os_url:
             # Token flow auth takes priority
@@ -353,14 +341,12 @@ class OpenStackShell(app.App):
                     "You must provide a username via"
                     " either --os-username or env[OS_USERNAME]")
 
-            self.get_password_from_keyring()
             if not self.options.os_password:
                 # No password, if we've got a tty, try prompting for it
                 if hasattr(sys.stdin, 'isatty') and sys.stdin.isatty():
                     # Check for Ctl-D
                     try:
                         self.options.os_password = getpass.getpass()
-                        self.set_password_in_keyring()
                     except EOFError:
                         pass
                 # No password because we did't have a tty or the
@@ -374,18 +360,34 @@ class OpenStackShell(app.App):
             if not ((self.options.os_project_id
                     or self.options.os_project_name) or
                     (self.options.os_domain_id
-                    or self.options.os_domain_name)):
+                    or self.options.os_domain_name) or
+                    self.options.os_trust_id):
                 raise exc.CommandError(
                     "You must provide authentication scope as a project "
                     "or a domain via --os-project-id or env[OS_PROJECT_ID], "
                     "--os-project-name or env[OS_PROJECT_NAME], "
                     "--os-domain-id or env[OS_DOMAIN_ID], or"
-                    "--os-domain-name or env[OS_DOMAIN_NAME].")
+                    "--os-domain-name or env[OS_DOMAIN_NAME], or "
+                    "--os-trust-id or env[OS_TRUST_ID].")
 
             if not self.options.os_auth_url:
                 raise exc.CommandError(
                     "You must provide an auth url via"
                     " either --os-auth-url or via env[OS_AUTH_URL]")
+
+            if (self.options.os_trust_id and
+               self.options.os_identity_api_version != '3'):
+                raise exc.CommandError(
+                    "Trusts can only be used with Identity API v3")
+
+            if (self.options.os_trust_id and
+               ((self.options.os_project_id
+                 or self.options.os_project_name) or
+                (self.options.os_domain_id
+                 or self.options.os_domain_name))):
+                raise exc.CommandError(
+                    "Authentication cannot be scoped to multiple targets. "
+                    "Pick one of project, domain or trust.")
 
         self.client_manager = clientmanager.ClientManager(
             token=self.options.os_token,
@@ -403,37 +405,11 @@ class OpenStackShell(app.App):
             password=self.options.os_password,
             region_name=self.options.os_region_name,
             verify=self.verify,
+            timing=self.options.timing,
             api_version=self.api_version,
+            trust_id=self.options.os_trust_id,
         )
         return
-
-    def init_keyring_backend(self):
-        """Initialize openstack backend to use for keyring"""
-        return openstackkeyring.os_keyring()
-
-    def get_password_from_keyring(self):
-        """Get password from keyring, if it's set"""
-        if self.options.os_use_keyring:
-            service = KEYRING_SERVICE
-            backend = self.init_keyring_backend()
-            if not self.options.os_password:
-                password = backend.get_password(service,
-                                                self.options.os_username)
-                self.options.os_password = password
-
-    def set_password_in_keyring(self):
-        """Set password in keyring for this user"""
-        if self.options.os_use_keyring:
-            service = KEYRING_SERVICE
-            backend = self.init_keyring_backend()
-            if self.options.os_password:
-                password = backend.get_password(service,
-                                                self.options.os_username)
-                # either password is not set in keyring, or it is different
-                if password != self.options.os_password:
-                    backend.set_password(service,
-                                         self.options.os_username,
-                                         self.options.os_password)
 
     def initialize_app(self, argv):
         """Global app init bits:
@@ -448,24 +424,19 @@ class OpenStackShell(app.App):
         # Save default domain
         self.default_domain = self.options.os_default_domain
 
-        # Stash selected API versions for later
-        self.api_version = {
-            'identity': self.options.os_identity_api_version,
-        }
         # Loop through extensions to get API versions
         for mod in self.ext_modules:
-            ver = getattr(self.options, mod.API_VERSION_OPTION, None)
-            if ver:
-                self.api_version[mod.API_NAME] = ver
-                self.log.debug('%(name)s API version %(version)s',
-                               {'name': mod.API_NAME, 'version': ver})
-
-        # Add the API version-specific commands
-        for api in self.api_version.keys():
-            version = '.v' + self.api_version[api].replace('.', '_')
-            cmd_group = 'openstack.' + api.replace('-', '_') + version
-            self.log.debug('command group %s', cmd_group)
-            self.command_manager.add_command_group(cmd_group)
+            version_opt = getattr(self.options, mod.API_VERSION_OPTION, None)
+            if version_opt:
+                api = mod.API_NAME
+                self.api_version[api] = version_opt
+                version = '.v' + version_opt.replace('.', '_')
+                cmd_group = 'openstack.' + api.replace('-', '_') + version
+                self.command_manager.add_command_group(cmd_group)
+                self.log.debug(
+                    '%(name)s API version %(version)s, cmd group %(group)s',
+                    {'name': api, 'version': version_opt, 'group': cmd_group}
+                )
 
         # Commands that span multiple APIs
         self.command_manager.add_command_group(
@@ -495,10 +466,6 @@ class OpenStackShell(app.App):
             self.verify = self.options.os_cacert
         else:
             self.verify = not self.options.insecure
-        self.restapi = restapi.RESTApi(
-            verify=self.verify,
-            debug=self.options.debug,
-        )
 
     def prepare_to_run_command(self, cmd):
         """Set up auth and API versions"""
@@ -509,24 +476,45 @@ class OpenStackShell(app.App):
         if cmd.best_effort:
             try:
                 self.authenticate_user()
-                self.restapi.set_auth(self.client_manager.identity.auth_token)
             except Exception:
                 pass
         else:
             self.authenticate_user()
-            self.restapi.set_auth(self.client_manager.identity.auth_token)
         return
 
     def clean_up(self, cmd, result, err):
         self.log.debug('clean_up %s', cmd.__class__.__name__)
+
         if err:
             self.log.debug('got an error: %s', err)
+
+        # Process collected timing data
+        if self.options.timing:
+            # Loop through extensions
+            for mod in self.ext_modules:
+                client = getattr(self.client_manager, mod.API_NAME)
+                if hasattr(client, 'get_timings'):
+                    self.timing_data.extend(client.get_timings())
+
+            # Use the Timing pseudo-command to generate the output
+            tcmd = timing.Timing(self, self.options)
+            tparser = tcmd.get_parser('Timing')
+
+            # If anything other than prettytable is specified, force csv
+            format = 'table'
+            # Check the formatter used in the actual command
+            if hasattr(cmd, 'formatter') \
+                    and cmd.formatter != cmd._formatter_plugins['table'].obj:
+                format = 'csv'
+
+            sys.stdout.write('\n')
+            targs = tparser.parse_args(['-f', format])
+            tcmd.run(targs)
 
     def interact(self):
         # NOTE(dtroyer): Maintain the old behaviour for interactive use as
         #                this path does not call prepare_to_run_command()
         self.authenticate_user()
-        self.restapi.set_auth(self.client_manager.identity.auth_token)
         super(OpenStackShell, self).interact()
 
 

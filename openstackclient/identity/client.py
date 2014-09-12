@@ -36,16 +36,19 @@ def make_client(instance):
         API_NAME,
         instance._api_version[API_NAME],
         API_VERSIONS)
+    LOG.debug('Instantiating identity client: %s', identity_client)
+
     if instance._url:
-        LOG.debug('instantiating identity client: token flow')
+        LOG.debug('Using token auth')
         client = identity_client(
             endpoint=instance._url,
             token=instance._token,
             cacert=instance._cacert,
             insecure=instance._insecure,
+            trust_id=instance._trust_id,
         )
     else:
-        LOG.debug('instantiating identity client: password flow')
+        LOG.debug('Using password auth')
         client = identity_client(
             username=instance._username,
             password=instance._password,
@@ -61,9 +64,41 @@ def make_client(instance):
             region_name=instance._region_name,
             cacert=instance._cacert,
             insecure=instance._insecure,
+            trust_id=instance._trust_id,
         )
+
+        # TODO(dtroyer): the identity v2 role commands use this yet, fix that
+        #                so we can remove it
         instance.auth_ref = client.auth_ref
+
+        # NOTE(dtroyer): this is hanging around until restapi is replace by
+        #                ksc session
+        instance.session.set_auth(
+            client.auth_ref.auth_token,
+        )
+
     return client
+
+
+def build_option_parser(parser):
+    """Hook to add global options"""
+    parser.add_argument(
+        '--os-identity-api-version',
+        metavar='<identity-api-version>',
+        default=utils.env(
+            'OS_IDENTITY_API_VERSION',
+            default=DEFAULT_IDENTITY_API_VERSION),
+        help='Identity API version, default=' +
+             DEFAULT_IDENTITY_API_VERSION +
+             ' (Env: OS_IDENTITY_API_VERSION)')
+    parser.add_argument(
+        '--os-trust-id',
+        metavar='<trust-id>',
+        default=utils.env('OS_TRUST_ID'),
+        help='Trust ID to use when authenticating. '
+             'This can only be used with Keystone v3 API '
+             '(Env: OS_TRUST_ID)')
+    return parser
 
 
 class IdentityClientv2_0(identity_client_v2_0.Client):

@@ -57,13 +57,13 @@ class CreateEndpoint(show.ShowOne):
             dest='enabled',
             action='store_true',
             default=True,
-            help='Enable user',
+            help='Enable endpoint',
         )
         enable_group.add_argument(
             '--disable',
             dest='enabled',
             action='store_false',
-            help='Disable user',
+            help='Disable endpoint',
         )
         return parser
 
@@ -114,12 +114,38 @@ class ListEndpoint(lister.Lister):
 
     log = logging.getLogger(__name__ + '.ListEndpoint')
 
+    def get_parser(self, prog_name):
+        parser = super(ListEndpoint, self).get_parser(prog_name)
+        parser.add_argument(
+            '--service',
+            metavar='<service>',
+            help='Filter by a specific service')
+        parser.add_argument(
+            '--interface',
+            metavar='<interface>',
+            choices=['admin', 'public', 'internal'],
+            help='Filter by a specific interface, must be admin, public or'
+                 ' internal')
+        parser.add_argument(
+            '--region',
+            metavar='<region>',
+            help='Filter by a specific region')
+        return parser
+
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         columns = ('ID', 'Region', 'Service Name', 'Service Type',
                    'Enabled', 'Interface', 'URL')
-        data = identity_client.endpoints.list()
+        kwargs = {}
+        if parsed_args.service:
+            service = common.find_service(identity_client, parsed_args.service)
+            kwargs['service'] = service.id
+        if parsed_args.interface:
+            kwargs['interface'] = parsed_args.interface
+        if parsed_args.region:
+            kwargs['region'] = parsed_args.region
+        data = identity_client.endpoints.list(**kwargs)
 
         for ep in data:
             service = common.find_service(identity_client, ep.service_id)
@@ -165,14 +191,13 @@ class SetEndpoint(command.Command):
             '--enable',
             dest='enabled',
             action='store_true',
-            default=True,
-            help='Enable user',
+            help='Enable endpoint',
         )
         enable_group.add_argument(
             '--disable',
-            dest='enabled',
-            action='store_false',
-            help='Disable user',
+            dest='disabled',
+            action='store_true',
+            help='Disable endpoint',
         )
         return parser
 
@@ -181,20 +206,31 @@ class SetEndpoint(command.Command):
         identity_client = self.app.client_manager.identity
         endpoint = utils.find_resource(identity_client.endpoints,
                                        parsed_args.endpoint)
-        service = common.find_service(identity_client, parsed_args.service)
 
         if (not parsed_args.interface and not parsed_args.url
-                and not parsed_args.service and not parsed_args.region):
+                and not parsed_args.service and not parsed_args.region
+                and not parsed_args.enabled and not parsed_args.disabled):
             sys.stdout.write("Endpoint not updated, no arguments present")
             return
 
+        service_id = None
+        if parsed_args.service:
+            service = common.find_service(identity_client, parsed_args.service)
+            service_id = service.id
+
+        enabled = None
+        if parsed_args.enabled:
+            enabled = True
+        if parsed_args.disabled:
+            enabled = False
+
         identity_client.endpoints.update(
             endpoint.id,
-            service=service.id,
+            service=service_id,
             url=parsed_args.url,
             interface=parsed_args.interface,
             region=parsed_args.region,
-            enabled=parsed_args.enabled
+            enabled=enabled
         )
 
         return

@@ -19,11 +19,10 @@ import getpass
 import logging
 import os
 import six
-import sys
 import time
 
 from openstackclient.common import exceptions
-from openstackclient.openstack.common import strutils
+from openstackclient.openstack.common import importutils
 
 
 def find_resource(manager, name_or_id):
@@ -78,10 +77,19 @@ def format_dict(data):
     """
 
     output = ""
-    for s in data:
-        output = output + s + "='" + \
-            strutils.safe_encode(six.text_type(data[s])) + "', "
+    for s in sorted(data):
+        output = output + s + "='" + six.text_type(data[s]) + "', "
     return output[:-2]
+
+
+def format_list(data):
+    """Return a formatted strings
+
+    :param data: a list of strings
+    :rtype: a string formatted to a,b,c
+    """
+
+    return ', '.join(sorted(data))
 
 
 def get_item_properties(item, fields, mixed_case_fields=[], formatters={}):
@@ -149,17 +157,6 @@ def env(*vars, **kwargs):
     return kwargs.get('default', '')
 
 
-def import_class(import_str):
-    """Returns a class from a string including module and class
-
-    :param import_str: a string representation of the class name
-    :rtype: the requested class
-    """
-    mod_str, _sep, class_str = import_str.rpartition('.')
-    __import__(mod_str)
-    return getattr(sys.modules[mod_str], class_str)
-
-
 def get_client_class(api_name, version, version_map):
     """Returns the client class for the requested API version
 
@@ -175,7 +172,7 @@ def get_client_class(api_name, version, version_map):
               (api_name, version, ', '.join(version_map.keys())))
         raise exceptions.UnsupportedVersion(msg)
 
-    return import_class(client_path)
+    return importutils.import_class(client_path)
 
 
 def wait_for_status(status_f,
@@ -223,12 +220,15 @@ def get_effective_log_level():
     return min_log_lvl
 
 
-def get_password(stdin):
+def get_password(stdin, prompt=None, confirm=True):
+    message = prompt or "User Password:"
     if hasattr(stdin, 'isatty') and stdin.isatty():
         try:
             while True:
-                first_pass = getpass.getpass("User password: ")
-                second_pass = getpass.getpass("Repeat user password: ")
+                first_pass = getpass.getpass(message)
+                if not confirm:
+                    return first_pass
+                second_pass = getpass.getpass("Repeat " + message)
                 if first_pass == second_pass:
                     return first_pass
                 print("The passwords entered were not the same")

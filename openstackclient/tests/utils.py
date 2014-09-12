@@ -37,13 +37,20 @@ class TestCase(testtools.TestCase):
             stderr = self.useFixture(fixtures.StringStream("stderr")).stream
             self.useFixture(fixtures.MonkeyPatch("sys.stderr", stderr))
 
+    def assertNotCalled(self, m, msg=None):
+        """Assert a function was not called"""
+
+        if m.called:
+            if not msg:
+                msg = 'method %s should not have been called' % m
+            self.fail(msg)
+
     # 2.6 doesn't have the assert dict equals so make sure that it exists
     if tuple(sys.version_info)[0:2] < (2, 7):
 
         def assertIsInstance(self, obj, cls, msg=None):
-            """Same as self.assertTrue(isinstance(obj, cls)), with a nicer
-            default message
-            """
+            """self.assertTrue(isinstance(obj, cls)), with a nicer message"""
+
             if not isinstance(obj, cls):
                 standardMsg = '%s is not an instance of %r' % (obj, cls)
                 self.fail(self._formatMessage(msg, standardMsg))
@@ -74,7 +81,10 @@ class TestCommand(TestCase):
 
     def check_parser(self, cmd, args, verify_args):
         cmd_parser = cmd.get_parser('check_parser')
-        parsed_args = cmd_parser.parse_args(args)
+        try:
+            parsed_args = cmd_parser.parse_args(args)
+        except SystemExit:
+            raise Exception("Argument parse failed")
         for av in verify_args:
             attr, value = av
             if attr:

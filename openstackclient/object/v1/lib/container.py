@@ -17,13 +17,52 @@
 """Object v1 API library"""
 
 try:
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse  # noqa
 except ImportError:
-    from urlparse import urlparse
+    from urlparse import urlparse  # noqa
+
+
+def create_container(
+    session,
+    url,
+    container,
+):
+    """Create a container
+
+    :param session: a restapi object
+    :param url: endpoint
+    :param container: name of container to create
+    :returns: dict of returned headers
+    """
+
+    response = session.put("%s/%s" % (url, container))
+    url_parts = urlparse(url)
+    data = {
+        'account': url_parts.path.split('/')[-1],
+        'container': container,
+        'x-trans-id': response.headers.get('x-trans-id', None),
+    }
+
+    return data
+
+
+def delete_container(
+    session,
+    url,
+    container,
+):
+    """Delete a container
+
+    :param session: a restapi object
+    :param url: endpoint
+    :param container: name of container to delete
+    """
+
+    session.delete("%s/%s" % (url, container))
 
 
 def list_containers(
-    api,
+    session,
     url,
     marker=None,
     limit=None,
@@ -33,7 +72,7 @@ def list_containers(
 ):
     """Get containers in an account
 
-    :param api: a restapi object
+    :param session: a restapi object
     :param url: endpoint
     :param marker: marker query
     :param limit: limit query
@@ -46,7 +85,7 @@ def list_containers(
 
     if full_listing:
         data = listing = list_containers(
-            api,
+            session,
             url,
             marker,
             limit,
@@ -56,7 +95,7 @@ def list_containers(
         while listing:
             marker = listing[-1]['name']
             listing = list_containers(
-                api,
+                session,
                 url,
                 marker,
                 limit,
@@ -78,34 +117,35 @@ def list_containers(
         params['end_marker'] = end_marker
     if prefix:
         params['prefix'] = prefix
-    return api.list(url, params=params)
+    return session.get(url, params=params).json()
 
 
 def show_container(
-    api,
+    session,
     url,
     container,
 ):
     """Get container details
 
-    :param api: a restapi object
+    :param session: a restapi object
     :param url: endpoint
     :param container: name of container to show
     :returns: dict of returned headers
     """
 
-    response = api.head("%s/%s" % (url, container))
-    url_parts = urlparse(url)
+    response = session.head("%s/%s" % (url, container))
     data = {
-        'account': url_parts.path.split('/')[-1],
+        'account': response.headers.get('x-container-meta-owner', None),
         'container': container,
+        'object_count': response.headers.get(
+            'x-container-object-count',
+            None,
+        ),
+        'bytes_used': response.headers.get('x-container-bytes-used', None),
+        'read_acl': response.headers.get('x-container-read', None),
+        'write_acl': response.headers.get('x-container-write', None),
+        'sync_to': response.headers.get('x-container-sync-to', None),
+        'sync_key': response.headers.get('x-container-sync-key', None),
     }
-    data['object_count'] = response.headers.get(
-        'x-container-object-count', None)
-    data['bytes_used'] = response.headers.get('x-container-bytes-used', None)
-    data['read_acl'] = response.headers.get('x-container-read', None)
-    data['write_acl'] = response.headers.get('x-container-write', None)
-    data['sync_to'] = response.headers.get('x-container-sync-to', None)
-    data['sync_key'] = response.headers.get('x-container-sync-key', None)
 
     return data

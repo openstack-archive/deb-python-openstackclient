@@ -39,11 +39,13 @@ DEFAULT_COMPUTE_API_VERSION = "2"
 DEFAULT_IDENTITY_API_VERSION = "2.0"
 DEFAULT_IMAGE_API_VERSION = "v2"
 DEFAULT_VOLUME_API_VERSION = "1"
+DEFAULT_NETWORK_API_VERSION = "2"
 
 LIB_COMPUTE_API_VERSION = "2"
 LIB_IDENTITY_API_VERSION = "2.0"
 LIB_IMAGE_API_VERSION = "1"
 LIB_VOLUME_API_VERSION = "1"
+LIB_NETWORK_API_VERSION = "2"
 
 
 def make_shell():
@@ -102,6 +104,8 @@ class TestShell(utils.TestCase):
                              default_args["password"])
             self.assertEqual(_shell.options.os_region_name,
                              default_args["region_name"])
+            self.assertEqual(_shell.options.os_trust_id,
+                             default_args["trust_id"])
 
     def _assert_token_auth(self, cmd_options, default_args):
         with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
@@ -128,6 +132,8 @@ class TestShell(utils.TestCase):
                              default_args["image_api_version"])
             self.assertEqual(_shell.options.os_volume_api_version,
                              default_args["volume_api_version"])
+            self.assertEqual(_shell.options.os_network_api_version,
+                             default_args["network_api_version"])
 
 
 class TestShellHelp(TestShell):
@@ -177,7 +183,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -195,7 +202,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -213,7 +221,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -231,7 +240,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -249,7 +259,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -267,7 +278,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -285,7 +297,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -303,7 +316,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -321,7 +335,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -339,7 +354,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -357,7 +373,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": DEFAULT_PROJECT_DOMAIN_NAME,
             "username": "",
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -375,7 +392,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": DEFAULT_USERNAME,
             "password": "",
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -393,7 +411,8 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": DEFAULT_PASSWORD,
-            "region_name": ""
+            "region_name": "",
+            "trust_id": "",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -411,7 +430,27 @@ class TestShellPasswordAuth(TestShell):
             "project_domain_name": "",
             "username": "",
             "password": "",
-            "region_name": DEFAULT_REGION_NAME
+            "region_name": DEFAULT_REGION_NAME,
+            "trust_id": "",
+        }
+        self._assert_password_auth(flag, kwargs)
+
+    def test_only_trust_id_flow(self):
+        flag = "--os-trust-id " + "1234"
+        kwargs = {
+            "auth_url": "",
+            "project_id": "",
+            "project_name": "",
+            "domain_id": "",
+            "domain_name": "",
+            "user_domain_id": "",
+            "user_domain_name": "",
+            "project_domain_id": "",
+            "project_domain_name": "",
+            "username": "",
+            "password": "",
+            "region_name": "",
+            "trust_id": "1234",
         }
         self._assert_password_auth(flag, kwargs)
 
@@ -455,6 +494,7 @@ class TestShellCli(TestShell):
             "OS_IDENTITY_API_VERSION": DEFAULT_IDENTITY_API_VERSION,
             "OS_IMAGE_API_VERSION": DEFAULT_IMAGE_API_VERSION,
             "OS_VOLUME_API_VERSION": DEFAULT_VOLUME_API_VERSION,
+            "OS_NETWORK_API_VERSION": DEFAULT_NETWORK_API_VERSION,
         }
         self.orig_env, os.environ = os.environ, env.copy()
 
@@ -475,7 +515,8 @@ class TestShellCli(TestShell):
             "compute_api_version": DEFAULT_COMPUTE_API_VERSION,
             "identity_api_version": DEFAULT_IDENTITY_API_VERSION,
             "image_api_version": DEFAULT_IMAGE_API_VERSION,
-            "volume_api_version": DEFAULT_VOLUME_API_VERSION
+            "volume_api_version": DEFAULT_VOLUME_API_VERSION,
+            "network_api_version": DEFAULT_NETWORK_API_VERSION,
         }
         self._assert_cli(flag, kwargs)
 
@@ -486,6 +527,7 @@ class TestShellCli(TestShell):
             "compute_api_version": LIB_COMPUTE_API_VERSION,
             "identity_api_version": LIB_IDENTITY_API_VERSION,
             "image_api_version": LIB_IMAGE_API_VERSION,
-            "volume_api_version": LIB_VOLUME_API_VERSION
+            "volume_api_version": LIB_VOLUME_API_VERSION,
+            "network_api_version": LIB_NETWORK_API_VERSION
         }
         self._assert_cli(flag, kwargs)

@@ -20,9 +20,9 @@ import logging
 import requests
 
 try:
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode  # noqa
 except ImportError:
-    from urllib import urlencode
+    from urllib import urlencode  # noqa
 
 
 USER_AGENT = 'RAPI'
@@ -189,7 +189,11 @@ class RESTApi(object):
         :param \*\*kwargs: Optional arguments passed to ``request``
         """
 
-        return self.request('PATCH', url, data=data, json=json, **kwargs)
+        if json:
+            kwargs['json'] = json
+        if data:
+            kwargs['data'] = data
+        return self.request('PATCH', url, **kwargs)
 
     def post(self, url, data=None, json=None, **kwargs):
         """Send a POST request. Returns :class:`requests.Response` object.
@@ -201,7 +205,11 @@ class RESTApi(object):
         :param \*\*kwargs: Optional arguments passed to ``request``
         """
 
-        return self.request('POST', url, data=data, json=json, **kwargs)
+        if json:
+            kwargs['json'] = json
+        if data:
+            kwargs['data'] = data
+        return self.request('POST', url, **kwargs)
 
     def put(self, url, data=None, json=None, **kwargs):
         """Send a PUT request. Returns :class:`requests.Response` object.
@@ -213,7 +221,11 @@ class RESTApi(object):
         :param \*\*kwargs: Optional arguments passed to ``request``
         """
 
-        return self.request('PUT', url, data=data, json=json, **kwargs)
+        if json:
+            kwargs['json'] = json
+        if data:
+            kwargs['data'] = data
+        return self.request('PUT', url, **kwargs)
 
     # Command verb methods
 
@@ -250,16 +262,6 @@ class RESTApi(object):
             return response.json()[response_key]
         else:
             return response.json()
-
-        ###hack this for keystone!!!
-        #data = body[response_key]
-        # NOTE(ja): keystone returns values as list as {'values': [ ... ]}
-        #           unlike other services which just return the list...
-        #if isinstance(data, dict):
-        #    try:
-        #        data = data['values']
-        #    except KeyError:
-        #        pass
 
     def set(self, url, data=None, response_key=None, **kwargs):
         """Update an object via a PUT request

@@ -2,9 +2,9 @@
 OpenStack Client
 ================
 
-OpenStackclient (aka ``python-openstackclient``) is a command-line client for
+OpenStack Client (aka ``python-openstackclient``) is a command-line client for
 the OpenStack APIs.
-It is primarily a wrapper to the stock python-*client modules that implement the
+It is primarily a wrapper to the stock python-\*client modules that implement the
 actual REST API client actions.
 
 This is an implementation of the design goals shown in
@@ -15,13 +15,14 @@ operations in OpenStack.  The master repository is on GitHub_.
 .. _OpenStack Client Wiki: https://wiki.openstack.org/wiki/OpenStackClient
 .. _GitHub: https://github.com/openstack/python-openstackclient
 
-OpenStackclient has a plugin mechanism to add support for API extensions.
+OpenStack Client has a plugin mechanism to add support for API extensions.
 
 * `Release management`_
 * `Blueprints and feature specifications`_
 * `Issue tracking`_
 * `PyPi`_
 * `Developer Docs`_
+
 .. _release management: https://launchpad.net/python-openstackclient
 .. _Blueprints and feature specifications: https://blueprints.launchpad.net/python-openstackclient
 .. _Issue tracking: https://bugs.launchpad.net/python-openstackclient
@@ -39,7 +40,7 @@ or output.  We do not, however, expect any major changes at this point.
 Getting Started
 ===============
 
-OpenStackclient can be installed from PyPI using pip::
+OpenStack Client can be installed from PyPI using pip::
 
     pip install python-openstackclient
 
@@ -79,7 +80,6 @@ The 'password flow' variation is most commonly used::
    export OS_PROJECT_NAME=<project-name>
    export OS_USERNAME=<user-name>
    export OS_PASSWORD=<password>  # (optional)
-   export OS_USE_KEYRING=true  # (optional)
 
 The corresponding command-line options look very similar::
 
@@ -87,12 +87,9 @@ The corresponding command-line options look very similar::
    --os-project-name <project-name>
    --os-username <user-name>
    [--os-password <password>]
-   [--os-use-keyring]
 
 If a password is not provided above (in plaintext), you will be interactively
-prompted to provide one securely. If keyring is enabled, the password entered
-in the prompt is stored in keyring. From next time, the password is read from
-keyring, if it is not provided above (in plaintext).
+prompted to provide one securely.
 
 The token flow variation for authentication uses an already-acquired token
 and a URL pointing directly to the service API that presumably was acquired

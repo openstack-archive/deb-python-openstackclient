@@ -21,10 +21,13 @@ from openstackclient.tests import utils
 
 domain_id = 'd1'
 domain_name = 'oftheking'
+domain_description = 'domain description'
 
 DOMAIN = {
     'id': domain_id,
     'name': domain_name,
+    'description': domain_description,
+    'enabled': True,
 }
 
 group_id = 'gr-010'
@@ -74,6 +77,20 @@ SERVICE = {
     'enabled': True,
 }
 
+endpoint_id = 'e-123'
+endpoint_url = 'http://127.0.0.1:35357'
+endpoint_region = 'RegionOne'
+endpoint_interface = 'admin'
+
+ENDPOINT = {
+    'id': endpoint_id,
+    'url': endpoint_url,
+    'region': endpoint_region,
+    'interface': endpoint_interface,
+    'service_id': service_id,
+    'enabled': True,
+}
+
 user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 user_name = 'paul'
 user_description = 'Sir Paul'
@@ -114,7 +131,8 @@ IDENTITY_PROVIDER = {
     'description': idp_description
 }
 
-#Assignments
+# Assignments
+
 ASSIGNMENT_WITH_PROJECT_ID_AND_USER_ID = {
     'scope': {'project': {'id': project_id}},
     'user': {'id': user_id},
@@ -181,6 +199,8 @@ class FakeIdentityv3Client(object):
     def __init__(self, **kwargs):
         self.domains = mock.Mock()
         self.domains.resource_class = fakes.FakeResource(None, {})
+        self.endpoints = mock.Mock()
+        self.endpoints.resource_class = fakes.FakeResource(None, {})
         self.groups = mock.Mock()
         self.groups.resource_class = fakes.FakeResource(None, {})
         self.oauth1 = mock.Mock()
@@ -200,12 +220,16 @@ class FakeIdentityv3Client(object):
         self.management_url = kwargs['endpoint']
 
 
+class FakeFederationManager(object):
+    def __init__(self, **kwargs):
+        self.identity_providers = mock.Mock()
+        self.identity_providers.resource_class = fakes.FakeResource(None, {})
+
+
 class FakeFederatedClient(FakeIdentityv3Client):
     def __init__(self, **kwargs):
         super(FakeFederatedClient, self).__init__(**kwargs)
-
-        self.identity_providers = mock.Mock()
-        self.identity_providers.resource_class = fakes.FakeResource(None, {})
+        self.federation = FakeFederationManager()
 
 
 class FakeOAuth1Client(FakeIdentityv3Client):

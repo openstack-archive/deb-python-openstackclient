@@ -175,7 +175,7 @@ class AddServerSecurityGroup(command.Command):
             parsed_args.group,
         )
 
-        server.add_security_group(security_group)
+        server.add_security_group(security_group.name)
         return
 
 
@@ -300,19 +300,22 @@ class CreateServer(show.ShowOne):
                 raise exceptions.CommandError("Can't open '%s': %s" % (src, e))
 
         if parsed_args.min > parsed_args.max:
-            raise exceptions.CommandError("min instances should be <= "
-                                          "max instances")
+            msg = "min instances should be <= max instances"
+            raise exceptions.CommandError(msg)
         if parsed_args.min < 1:
-            raise exceptions.CommandError("min instances should be > 0")
+            msg = "min instances should be > 0"
+            raise exceptions.CommandError(msg)
         if parsed_args.max < 1:
-            raise exceptions.CommandError("max instances should be > 0")
+            msg = "max instances should be > 0"
+            raise exceptions.CommandError(msg)
 
         userdata = None
         if parsed_args.user_data:
             try:
                 userdata = open(parsed_args.user_data)
             except IOError as e:
-                raise exceptions.CommandError("Can't open '%s': %s" %
+                msg = "Can't open '%s': %s"
+                raise exceptions.CommandError(msg %
                                               (parsed_args.user_data, e))
 
         block_device_mapping = dict(v.split('=', 1)
@@ -693,7 +696,7 @@ class MigrateServer(command.Command):
             if utils.wait_for_status(
                 compute_client.servers.get,
                 server.id,
-                #callback=_show_progress,
+                callback=_show_progress,
             ):
                 sys.stdout.write('Complete\n')
             else:
@@ -938,27 +941,32 @@ class RescueServer(show.ShowOne):
 
 
 class ResizeServer(command.Command):
-    """Convert server to a new flavor"""
+    """Scale server to a new flavor"""
 
     log = logging.getLogger(__name__ + '.ResizeServer')
 
     def get_parser(self, prog_name):
         parser = super(ResizeServer, self).get_parser(prog_name)
         phase_group = parser.add_mutually_exclusive_group()
+        parser.add_argument(
+            'server',
+            metavar='<server>',
+            help='Server (name or ID)',
+        )
         phase_group.add_argument(
             '--flavor',
             metavar='<flavor>',
-            help='Resize server to this flavor',
+            help='Resize server to specified flavor',
         )
         phase_group.add_argument(
             '--verify',
             action="store_true",
-            help='Verify previous server resize',
+            help='Verify server resize is complete',
         )
         phase_group.add_argument(
             '--revert',
             action="store_true",
-            help='Restore server before resize',
+            help='Restore server state before resize',
         )
         parser.add_argument(
             '--wait',
@@ -980,7 +988,7 @@ class ResizeServer(command.Command):
                 compute_client.flavors,
                 parsed_args.flavor,
             )
-            server.resize(flavor)
+            compute_client.servers.resize(server, flavor)
             if parsed_args.wait:
                 if utils.wait_for_status(
                     compute_client.servers.get,
@@ -993,9 +1001,9 @@ class ResizeServer(command.Command):
                     sys.stdout.write('\nError resizing server')
                     raise SystemExit
         elif parsed_args.verify:
-            server.confirm_resize()
+            compute_client.servers.confirm_resize(server)
         elif parsed_args.revert:
-            server.revert_resize()
+            compute_client.servers.revert_resize(server)
 
 
 class ResumeServer(command.Command):
@@ -1077,8 +1085,8 @@ class SetServer(command.Command):
             if p1 == p2:
                 server.change_password(p1)
             else:
-                raise exceptions.CommandError(
-                    "Passwords do not match, password unchanged")
+                msg = "Passwords do not match, password unchanged"
+                raise exceptions.CommandError(msg)
 
 
 class ShowServer(show.ShowOne):

@@ -25,7 +25,7 @@ from openstackclient.common import utils
 
 
 class CreateIdentityProvider(show.ShowOne):
-    """Create identity_provider command"""
+    """Create new identity provider"""
 
     log = logging.getLogger(__name__ + '.CreateIdentityProvider')
 
@@ -33,7 +33,7 @@ class CreateIdentityProvider(show.ShowOne):
         parser = super(CreateIdentityProvider, self).get_parser(prog_name)
         parser.add_argument(
             'identity_provider_id',
-            metavar='<identity_provider_id>',
+            metavar='<identity-provider-id>',
             help='New identity provider ID (must be unique)'
         )
         parser.add_argument(
@@ -61,8 +61,8 @@ class CreateIdentityProvider(show.ShowOne):
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
-        idp = identity_client.identity_providers.create(
-            parsed_args.identity_provider_id,
+        idp = identity_client.federation.identity_providers.create(
+            id=parsed_args.identity_provider_id,
             description=parsed_args.description,
             enabled=parsed_args.enabled)
         info = {}
@@ -71,7 +71,7 @@ class CreateIdentityProvider(show.ShowOne):
 
 
 class DeleteIdentityProvider(command.Command):
-    """Delete identity provider"""
+    """Delete an identity provider"""
 
     log = logging.getLogger(__name__ + '.DeleteIdentityProvider')
 
@@ -79,15 +79,15 @@ class DeleteIdentityProvider(command.Command):
         parser = super(DeleteIdentityProvider, self).get_parser(prog_name)
         parser.add_argument(
             'identity_provider',
-            metavar='<identity_provider>',
-            help='ID of the identity provider to be deleted',
+            metavar='<identity-provider-id>',
+            help='Identity provider ID to delete',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
-        identity_client.identity_providers.delete(
+        identity_client.federation.identity_providers.delete(
             parsed_args.identity_provider)
         return
 
@@ -100,7 +100,8 @@ class ListIdentityProvider(lister.Lister):
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         columns = ('ID', 'Enabled', 'Description')
-        data = self.app.client_manager.identity.identity_providers.list()
+        identity_client = self.app.client_manager.identity
+        data = identity_client.federation.identity_providers.list()
         return (columns,
                 (utils.get_item_properties(
                     s, columns,
@@ -109,7 +110,7 @@ class ListIdentityProvider(lister.Lister):
 
 
 class SetIdentityProvider(command.Command):
-    """Set identity provider"""
+    """Set identity provider properties"""
 
     log = logging.getLogger(__name__ + '.SetIdentityProvider')
 
@@ -117,8 +118,8 @@ class SetIdentityProvider(command.Command):
         parser = super(SetIdentityProvider, self).get_parser(prog_name)
         parser.add_argument(
             'identity_provider',
-            metavar='<identity_provider>',
-            help='ID of the identity provider to be changed',
+            metavar='<identity-provider-id>',
+            help='Identity provider ID to change',
         )
 
         enable_identity_provider = parser.add_mutually_exclusive_group()
@@ -136,7 +137,7 @@ class SetIdentityProvider(command.Command):
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
-        identity_client = self.app.client_manager.identity
+        federation_client = self.app.client_manager.identity.federation
 
         if parsed_args.enable is True:
             enabled = True
@@ -147,7 +148,7 @@ class SetIdentityProvider(command.Command):
                              "no arguments present")
             return (None, None)
 
-        identity_provider = identity_client.identity_providers.update(
+        identity_provider = federation_client.identity_providers.update(
             parsed_args.identity_provider, enabled=enabled)
         info = {}
         info.update(identity_provider._info)
@@ -155,7 +156,7 @@ class SetIdentityProvider(command.Command):
 
 
 class ShowIdentityProvider(show.ShowOne):
-    """Show identity provider"""
+    """Show identity provider details"""
 
     log = logging.getLogger(__name__ + '.ShowIdentityProvider')
 
@@ -163,8 +164,8 @@ class ShowIdentityProvider(show.ShowOne):
         parser = super(ShowIdentityProvider, self).get_parser(prog_name)
         parser.add_argument(
             'identity_provider',
-            metavar='<identity_provider>',
-            help='ID of the identity provider to be displayed',
+            metavar='<identity-provider-id>',
+            help='Identity provider ID to show',
         )
         return parser
 
@@ -172,7 +173,7 @@ class ShowIdentityProvider(show.ShowOne):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
         identity_provider = utils.find_resource(
-            identity_client.identity_providers,
+            identity_client.federation.identity_providers,
             parsed_args.identity_provider)
 
         info = {}

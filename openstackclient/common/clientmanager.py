@@ -19,6 +19,7 @@ import logging
 import pkg_resources
 import sys
 
+from openstackclient.common import restapi
 from openstackclient.identity import client as identity_client
 
 
@@ -48,7 +49,8 @@ class ClientManager(object):
                  username=None, password=None,
                  user_domain_id=None, user_domain_name=None,
                  project_domain_id=None, project_domain_name=None,
-                 region_name=None, api_version=None, verify=True):
+                 region_name=None, api_version=None, verify=True,
+                 trust_id=None, timing=None):
         self._token = token
         self._url = url
         self._auth_url = auth_url
@@ -64,7 +66,9 @@ class ClientManager(object):
         self._project_domain_name = project_domain_name
         self._region_name = region_name
         self._api_version = api_version
+        self._trust_id = trust_id
         self._service_catalog = None
+        self.timing = timing
 
         # verify is the Requests-compatible form
         self._verify = verify
@@ -74,7 +78,18 @@ class ClientManager(object):
             self._insecure = not verify
         else:
             self._cacert = verify
-            self._insecure = True
+            self._insecure = False
+
+        self.session = restapi.RESTApi(
+            verify=verify,
+            debug=True,
+        )
+
+        # Get logging from root logger
+        root_logger = logging.getLogger('')
+        LOG.setLevel(root_logger.getEffectiveLevel())
+        restapi_logger = logging.getLogger('restapi')
+        restapi_logger.setLevel(root_logger.getEffectiveLevel())
 
         self.auth_ref = None
 
@@ -114,7 +129,7 @@ def get_extension_modules(group):
 
         setattr(
             ClientManager,
-            ep.name,
+            module.API_NAME,
             ClientCache(
                 getattr(sys.modules[ep.module_name], 'make_client', None)
             ),

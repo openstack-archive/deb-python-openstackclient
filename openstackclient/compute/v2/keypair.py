@@ -29,7 +29,7 @@ from openstackclient.common import utils
 
 
 class CreateKeypair(show.ShowOne):
-    """Create keypair command"""
+    """Create new keypair"""
 
     log = logging.getLogger(__name__ + '.CreateKeypair')
 
@@ -57,8 +57,9 @@ class CreateKeypair(show.ShowOne):
                 with open(os.path.expanduser(parsed_args.public_key)) as p:
                     public_key = p.read()
             except IOError as e:
-                raise exceptions.CommandError(
-                    "Key file %s not found: %s" % (parsed_args.public_key, e))
+                msg = "Key file %s not found: %s"
+                raise exceptions.CommandError(msg
+                                              % (parsed_args.public_key, e))
 
         keypair = compute_client.keypairs.create(
             parsed_args.name,
@@ -79,7 +80,7 @@ class CreateKeypair(show.ShowOne):
 
 
 class DeleteKeypair(command.Command):
-    """Delete keypair command"""
+    """Delete a keypair"""
 
     log = logging.getLogger(__name__ + '.DeleteKeypair')
 
@@ -100,7 +101,7 @@ class DeleteKeypair(command.Command):
 
 
 class ListKeypair(lister.Lister):
-    """List keypair command"""
+    """List keypairs"""
 
     log = logging.getLogger(__name__ + ".ListKeypair")
 
@@ -120,7 +121,7 @@ class ListKeypair(lister.Lister):
 
 
 class ShowKeypair(show.ShowOne):
-    """Show keypair command"""
+    """Show keypair details"""
 
     log = logging.getLogger(__name__ + '.ShowKeypair')
 

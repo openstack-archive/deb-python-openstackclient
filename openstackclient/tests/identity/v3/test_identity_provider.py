@@ -21,152 +21,154 @@ from openstackclient.tests.identity.v3 import fakes as identity_fakes
 
 class TestIdentityProvider(identity_fakes.TestFederatedIdentity):
 
-        def setUp(self):
-            super(TestIdentityProvider, self).setUp()
+    def setUp(self):
+        super(TestIdentityProvider, self).setUp()
 
-            self.identity_providers_mock = self.app.client_manager.\
-                identity.identity_providers
-
-            self.identity_providers_mock.reset_mock()
+        federation_lib = self.app.client_manager.identity.federation
+        self.identity_providers_mock = federation_lib.identity_providers
+        self.identity_providers_mock.reset_mock()
 
 
 class TestIdentityProviderCreate(TestIdentityProvider):
 
-        def setUp(self):
-            super(TestIdentityProviderCreate, self).setUp()
+    def setUp(self):
+        super(TestIdentityProviderCreate, self).setUp()
 
-            self.identity_providers_mock.create.return_value = \
-                fakes.FakeResource(
-                    None,
-                    copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
-                    loaded=True
-                )
+        copied_idp = copy.deepcopy(identity_fakes.IDENTITY_PROVIDER)
+        resource = fakes.FakeResource(None, copied_idp, loaded=True)
+        self.identity_providers_mock.create.return_value = resource
+        self.cmd = identity_provider.CreateIdentityProvider(self.app, None)
 
-            self.cmd = identity_provider.CreateIdentityProvider(
-                self.app, None)
+    def test_create_identity_provider_no_options(self):
+        arglist = [
+            identity_fakes.idp_id,
+        ]
+        verifylist = [
+            ('identity_provider_id', identity_fakes.idp_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
 
-        def test_create_identity_provider_no_options(self):
-            arglist = [
-                    identity_fakes.idp_id
-            ]
-            verifylist = [
-                    ('identity_provider_id', identity_fakes.idp_id)
-            ]
-            parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-            columns, data = self.cmd.take_action(parsed_args)
+        # Set expected values
+        kwargs = {
+            'enabled': True,
+            'description': None,
+        }
 
-            # Set expected values
-            kwargs = {
-                'enabled': True,
-                'description': None,
-            }
+        self.identity_providers_mock.create.assert_called_with(
+            id=identity_fakes.idp_id,
+            **kwargs
+        )
 
-            self.identity_providers_mock.create.assert_called_with(
-                identity_fakes.idp_id, **kwargs)
+        collist = ('description', 'enabled', 'id')
+        self.assertEqual(columns, collist)
+        datalist = (
+            identity_fakes.idp_description,
+            True,
+            identity_fakes.idp_id,
+        )
+        self.assertEqual(data, datalist)
 
-            collist = ('description', 'enabled', 'id')
-            self.assertEqual(columns, collist)
-            datalist = (
-                identity_fakes.idp_description,
-                True,
-                identity_fakes.idp_id,
-            )
-            self.assertEqual(data, datalist)
+    def test_create_identity_provider_description(self):
+        arglist = [
+            '--description', identity_fakes.idp_description,
+            identity_fakes.idp_id,
+        ]
+        verifylist = [
+            ('identity_provider_id', identity_fakes.idp_id),
+            ('description', identity_fakes.idp_description),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
 
-        def test_create_identity_provider_description(self):
-            arglist = ['--description', identity_fakes.idp_description,
-                       identity_fakes.idp_id]
-            verifylist = [
-                    ('identity_provider_id', identity_fakes.idp_id),
-                    ('description', identity_fakes.idp_description)
-            ]
-            parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-            columns, data = self.cmd.take_action(parsed_args)
+        # Set expected values
+        kwargs = {
+            'description': identity_fakes.idp_description,
+            'enabled': True,
+        }
 
-            # Set expected values
-            kwargs = {
-                'description': identity_fakes.idp_description,
-                'enabled': True,
-            }
+        self.identity_providers_mock.create.assert_called_with(
+            id=identity_fakes.idp_id,
+            **kwargs
+        )
 
-            self.identity_providers_mock.create.assert_called_with(
-                identity_fakes.idp_id, **kwargs)
+        collist = ('description', 'enabled', 'id')
+        self.assertEqual(columns, collist)
+        datalist = (
+            identity_fakes.idp_description,
+            True,
+            identity_fakes.idp_id,
+        )
+        self.assertEqual(data, datalist)
 
-            collist = ('description', 'enabled', 'id')
-            self.assertEqual(columns, collist)
-            datalist = (
-                identity_fakes.idp_description, True, identity_fakes.idp_id,
-            )
-            self.assertEqual(data, datalist)
+    def test_create_identity_provider_disabled(self):
 
-        def test_create_identity_provider_disabled(self):
+        # Prepare FakeResource object
+        IDENTITY_PROVIDER = copy.deepcopy(identity_fakes.IDENTITY_PROVIDER)
+        IDENTITY_PROVIDER['enabled'] = False
+        IDENTITY_PROVIDER['description'] = None
 
-            # Prepare FakeResource object
-            IDENTITY_PROVIDER = copy.deepcopy(identity_fakes.IDENTITY_PROVIDER)
-            IDENTITY_PROVIDER['enabled'] = False
-            IDENTITY_PROVIDER['description'] = None
+        resource = fakes.FakeResource(None, IDENTITY_PROVIDER, loaded=True)
+        self.identity_providers_mock.create.return_value = resource
 
-            self.identity_providers_mock.create.return_value = \
-                fakes.FakeResource(
-                    None,
-                    IDENTITY_PROVIDER,
-                    loaded=True
-                )
-            arglist = ['--disable',
-                       identity_fakes.idp_id]
-            verifylist = [
-                    ('identity_provider_id', identity_fakes.idp_id),
+        arglist = [
+            '--disable',
+            identity_fakes.idp_id,
+        ]
+        verifylist = [
+            ('identity_provider_id', identity_fakes.idp_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
 
-            ]
-            parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-            columns, data = self.cmd.take_action(parsed_args)
+        # Set expected values
+        kwargs = {
+            'enabled': False,
+            'description': None,
+        }
 
-            # Set expected values
-            kwargs = {
-                'enabled': False,
-                'description': None
-            }
+        self.identity_providers_mock.create.assert_called_with(
+            id=identity_fakes.idp_id,
+            **kwargs
+        )
 
-            self.identity_providers_mock.create.assert_called_with(
-                identity_fakes.idp_id, **kwargs)
-
-            collist = ('description', 'enabled', 'id')
-            self.assertEqual(columns, collist)
-            datalist = (
-                None,
-                False,
-                identity_fakes.idp_id,
-            )
-            self.assertEqual(data, datalist)
+        collist = ('description', 'enabled', 'id')
+        self.assertEqual(columns, collist)
+        datalist = (
+            None,
+            False,
+            identity_fakes.idp_id,
+        )
+        self.assertEqual(data, datalist)
 
 
 class TestIdentityProviderDelete(TestIdentityProvider):
 
-        def setUp(self):
-            super(TestIdentityProviderDelete, self).setUp()
+    def setUp(self):
+        super(TestIdentityProviderDelete, self).setUp()
 
-            # This is the return value for utils.find_resource()
-            self.identity_providers_mock.get.return_value = fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
-                loaded=True)
+        # This is the return value for utils.find_resource()
+        self.identity_providers_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
+            loaded=True,
+        )
 
-            self.identity_providers_mock.delete.return_value = None
-            self.cmd = identity_provider.DeleteIdentityProvider(
-                self.app, None)
+        self.identity_providers_mock.delete.return_value = None
+        self.cmd = identity_provider.DeleteIdentityProvider(self.app, None)
 
-        def test_delete_identity_provider(self):
-            arglist = [
-                identity_fakes.idp_id
-            ]
-            verifylist = [
-                ('identity_provider', identity_fakes.idp_id)
-            ]
-            parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-            self.cmd.take_action(parsed_args)
-            self.identity_providers_mock.delete.assert_called_with(
-                    identity_fakes.idp_id,
-            )
+    def test_delete_identity_provider(self):
+        arglist = [
+            identity_fakes.idp_id,
+        ]
+        verifylist = [
+            ('identity_provider', identity_fakes.idp_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.cmd.take_action(parsed_args)
+        self.identity_providers_mock.delete.assert_called_with(
+            identity_fakes.idp_id,
+        )
 
 
 class TestIdentityProviderList(TestIdentityProvider):
@@ -205,8 +207,7 @@ class TestIdentityProviderList(TestIdentityProvider):
         datalist = ((
             identity_fakes.idp_id,
             True,
-            identity_fakes.idp_description
-
+            identity_fakes.idp_description,
         ), )
         self.assertEqual(tuple(data), datalist)
 
@@ -216,35 +217,36 @@ class TestIdentityProviderShow(TestIdentityProvider):
     def setUp(self):
         super(TestIdentityProviderShow, self).setUp()
 
-        self.identity_providers_mock.get.return_value = fakes.FakeResource(
+        ret = fakes.FakeResource(
             None,
             copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
-            loaded=True
+            loaded=True,
         )
-
+        self.identity_providers_mock.get.return_value = ret
         # Get the command object to test
         self.cmd = identity_provider.ShowIdentityProvider(self.app, None)
 
     def test_identity_provider_show(self):
         arglist = [
-            identity_fakes.idp_id
+            identity_fakes.idp_id,
         ]
         verifylist = [
-            ('identity_provider', identity_fakes.idp_id)
+            ('identity_provider', identity_fakes.idp_id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
 
         self.identity_providers_mock.get.assert_called_with(
-            identity_fakes.idp_id)
+            identity_fakes.idp_id,
+        )
 
-        collist = ('description', 'enabled', 'id' )
+        collist = ('description', 'enabled', 'id')
         self.assertEqual(columns, collist)
         datalist = (
             identity_fakes.idp_description,
             True,
-            identity_fakes.idp_id
+            identity_fakes.idp_id,
         )
         self.assertEqual(data, datalist)
 
@@ -259,7 +261,6 @@ class TestIdentityProviderSet(TestIdentityProvider):
         """Disable Identity Provider
 
         Set Identity Provider's ``enabled`` attribute to False.
-
         """
         def prepare(self):
             """Prepare fake return objects before the test is executed"""
@@ -274,23 +275,27 @@ class TestIdentityProviderSet(TestIdentityProvider):
 
         prepare(self)
         arglist = [
-            '--disable', identity_fakes.idp_id
+            '--disable', identity_fakes.idp_id,
         ]
         verifylist = [
             ('identity_provider', identity_fakes.idp_id),
             ('enable', False),
-            ('disable', True)
+            ('disable', True),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
         columns, data = self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
-            identity_fakes.idp_id, enabled=False)
-        collist = ('description', 'enabled', 'id' )
+            identity_fakes.idp_id,
+            enabled=False,
+        )
+
+        collist = ('description', 'enabled', 'id')
         self.assertEqual(columns, collist)
         datalist = (
             identity_fakes.idp_description,
             False,
-            identity_fakes.idp_id
+            identity_fakes.idp_id,
         )
         self.assertEqual(datalist, data)
 
@@ -298,7 +303,6 @@ class TestIdentityProviderSet(TestIdentityProvider):
         """Enable Identity Provider.
 
         Set Identity Provider's ``enabled`` attribute to True.
-
         """
         def prepare(self):
             """Prepare fake return objects before the test is executed"""
@@ -311,24 +315,24 @@ class TestIdentityProviderSet(TestIdentityProvider):
 
         prepare(self)
         arglist = [
-            '--enable', identity_fakes.idp_id
+            '--enable', identity_fakes.idp_id,
         ]
         verifylist = [
             ('identity_provider', identity_fakes.idp_id),
             ('enable', True),
-            ('disable', False)
+            ('disable', False),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id, enabled=True)
-        collist = ('description', 'enabled', 'id' )
+        collist = ('description', 'enabled', 'id')
         self.assertEqual(columns, collist)
         datalist = (
             identity_fakes.idp_description,
             True,
-            identity_fakes.idp_id
+            identity_fakes.idp_id,
         )
         self.assertEqual(data, datalist)
 
@@ -345,18 +349,18 @@ class TestIdentityProviderSet(TestIdentityProvider):
             resources = fakes.FakeResource(
                 None,
                 copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
-                loaded=True
+                loaded=True,
             )
             self.identity_providers_mock.update.return_value = resources
 
         prepare(self)
         arglist = [
-            identity_fakes.idp_id
+            identity_fakes.idp_id,
         ]
         verifylist = [
             ('identity_provider', identity_fakes.idp_id),
             ('enable', False),
-            ('disable', False)
+            ('disable', False),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
