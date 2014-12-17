@@ -1,3 +1,9 @@
+python-openstackclient (1.0.1-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Wed, 17 Dec 2014 12:56:18 +0800
+
 python-openstackclient (0.4.1-1) unstable; urgency=medium
 
   * New upstream release.
