@@ -3,11 +3,11 @@ Upstream-Name: python-openstackclient
 Source: http://wiki.openstack.org/OpenStackClient
 
 Files: debian/*
-Copyright: (c) 2013, gustavo panizzo <gfa@zumbi.com.ar>
+Copyright: (c) 2013-2014, gustavo panizzo <gfa@zumbi.com.ar>
 License: Apache-2
 
 Files: *
-Copyright: (c) 2013, OpenStack
+Copyright: (c) 2013-2014, OpenStack
 License: Apache-2
 
 License: Apache-2
