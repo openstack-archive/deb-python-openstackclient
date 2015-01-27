@@ -134,11 +134,6 @@ class DeleteProject(command.Command):
             metavar='<domain>',
             help='Domain owning <project> (name or ID)',
         )
-        parser.add_argument(
-            '--domain',
-            metavar='<domain>',
-            help='Domain owning <project> (name or ID)',
-        )
         return parser
 
     def take_action(self, parsed_args):
