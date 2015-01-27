@@ -15,19 +15,20 @@
 
 """Volume v1 Snapshot action implementations"""
 
+import copy
 import logging
 import six
-import sys
 
 from cliff import command
 from cliff import lister
 from cliff import show
 
+from openstackclient.common import parseractions
 from openstackclient.common import utils
 
 
 class CreateSnapshot(show.ShowOne):
-    """Create snapshot command"""
+    """Create new snapshot"""
 
     log = logging.getLogger(__name__ + '.CreateSnapshot')
 
@@ -36,7 +37,7 @@ class CreateSnapshot(show.ShowOne):
         parser.add_argument(
             'volume',
             metavar='<volume>',
-            help='The name or ID of the volume to snapshot',
+            help='Volume to snapshot (name or ID)',
         )
         parser.add_argument(
             '--name',
@@ -70,56 +71,103 @@ class CreateSnapshot(show.ShowOne):
             parsed_args.description
         )
 
+        snapshot._info.update(
+            {'properties': utils.format_dict(snapshot._info.pop('metadata'))}
+        )
+
         return zip(*sorted(six.iteritems(snapshot._info)))
 
 
 class DeleteSnapshot(command.Command):
-    """Delete snapshot command"""
+    """Delete snapshot(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteSnapshot')
 
     def get_parser(self, prog_name):
         parser = super(DeleteSnapshot, self).get_parser(prog_name)
         parser.add_argument(
-            'snapshot',
+            'snapshots',
             metavar='<snapshot>',
-            help='Name or ID of snapshot to delete',
+            nargs="+",
+            help='Snapshot(s) to delete (name or ID)',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
-        snapshot_id = utils.find_resource(volume_client.volume_snapshots,
-                                          parsed_args.snapshot).id
-        volume_client.volume_snapshots.delete(snapshot_id)
+        for snapshot in parsed_args.snapshots:
+            snapshot_id = utils.find_resource(volume_client.volume_snapshots,
+                                              snapshot).id
+            volume_client.volume_snapshots.delete(snapshot_id)
         return
 
 
 class ListSnapshot(lister.Lister):
-    """List snapshot command"""
+    """List snapshots"""
 
     log = logging.getLogger(__name__ + '.ListSnapshot')
 
+    def get_parser(self, prog_name):
+        parser = super(ListSnapshot, self).get_parser(prog_name)
+        parser.add_argument(
+            '--long',
+            action='store_true',
+            default=False,
+            help='List additional fields in output',
+        )
+        return parser
+
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
-        columns = (
-            'ID',
-            'Display Name',
-            'Display Description',
-            'Status',
-            'Size'
-        )
+
+        def _format_volume_id(volume_id):
+            """Return a volume name if available
+
+            :param volume_id: a volume ID
+            :rtype: either the volume ID or name
+            """
+
+            volume = volume_id
+            if volume_id in volume_cache.keys():
+                volume = volume_cache[volume_id].display_name
+            return volume
+
+        if parsed_args.long:
+            columns = ['ID', 'Display Name', 'Display Description', 'Status',
+                       'Size', 'Created At', 'Volume ID', 'Metadata']
+            column_headers = copy.deepcopy(columns)
+            column_headers[6] = 'Volume'
+            column_headers[7] = 'Properties'
+        else:
+            columns = ['ID', 'Display Name', 'Display Description', 'Status',
+                       'Size']
+            column_headers = copy.deepcopy(columns)
+
+        # Always update Name and Description
+        column_headers[1] = 'Name'
+        column_headers[2] = 'Description'
+
+        # Cache the volume list
+        volume_cache = {}
+        try:
+            for s in self.app.client_manager.volume.volumes.list():
+                volume_cache[s.id] = s
+        except Exception:
+            # Just forget it if there's any trouble
+            pass
+
         data = self.app.client_manager.volume.volume_snapshots.list()
-        return (columns,
+        return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
-                    formatters={},
+                    formatters={'Metadata': utils.format_dict,
+                                'Volume ID': _format_volume_id},
                 ) for s in data))
 
 
 class SetSnapshot(command.Command):
-    """Set snapshot command"""
+    """Set snapshot properties"""
 
     log = logging.getLogger(__name__ + '.SetSnapshot')
 
@@ -128,15 +176,22 @@ class SetSnapshot(command.Command):
         parser.add_argument(
             'snapshot',
             metavar='<snapshot>',
-            help='Name or ID of snapshot to change')
+            help='Snapshot to modify (name or ID)')
         parser.add_argument(
             '--name',
-            metavar='<new-snapshot-name>',
+            metavar='<name>',
             help='New snapshot name')
         parser.add_argument(
             '--description',
-            metavar='<new-snapshot-description>',
+            metavar='<description>',
             help='New snapshot description')
+        parser.add_argument(
+            '--property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help='Property to add/change for this snapshot '
+                 '(repeat option to set multiple properties)',
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -144,21 +199,27 @@ class SetSnapshot(command.Command):
         volume_client = self.app.client_manager.volume
         snapshot = utils.find_resource(volume_client.volume_snapshots,
                                        parsed_args.snapshot)
+
+        if parsed_args.property:
+            volume_client.volume_snapshots.set_metadata(snapshot.id,
+                                                        parsed_args.property)
+
         kwargs = {}
         if parsed_args.name:
             kwargs['display_name'] = parsed_args.name
         if parsed_args.description:
             kwargs['display_description'] = parsed_args.description
 
-        if not kwargs:
-            sys.stdout.write("Snapshot not updated, no arguments present")
+        if not kwargs and not parsed_args.property:
+            self.app.log.error("No changes requested\n")
             return
+
         snapshot.update(**kwargs)
         return
 
 
 class ShowSnapshot(show.ShowOne):
-    """Show snapshot command"""
+    """Display snapshot details"""
 
     log = logging.getLogger(__name__ + '.ShowSnapshot')
 
@@ -167,7 +228,7 @@ class ShowSnapshot(show.ShowOne):
         parser.add_argument(
             'snapshot',
             metavar='<snapshot>',
-            help='Name or ID of snapshot to display')
+            help='Snapshot to display (name or ID)')
         return parser
 
     def take_action(self, parsed_args):
@@ -176,4 +237,46 @@ class ShowSnapshot(show.ShowOne):
         snapshot = utils.find_resource(volume_client.volume_snapshots,
                                        parsed_args.snapshot)
 
+        snapshot._info.update(
+            {'properties': utils.format_dict(snapshot._info.pop('metadata'))}
+        )
+
         return zip(*sorted(six.iteritems(snapshot._info)))
+
+
+class UnsetSnapshot(command.Command):
+    """Unset snapshot properties"""
+
+    log = logging.getLogger(__name__ + '.UnsetSnapshot')
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetSnapshot, self).get_parser(prog_name)
+        parser.add_argument(
+            'snapshot',
+            metavar='<snapshot>',
+            help='Snapshot to modify (name or ID)',
+        )
+        parser.add_argument(
+            '--property',
+            metavar='<key>',
+            action='append',
+            default=[],
+            help='Property to remove from snapshot '
+                 '(repeat to remove multiple values)',
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug('take_action(%s)', parsed_args)
+        volume_client = self.app.client_manager.volume
+        snapshot = utils.find_resource(
+            volume_client.volume_snapshots, parsed_args.snapshot)
+
+        if parsed_args.property:
+            volume_client.volume_snapshots.delete_metadata(
+                snapshot.id,
+                parsed_args.property,
+            )
+        else:
+            self.app.log.error("No changes requested\n")
+        return

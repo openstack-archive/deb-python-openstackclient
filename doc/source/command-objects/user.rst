@@ -72,13 +72,13 @@ Create new user
 user delete
 -----------
 
-Delete user
+Delete user(s)
 
 .. program:: user delete
 .. code:: bash
 
     os user delete
-        <user>
+        <user> [<user> ...]
 
 .. option:: --domain <domain>
 
@@ -101,28 +101,26 @@ List users
 .. code:: bash
 
     os user list
-        [--domain <domain>]
         [--project <project>]
-        [--group <group>]
+        [--domain <domain>]
+        [--group <group> | --project <project>]
         [--long]
-
-.. option:: --domain <domain>
-
-    Filter users by `<domain>` (name or ID)
-
-    .. versionadded:: 3
 
 .. option:: --project <project>
 
     Filter users by `<project>` (name or ID)
 
-    *Removed in version 3.*
+.. option:: --domain <domain>
+
+    Filter users by `<domain>` (name or ID)
+
+    *Identity version 3 only*
 
 .. option:: --group <group>
 
     Filter users by `<group>` membership (name or ID)
 
-    .. versionadded:: 3
+    *Identity version 3 only*
 
 .. option:: --long
 
@@ -193,6 +191,8 @@ Set user properties
 user show
 ---------
 
+Display user details
+
 .. program:: user show
 .. code:: bash
 
@@ -209,4 +209,4 @@ user show
 .. _user_show-user:
 .. describe:: <user>
 
-    User to show (name or ID)
+    User to display (name or ID)

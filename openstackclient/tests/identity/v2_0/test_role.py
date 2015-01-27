@@ -16,7 +16,7 @@
 import copy
 import mock
 
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import exceptions
 from openstackclient.identity.v2_0 import role
@@ -234,7 +234,7 @@ class TestRoleDelete(TestRole):
             identity_fakes.role_name,
         ]
         verifylist = [
-            ('role', identity_fakes.role_name),
+            ('roles', [identity_fakes.role_name]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 

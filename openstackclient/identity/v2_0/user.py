@@ -21,7 +21,7 @@ import six
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
@@ -128,16 +128,17 @@ class CreateUser(show.ShowOne):
 
 
 class DeleteUser(command.Command):
-    """Delete user"""
+    """Delete user(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteUser')
 
     def get_parser(self, prog_name):
         parser = super(DeleteUser, self).get_parser(prog_name)
         parser.add_argument(
-            'user',
+            'users',
             metavar='<user>',
-            help=_('User to delete (name or ID)'),
+            nargs="+",
+            help=_('User(s) to delete (name or ID)'),
         )
         return parser
 
@@ -145,12 +146,12 @@ class DeleteUser(command.Command):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        user = utils.find_resource(
-            identity_client.users,
-            parsed_args.user,
-        )
-
-        identity_client.users.delete(user.id)
+        for user in parsed_args.users:
+            user_obj = utils.find_resource(
+                identity_client.users,
+                user,
+            )
+            identity_client.users.delete(user_obj.id)
         return
 
 
@@ -348,7 +349,7 @@ class SetUser(command.Command):
 
 
 class ShowUser(show.ShowOne):
-    """Show user details"""
+    """Display user details"""
 
     log = logging.getLogger(__name__ + '.ShowUser')
 

@@ -5,6 +5,8 @@ keypair
 The badly named keypair is really the public key of an OpenSSH key pair to be
 used for access to created servers.
 
+Compute v2
+
 keypair create
 --------------
 
@@ -28,7 +30,7 @@ Create new public key
 keypair delete
 --------------
 
-Delete a public key
+Delete public key
 
 .. program keypair delete
 .. code:: bash
@@ -53,7 +55,7 @@ List public key fingerprints
 keypair show
 ------------
 
-Show public key details
+Display public key details
 
 .. program keypair show
 .. code:: bash
@@ -68,4 +70,4 @@ Show public key details
 
 .. describe:: <key>
 
-    Public key to show
+    Public key to display

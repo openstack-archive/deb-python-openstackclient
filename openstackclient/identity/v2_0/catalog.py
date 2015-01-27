@@ -59,7 +59,7 @@ class ListCatalog(lister.Lister):
 
 
 class ShowCatalog(show.ShowOne):
-    """Show service catalog details"""
+    """Display service catalog details"""
 
     log = logging.getLogger(__name__ + '.ShowCatalog')
 
@@ -68,7 +68,7 @@ class ShowCatalog(show.ShowOne):
         parser.add_argument(
             'service',
             metavar='<service>',
-            help=_('Service to display (type, name or ID)'),
+            help=_('Service to display (type or name)'),
         )
         return parser
 
@@ -83,17 +83,17 @@ class ShowCatalog(show.ShowOne):
 
         data = None
         for service in sc.get_data():
-            if (
-                'name' in service and
-                service['name'] != parsed_args.service and
-                'type' in service and
-                service['type'] != parsed_args.service
-            ):
-                    continue
+            if (service.get('name') == parsed_args.service or
+                    service.get('type') == parsed_args.service):
+                data = service
+                data['endpoints'] = _format_endpoints(data['endpoints'])
+                if 'endpoints_links' in data:
+                    data.pop('endpoints_links')
+                break
 
-            data = service
-            data['endpoints'] = _format_endpoints(data['endpoints'])
-            if 'endpoints_links' in data:
-                data.pop('endpoints_links')
+        if not data:
+            self.app.log.error('service %s not found\n' %
+                               parsed_args.service)
+            return ([], [])
 
         return zip(*sorted(six.iteritems(data)))

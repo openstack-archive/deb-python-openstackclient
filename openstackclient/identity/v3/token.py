@@ -20,9 +20,12 @@ import six
 
 from cliff import show
 
+from openstackclient.common import utils
+from openstackclient.identity import common
+
 
 class AuthorizeRequestToken(show.ShowOne):
-    """Authorize request token"""
+    """Authorize a request token"""
 
     log = logging.getLogger(__name__ + '.AuthorizeRequestToken')
 
@@ -31,13 +34,16 @@ class AuthorizeRequestToken(show.ShowOne):
         parser.add_argument(
             '--request-key',
             metavar='<request-key>',
-            help='Request token key',
+            help='Request token to authorize (ID only) (required)',
             required=True
         )
         parser.add_argument(
-            '--role-ids',
-            metavar='<role-ids>',
-            help='Requested role IDs',
+            '--role',
+            metavar='<role>',
+            action='append',
+            default=[],
+            help='Roles to authorize (name or ID) '
+                 '(repeat to set multiple values) (required)',
             required=True
         )
         return parser
@@ -46,20 +52,24 @@ class AuthorizeRequestToken(show.ShowOne):
         self.log.debug('take_action(%s)' % parsed_args)
         identity_client = self.app.client_manager.identity
 
+        # NOTE(stevemar): We want a list of role ids
         roles = []
-        for r_id in parsed_args.role_ids.split():
-            roles.append(r_id)
+        for role in parsed_args.role:
+            role_id = utils.find_resource(
+                identity_client.roles,
+                role,
+            ).id
+            roles.append(role_id)
 
         verifier_pin = identity_client.oauth1.request_tokens.authorize(
             parsed_args.request_key,
             roles)
-        info = {}
-        info.update(verifier_pin._info)
-        return zip(*sorted(six.iteritems(info)))
+
+        return zip(*sorted(six.iteritems(verifier_pin._info)))
 
 
 class CreateAccessToken(show.ShowOne):
-    """Create access token"""
+    """Create an access token"""
 
     log = logging.getLogger(__name__ + '.CreateAccessToken')
 
@@ -68,31 +78,31 @@ class CreateAccessToken(show.ShowOne):
         parser.add_argument(
             '--consumer-key',
             metavar='<consumer-key>',
-            help='Consumer key',
+            help='Consumer key (required)',
             required=True
         )
         parser.add_argument(
             '--consumer-secret',
             metavar='<consumer-secret>',
-            help='Consumer secret',
+            help='Consumer secret (required)',
             required=True
         )
         parser.add_argument(
             '--request-key',
             metavar='<request-key>',
-            help='Request token key',
+            help='Request token to exchange for access token (required)',
             required=True
         )
         parser.add_argument(
             '--request-secret',
             metavar='<request-secret>',
-            help='Request token secret',
+            help='Secret associated with <request-key> (required)',
             required=True
         )
         parser.add_argument(
             '--verifier',
             metavar='<verifier>',
-            help='Verifier Pin',
+            help='Verifier associated with <request-key> (required)',
             required=True
         )
         return parser
@@ -104,13 +114,11 @@ class CreateAccessToken(show.ShowOne):
             parsed_args.consumer_key, parsed_args.consumer_secret,
             parsed_args.request_key, parsed_args.request_secret,
             parsed_args.verifier)
-        info = {}
-        info.update(access_token._info)
-        return zip(*sorted(six.iteritems(info)))
+        return zip(*sorted(six.iteritems(access_token._info)))
 
 
 class CreateRequestToken(show.ShowOne):
-    """Create request token"""
+    """Create a request token"""
 
     log = logging.getLogger(__name__ + '.CreateRequestToken')
 
@@ -119,33 +127,50 @@ class CreateRequestToken(show.ShowOne):
         parser.add_argument(
             '--consumer-key',
             metavar='<consumer-key>',
-            help='Consumer key',
+            help='Consumer key (required)',
             required=True
         )
         parser.add_argument(
             '--consumer-secret',
             metavar='<consumer-secret>',
-            help='Consumer secret',
+            help='Consumer secret (required)',
             required=True
         )
         parser.add_argument(
-            '--project-id',
-            metavar='<project-id>',
-            help='Requested project ID',
+            '--project',
+            metavar='<project>',
+            help='Project that consumer wants to access (name or ID)'
+                 ' (required)',
             required=True
+        )
+        parser.add_argument(
+            '--domain',
+            metavar='<domain>',
+            help='Domain owning <project> (name or ID)',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)' % parsed_args)
-        token_client = self.app.client_manager.identity.oauth1.request_tokens
+
+        identity_client = self.app.client_manager.identity
+
+        if parsed_args.domain:
+            domain = common.find_domain(identity_client, parsed_args.domain)
+            project = utils.find_resource(identity_client.projects,
+                                          parsed_args.project,
+                                          domain_id=domain.id)
+        else:
+            project = utils.find_resource(identity_client.projects,
+                                          parsed_args.project)
+
+        token_client = identity_client.oauth1.request_tokens
+
         request_token = token_client.create(
             parsed_args.consumer_key,
             parsed_args.consumer_secret,
-            parsed_args.project_id)
-        info = {}
-        info.update(request_token._info)
-        return zip(*sorted(six.iteritems(info)))
+            project.id)
+        return zip(*sorted(six.iteritems(request_token._info)))
 
 
 class IssueToken(show.ShowOne):

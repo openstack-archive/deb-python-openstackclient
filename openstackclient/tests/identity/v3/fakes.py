@@ -147,11 +147,21 @@ ROLE = {
 service_id = 's-123'
 service_name = 'Texaco'
 service_type = 'gas'
+service_description = 'oil brand'
 
 SERVICE = {
     'id': service_id,
     'name': service_name,
     'type': service_type,
+    'description': service_description,
+    'enabled': True,
+    'links': base_url + 'services/' + service_id,
+}
+
+SERVICE_WITHOUT_NAME = {
+    'id': service_id,
+    'type': service_type,
+    'description': service_description,
     'enabled': True,
     'links': base_url + 'services/' + service_id,
 }
@@ -179,7 +189,7 @@ user_email = 'paul@applecorps.com'
 USER = {
     'id': user_id,
     'name': user_name,
-    'project_id': project_id,
+    'default_project_id': project_id,
     'email': user_email,
     'enabled': True,
     'domain_id': domain_id,

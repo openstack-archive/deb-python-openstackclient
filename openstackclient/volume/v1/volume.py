@@ -36,14 +36,14 @@ class CreateVolume(show.ShowOne):
         parser.add_argument(
             'name',
             metavar='<name>',
-            help='Name of the new volume',
+            help='New volume name',
         )
         parser.add_argument(
             '--size',
             metavar='<size>',
             required=True,
             type=int,
-            help='New volume size',
+            help='New volume size in GB',
         )
         parser.add_argument(
             '--snapshot-id',
@@ -53,22 +53,22 @@ class CreateVolume(show.ShowOne):
         parser.add_argument(
             '--description',
             metavar='<description>',
-            help='Description of the volume',
+            help='New volume description',
         )
         parser.add_argument(
             '--type',
             metavar='<volume-type>',
-            help='Type of volume',
+            help='Use <volume-type> as the new volume type',
         )
         parser.add_argument(
             '--user',
             metavar='<user>',
-            help='Specify a different user (admin only)',
+            help='Specify an alternate user (name or ID)',
         )
         parser.add_argument(
             '--project',
             metavar='<project>',
-            help='Specify a different project (admin only)',
+            help='Specify an alternate project (name or ID)',
         )
         parser.add_argument(
             '--availability-zone',
@@ -76,21 +76,21 @@ class CreateVolume(show.ShowOne):
             help='Create new volume in <availability-zone>',
         )
         parser.add_argument(
-            '--property',
-            metavar='<key=value>',
-            action=parseractions.KeyValueAction,
-            help='Property to store for this volume '
-                 '(repeat option to set multiple properties)',
-        )
-        parser.add_argument(
             '--image',
             metavar='<image>',
-            help='Use <image> as source of new volume',
+            help='Use <image> as source of new volume (name or ID)',
         )
         parser.add_argument(
             '--source',
             metavar='<volume>',
             help='Volume to clone (name or ID)',
+        )
+        parser.add_argument(
+            '--property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help='Set a property on this volume '
+                 '(repeat option to set multiple properties)',
         )
 
         return parser
@@ -155,35 +155,38 @@ class CreateVolume(show.ShowOne):
 
 
 class DeleteVolume(command.Command):
-    """Delete a volume"""
+    """Delete volume(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteVolume')
 
     def get_parser(self, prog_name):
         parser = super(DeleteVolume, self).get_parser(prog_name)
         parser.add_argument(
-            'volume',
+            'volumes',
             metavar='<volume>',
-            help='Volume to delete (name or ID)',
+            nargs="+",
+            help='Volume(s) to delete (name or ID)',
         )
         parser.add_argument(
             '--force',
             dest='force',
             action='store_true',
             default=False,
-            help='Attempt forced removal of a volume, regardless of state',
+            help='Attempt forced removal of volume(s), regardless of state '
+                 '(defaults to False)',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
-        volume = utils.find_resource(
-            volume_client.volumes, parsed_args.volume)
-        if parsed_args.force:
-            volume_client.volumes.force_delete(volume.id)
-        else:
-            volume_client.volumes.delete(volume.id)
+        for volume in parsed_args.volumes:
+            volume_obj = utils.find_resource(
+                volume_client.volumes, volume)
+            if parsed_args.force:
+                volume_client.volumes.force_delete(volume_obj.id)
+            else:
+                volume_client.volumes.delete(volume_obj.id)
         return
 
 
@@ -214,12 +217,31 @@ class ListVolume(lister.Lister):
             '--long',
             action='store_true',
             default=False,
-            help='Display properties',
+            help='List additional fields in output',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
+
+        volume_client = self.app.client_manager.volume
+        compute_client = self.app.client_manager.compute
+
+        def _format_attach(attachments):
+            """Return a formatted string of a volume's attached instances
+
+            :param volume: a volume.attachments field
+            :rtype: a string of formatted instances
+            """
+
+            msg = ''
+            for attachment in attachments:
+                server = attachment['server_id']
+                if server in server_cache.keys():
+                    server = server_cache[server].name
+                device = attachment['device']
+                msg += 'Attached to %s on %s ' % (server, device)
+            return msg
 
         if parsed_args.long:
             columns = (
@@ -229,7 +251,7 @@ class ListVolume(lister.Lister):
                 'Size',
                 'Volume Type',
                 'Bootable',
-                'Attached to',
+                'Attachments',
                 'Metadata',
             )
             column_headers = (
@@ -239,7 +261,7 @@ class ListVolume(lister.Lister):
                 'Size',
                 'Type',
                 'Bootable',
-                'Attached',
+                'Attached to',
                 'Properties',
             )
         else:
@@ -248,28 +270,38 @@ class ListVolume(lister.Lister):
                 'Display Name',
                 'Status',
                 'Size',
-                'Attached to',
+                'Attachments',
             )
             column_headers = (
                 'ID',
                 'Display Name',
                 'Status',
                 'Size',
-                'Attached',
+                'Attached to',
             )
+
+        # Cache the server list
+        server_cache = {}
+        try:
+            for s in compute_client.servers.list():
+                server_cache[s.id] = s
+        except Exception:
+            # Just forget it if there's any trouble
+            pass
+
         search_opts = {
             'all_tenants': parsed_args.all_projects,
             'display_name': parsed_args.name,
             'status': parsed_args.status,
         }
 
-        volume_client = self.app.client_manager.volume
         data = volume_client.volumes.list(search_opts=search_opts)
 
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
-                    formatters={'Metadata': utils.format_dict},
+                    formatters={'Metadata': utils.format_dict,
+                                'Attachments': _format_attach},
                 ) for s in data))
 
 
@@ -287,19 +319,19 @@ class SetVolume(command.Command):
         )
         parser.add_argument(
             '--name',
-            metavar='<new-name>',
+            metavar='<name>',
             help='New volume name',
         )
         parser.add_argument(
             '--description',
-            metavar='<new-description>',
+            metavar='<description>',
             help='New volume description',
         )
         parser.add_argument(
             '--property',
             metavar='<key=value>',
             action=parseractions.KeyValueAction,
-            help='Property to add/change for this volume '
+            help='Property to add or modify for this volume '
                  '(repeat option to set multiple properties)',
         )
         return parser
@@ -369,15 +401,15 @@ class UnsetVolume(command.Command):
         parser.add_argument(
             'volume',
             metavar='<volume>',
-            help='Volume to change (name or ID)',
+            help='Volume to modify (name or ID)',
         )
         parser.add_argument(
             '--property',
             metavar='<key>',
             action='append',
             default=[],
-            help='Property key to remove from volume '
-                 '(repeat to set multiple values)',
+            help='Property to remove from volume '
+                 '(repeat option to remove multiple properties)',
         )
         return parser
 

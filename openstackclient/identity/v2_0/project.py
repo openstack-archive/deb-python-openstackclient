@@ -21,7 +21,7 @@ import six
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import parseractions
 from openstackclient.common import utils
@@ -104,16 +104,17 @@ class CreateProject(show.ShowOne):
 
 
 class DeleteProject(command.Command):
-    """Delete an existing project"""
+    """Delete project(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteProject')
 
     def get_parser(self, prog_name):
         parser = super(DeleteProject, self).get_parser(prog_name)
         parser.add_argument(
-            'project',
+            'projects',
             metavar='<project>',
-            help=_('Project to delete (name or ID)'),
+            nargs="+",
+            help=_('Project(s) to delete (name or ID)'),
         )
         return parser
 
@@ -121,12 +122,12 @@ class DeleteProject(command.Command):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        project = utils.find_resource(
-            identity_client.tenants,
-            parsed_args.project,
-        )
-
-        identity_client.tenants.delete(project.id)
+        for project in parsed_args.projects:
+            project_obj = utils.find_resource(
+                identity_client.tenants,
+                project,
+            )
+            identity_client.tenants.delete(project_obj.id)
         return
 
 
@@ -240,7 +241,7 @@ class SetProject(command.Command):
 
 
 class ShowProject(show.ShowOne):
-    """Show project details"""
+    """Display project details"""
 
     log = logging.getLogger(__name__ + '.ShowProject')
 
@@ -249,7 +250,7 @@ class ShowProject(show.ShowOne):
         parser.add_argument(
             'project',
             metavar='<project>',
-            help=_('Project to show (name or ID)'))
+            help=_('Project to display (name or ID)'))
         return parser
 
     def take_action(self, parsed_args):

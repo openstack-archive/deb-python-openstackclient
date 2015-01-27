@@ -2,22 +2,26 @@
 server
 ======
 
+Compute v2
 
 server add security group
 -------------------------
 
 Add security group to server
 
+.. program:: server add security group
 .. code:: bash
 
     os server add security group
         <server>
         <group>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
-:option:`<group>`
+.. describe:: <group>
+
     Security group to add (name or ID)
 
 server add volume
@@ -25,6 +29,7 @@ server add volume
 
 Add volume to server
 
+.. program:: server add volume
 .. code:: bash
 
     os server add volume
@@ -32,13 +37,16 @@ Add volume to server
         <server>
         <volume>
 
-:option:`--device` <device>
+.. option:: --device <device>
+
     Server internal device name for volume
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
-:option:`<volume>`
+.. describe:: <volume>
+
     Volume to add (name or ID)
 
 server create
@@ -46,6 +54,7 @@ server create
 
 Create a new server
 
+.. program:: server create
 .. code:: bash
 
     os server create
@@ -66,69 +75,88 @@ Create a new server
         [--wait]
         <server-name>
 
-:option:`--image` <image>
+.. option:: --image <image>
+
     Create server from this image
 
-:option:`--volume` <volume>
+.. option:: --volume <volume>
+
     Create server from this volume
 
-:option:`--flavor` <flavor>
+.. option:: --flavor <flavor>
+
     Create server with this flavor
 
-:option:`--security-group` <security-group-name>
+.. option:: --security-group <security-group-name>
+
     Security group to assign to this server (repeat for multiple groups)
 
-:option:`--key-name` <key-name>
+.. option:: --key-name <key-name>
+
     Keypair to inject into this server (optional extension)
 
-:option:`--property` <key=value>
+.. option:: --property <key=value>
+
     Set a property on this server (repeat for multiple values)
 
-:option:`--file` <dest-filename=source-filename>
+.. option:: --file <dest-filename=source-filename>
+
     File to inject into image before boot (repeat for multiple files)
 
-:option:`--user-data` <user-data>
+.. option:: --user-data <user-data>
+
     User data file to serve from the metadata server
 
-:option:`--availability-zone` <zone-name>
+.. option:: --availability-zone <zone-name>
+
     Select an availability zone for the server
 
-:option:`--block-device-mapping` <dev-name=mapping>
+.. option:: --block-device-mapping <dev-name=mapping>
+
     Map block devices; map is <id>:<type>:<size(GB)>:<delete_on_terminate> (optional extension)
 
-:option:`--nic` <nic-config-string>
+.. option:: --nic <nic-config-string>
+
     Specify NIC configuration (optional extension)
 
-:option:`--hint` <key=value>
+.. option:: --hint <key=value>
+
     Hints for the scheduler (optional extension)
 
-:option:`--config-drive` <config-drive-volume>|True
+.. option:: --config-drive <config-drive-volume>|True
+
     Use specified volume as the config drive, or 'True' to use an ephemeral drive
 
-:option:`--min` <count>
+.. option:: --min <count>
+
     Minimum number of servers to launch (default=1)
 
-:option:`--max` <count>
+.. option:: --max <count>
+
     Maximum number of servers to launch (default=1)
 
-:option:`--wait`
+.. option:: --wait
+
     Wait for build to complete
 
-:option:`<server-name>`
+.. describe:: <server-name>
+
     New server name
 
 server delete
 -------------
 
-Delete server command
+Delete server(s)
 
+.. program:: server delete
 .. code:: bash
 
     os server delete
-        <server>
+        <server> [<server> ...]
 
-:option:`<server>`
-    Server (name or ID)
+.. describe:: <server>
+
+    Server to delete (name or ID)
 
 server list
 -----------
@@ -139,8 +167,8 @@ List servers
 
     os server list
         [--reservation-id <reservation-id>]
-        [--ip <ip-regex>]
-        [--ip6 <ip6-regex>]
+        [--ip <ip-address-regex>]
+        [--ip6 <ip6-address-regex>]
         [--name <name-regex>]
         [--instance-name <instance-name-regex>]
         [--status <status>]
@@ -150,37 +178,48 @@ List servers
         [--all-projects]
         [--long]
 
-:option:`--reservation-id` <reservation-id>
+.. option:: --reservation-id <reservation-id>
+
     Only return instances that match the reservation
 
-:option:`--ip` <ip-address-regex>
+.. option:: --ip <ip-address-regex>
+
     Regular expression to match IP addresses
 
-:option:`--ip6` <ip-address-regex>
+.. option:: --ip6 <ip-address-regex>
+
     Regular expression to match IPv6 addresses
 
-:option:`--name` <name-regex>
+.. option:: --name <name-regex>
+
     Regular expression to match names
 
-:option:`--instance-name` <server-name-regex>
+.. option:: --instance-name <server-name-regex>
+
     Regular expression to match instance name (admin only)
 
-:option:`--status` <status>
+.. option:: --status <status>
+
     Search by server status
 
-:option:`--flavor` <flavor>
+.. option:: --flavor <flavor>
+
     Search by flavor ID
 
-:option:`--image` <image>
+.. option:: --image <image>
+
     Search by image ID
 
-:option:`--host` <hostname>
+.. option:: --host <hostname>
+
     Search by hostname
 
-:option:`--all-projects`
+.. option:: --all-projects
+
     Include all projects (admin only)
 
-:option:`--long`
+.. option:: --long
+
     List additional fields in output
 
 server lock
@@ -188,12 +227,14 @@ server lock
 
 Lock server
 
+.. program:: server lock
 .. code:: bash
 
     os server lock
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server migrate
@@ -201,6 +242,7 @@ server migrate
 
 Migrate server to different host
 
+.. program:: server migrate
 .. code:: bash
 
     os server migrate
@@ -210,25 +252,32 @@ Migrate server to different host
         [--wait]
         <server>
 
-:option:`--wait`
-    Wait for resize to complete
+.. option:: --live <hostname>
 
-:option:`--live` <hostname>
     Target hostname
 
-:option:`--shared-migration`
+.. option:: --shared-migration
+
     Perform a shared live migration (default)
 
-:option:`--block-migration`
+.. option:: --block-migration
+
     Perform a block live migration
 
-:option:`--disk-overcommit`
+.. option:: --disk-overcommit
+
     Allow disk over-commit on the destination host
 
-:option:`--no-disk-overcommit`
+.. option:: --no-disk-overcommit
+
     Do not over-commit disk on the destination host (default)
 
-:option:`<server>`
+.. option:: --wait
+
+    Wait for resize to complete
+
+.. describe:: <server>
+
     Server to migrate (name or ID)
 
 server pause
@@ -236,12 +285,14 @@ server pause
 
 Pause server
 
+.. program:: server pause
 .. code:: bash
 
     os server pause
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server reboot
@@ -249,6 +300,7 @@ server reboot
 
 Perform a hard or soft server reboot
 
+.. program:: server reboot
 .. code:: bash
 
     os server reboot
@@ -256,16 +308,20 @@ Perform a hard or soft server reboot
         [--wait]
         <server>
 
-:option:`--hard`
+.. option:: --hard
+
     Perform a hard reboot
 
-:option:`--soft`
+.. option:: --soft
+
     Perform a soft reboot
 
-:option:`--wait`
+.. option:: --wait
+
     Wait for reboot to complete
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server rebuild
@@ -273,6 +329,7 @@ server rebuild
 
 Rebuild server
 
+.. program:: server rebuild
 .. code:: bash
 
     os server rebuild
@@ -281,16 +338,20 @@ Rebuild server
         [--wait]
         <server>
 
-:option:`--image` <image>
+.. option:: --image <image>
+
     Recreate server from this image
 
-:option:`--password` <password>
+.. option:: --password <password>
+
     Set the password on the rebuilt instance
 
-:option:`--wait`
+.. option:: --wait
+
     Wait for rebuild to complete
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server remove security group
@@ -298,16 +359,19 @@ server remove security group
 
 Remove security group from server
 
+.. program:: server remove security group
 .. code:: bash
 
     os server remove security group
         <server>
         <group>
 
-:option:`<server>`
+.. describe:: <server>
+
     Name or ID of server to use
 
-:option:`<group>`
+.. describe:: <group>
+
     Name or ID of security group to remove from server
 
 server remove volume
@@ -315,16 +379,19 @@ server remove volume
 
 Remove volume from server
 
+.. program:: server remove volume
 .. code:: bash
 
     os server remove volume
         <server>
         <volume>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
-:option:`<volume>`
+.. describe:: <volume>
+
     Volume to remove (name or ID)
 
 server rescue
@@ -332,12 +399,14 @@ server rescue
 
 Put server in rescue mode
 
+.. program:: server rescure
 .. code:: bash
 
     os server rescue
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server resize
@@ -345,6 +414,7 @@ server resize
 
 Scale server to a new flavor
 
+.. program:: server resize
 .. code:: bash
 
     os server resize
@@ -356,19 +426,24 @@ Scale server to a new flavor
         --verify | --revert
         <server>
 
-:option:`--flavor` <flavor>
+.. option:: --flavor <flavor>
+
     Resize server to specified flavor
 
-:option:`--verify`
+.. option:: --verify
+
     Verify server resize is complete
 
-:option:`--revert`
+.. option:: --revert
+
     Restore server state before resize
 
-:option:`--wait`
+.. option:: --wait
+
     Wait for resize to complete
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 A resize operation is implemented by creating a new server and copying
@@ -382,12 +457,14 @@ server resume
 
 Resume server
 
+.. program:: server resume
 .. code:: bash
 
     os server resume
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server set
@@ -395,6 +472,7 @@ server set
 
 Set server properties
 
+.. program:: server set
 .. code:: bash
 
     os server set
@@ -404,17 +482,21 @@ Set server properties
         --root-password
         <server>
 
-:option:`--name` <new-name>
+.. option:: --name <new-name>
+
     New server name
 
-:option:`--root-password`
+.. option:: --root-password
+
     Set new root password (interactive only)
 
-:option:`--property` <key=value>
+.. option:: --property <key=value>
+
     Property to add/change for this server (repeat option to set
     multiple properties)
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server show
@@ -422,16 +504,19 @@ server show
 
 Show server details
 
+.. program:: server show
 .. code:: bash
 
     os server show
         [--diagnostics]
         <server>
 
-:option:`--diagnostics`
+.. option:: --diagnostics
+
     Display server diagnostics information
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server ssh
@@ -439,6 +524,7 @@ server ssh
 
 Ssh to server
 
+.. program:: server ssh
 .. code:: bash
 
     os server ssh
@@ -449,28 +535,36 @@ Ssh to server
         [--public | --private | --address-type <address-type>]
         <server>
 
-:option:`--login` <login-name>
+.. option:: --login <login-name>
+
     Login name (ssh -l option)
 
-:option:`--port` <port>
+.. option:: --port <port>
+
     Destination port (ssh -p option)
 
-:option:`--identity` <keyfile>
+.. option:: --identity <keyfile>
+
     Private key file (ssh -i option)
 
-:option:`--option` <config-options>
+.. option:: --option <config-options>
+
     Options in ssh_config(5) format (ssh -o option)
 
-:option:`--public`
+.. option:: --public
+
     Use public IP address
 
-:option:`--private`
+.. option:: --private
+
     Use private IP address
 
-:option:`--address-type` <address-type>
+.. option:: --address-type <address-type>
+
     Use other IP address (public, private, etc)
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server suspend
@@ -478,12 +572,14 @@ server suspend
 
 Suspend server
 
+.. program:: server suspend
 .. code:: bash
 
     os server suspend
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server unlock
@@ -491,12 +587,14 @@ server unlock
 
 Unlock server
 
+.. program:: server unlock
 .. code:: bash
 
     os server unlock
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server unpause
@@ -504,12 +602,14 @@ server unpause
 
 Unpause server
 
+.. program:: server unpause
 .. code:: bash
 
     os server unpause
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server unrescue
@@ -517,12 +617,14 @@ server unrescue
 
 Restore server from rescue mode
 
+.. program:: server unrescue
 .. code:: bash
 
     os server unrescue
         <server>
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)
 
 server unset
@@ -530,6 +632,7 @@ server unset
 
 Unset server properties
 
+.. program:: server unset
 .. code:: bash
 
     os server unset
@@ -537,8 +640,10 @@ Unset server properties
         [--property <key>] ...
         <server>
 
-:option:`--property` <key>
+.. option:: --property <key>
+
     Property key to remove from server (repeat to set multiple values)
 
-:option:`<server>`
+.. describe:: <server>
+
     Server (name or ID)

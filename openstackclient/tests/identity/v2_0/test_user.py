@@ -16,7 +16,7 @@
 import copy
 import mock
 
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 from openstackclient.identity.v2_0 import user
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
@@ -443,7 +443,7 @@ class TestUserDelete(TestUser):
             identity_fakes.user_id,
         ]
         verifylist = [
-            ('user', identity_fakes.user_id),
+            ('users', [identity_fakes.user_id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 

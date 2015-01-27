@@ -35,24 +35,29 @@ class CreateService(show.ShowOne):
         parser = super(CreateService, self).get_parser(prog_name)
         parser.add_argument(
             'type',
-            metavar='<service-type>',
+            metavar='<type>',
             help='New service type (compute, image, identity, volume, etc)',
         )
         parser.add_argument(
             '--name',
-            metavar='<service-name>',
+            metavar='<name>',
             help='New service name',
+        )
+        parser.add_argument(
+            '--description',
+            metavar='<description>',
+            help='New service description',
         )
         enable_group = parser.add_mutually_exclusive_group()
         enable_group.add_argument(
             '--enable',
             action='store_true',
-            help='Enable project',
+            help='Enable service (default)',
         )
         enable_group.add_argument(
             '--disable',
             action='store_true',
-            help='Disable project',
+            help='Disable service',
         )
         return parser
 
@@ -67,6 +72,7 @@ class CreateService(show.ShowOne):
         service = identity_client.services.create(
             name=parsed_args.name,
             type=parsed_args.type,
+            description=parsed_args.description,
             enabled=enabled,
         )
 
@@ -84,7 +90,7 @@ class DeleteService(command.Command):
         parser.add_argument(
             'service',
             metavar='<service>',
-            help='Service to delete (name or ID)',
+            help='Service to delete (type or ID)',
         )
         return parser
 
@@ -103,16 +109,28 @@ class ListService(lister.Lister):
 
     log = logging.getLogger(__name__ + '.ListService')
 
+    def get_parser(self, prog_name):
+        parser = super(ListService, self).get_parser(prog_name)
+        parser.add_argument(
+            '--long',
+            action='store_true',
+            default=False,
+            help='List additional fields in output',
+        )
+        return parser
+
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
 
-        columns = ('ID', 'Name', 'Type', 'Enabled')
+        if parsed_args.long:
+            columns = ('ID', 'Name', 'Type', 'Description', 'Enabled')
+        else:
+            columns = ('ID', 'Name', 'Type')
         data = self.app.client_manager.identity.services.list()
-        return (columns,
-                (utils.get_item_properties(
-                    s, columns,
-                    formatters={},
-                ) for s in data))
+        return (
+            columns,
+            (utils.get_item_properties(s, columns) for s in data),
+        )
 
 
 class SetService(command.Command):
@@ -125,11 +143,11 @@ class SetService(command.Command):
         parser.add_argument(
             'service',
             metavar='<service>',
-            help='Service to update (name or ID)',
+            help='Service to update (type, name or ID)',
         )
         parser.add_argument(
             '--type',
-            metavar='<service-type>',
+            metavar='<type>',
             help='New service type (compute, image, identity, volume, etc)',
         )
         parser.add_argument(
@@ -137,16 +155,21 @@ class SetService(command.Command):
             metavar='<service-name>',
             help='New service name',
         )
+        parser.add_argument(
+            '--description',
+            metavar='<description>',
+            help='New service description',
+        )
         enable_group = parser.add_mutually_exclusive_group()
         enable_group.add_argument(
             '--enable',
             action='store_true',
-            help='Enable project',
+            help='Enable service',
         )
         enable_group.add_argument(
             '--disable',
             action='store_true',
-            help='Disable project',
+            help='Disable service',
         )
         return parser
 
@@ -156,6 +179,7 @@ class SetService(command.Command):
 
         if (not parsed_args.name
                 and not parsed_args.type
+                and not parsed_args.description
                 and not parsed_args.enable
                 and not parsed_args.disable):
             return
@@ -167,6 +191,8 @@ class SetService(command.Command):
             kwargs['type'] = parsed_args.type
         if parsed_args.name:
             kwargs['name'] = parsed_args.name
+        if parsed_args.description:
+            kwargs['description'] = parsed_args.description
         if parsed_args.enable:
             kwargs['enabled'] = True
         if parsed_args.disable:
@@ -180,7 +206,7 @@ class SetService(command.Command):
 
 
 class ShowService(show.ShowOne):
-    """Show service details"""
+    """Display service details"""
 
     log = logging.getLogger(__name__ + '.ShowService')
 

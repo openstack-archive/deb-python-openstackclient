@@ -74,12 +74,15 @@ class ClientManager(object):
         :param pw_func:
             Callback function for asking the user for a password.  The function
             takes an optional string for the prompt ('Password: ' on None) and
-            returns a string containig the password
+            returns a string containing the password
         """
 
         # If no auth type is named by the user, select one based on
         # the supplied options
         self.auth_plugin_name = auth.select_auth_plugin(auth_options)
+
+        # Basic option checking to avoid unhelpful error messages
+        auth.check_valid_auth_options(auth_options, self.auth_plugin_name)
 
         # Horrible hack alert...must handle prompt for null password if
         # password auth is requested.
@@ -97,6 +100,23 @@ class ClientManager(object):
         self._api_version = api_version
         self._auth_ref = None
         self.timing = auth_options.timing
+
+        default_domain = auth_options.os_default_domain
+        # NOTE(stevemar): If PROJECT_DOMAIN_ID or PROJECT_DOMAIN_NAME is
+        # present, then do not change the behaviour. Otherwise, set the
+        # PROJECT_DOMAIN_ID to 'OS_DEFAULT_DOMAIN' for better usability.
+        if (self._api_version.get('identity') == '3' and
+            not self._auth_params.get('project_domain_id') and
+                not self._auth_params.get('project_domain_name')):
+            self._auth_params['project_domain_id'] = default_domain
+
+        # NOTE(stevemar): If USER_DOMAIN_ID or USER_DOMAIN_NAME is present,
+        # then do not change the behaviour. Otherwise, set the USER_DOMAIN_ID
+        # to 'OS_DEFAULT_DOMAIN' for better usability.
+        if (self._api_version.get('identity') == '3' and
+            not self._auth_params.get('user_domain_id') and
+                not self._auth_params.get('user_domain_name')):
+            self._auth_params['user_domain_id'] = default_domain
 
         # For compatibility until all clients can be updated
         if 'project_name' in self._auth_params:

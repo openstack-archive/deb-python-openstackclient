@@ -22,7 +22,7 @@ import sys
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
@@ -177,16 +177,17 @@ class CreateRole(show.ShowOne):
 
 
 class DeleteRole(command.Command):
-    """Delete an existing role"""
+    """Delete role(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteRole')
 
     def get_parser(self, prog_name):
         parser = super(DeleteRole, self).get_parser(prog_name)
         parser.add_argument(
-            'role',
+            'roles',
             metavar='<role>',
-            help='Role to delete (name or ID)',
+            nargs="+",
+            help='Role(s) to delete (name or ID)',
         )
         return parser
 
@@ -194,12 +195,12 @@ class DeleteRole(command.Command):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
-        role = utils.find_resource(
-            identity_client.roles,
-            parsed_args.role,
-        )
-
-        identity_client.roles.delete(role.id)
+        for role in parsed_args.roles:
+            role_obj = utils.find_resource(
+                identity_client.roles,
+                role,
+            )
+            identity_client.roles.delete(role_obj.id)
         return
 
 
@@ -466,7 +467,7 @@ class SetRole(command.Command):
 
 
 class ShowRole(show.ShowOne):
-    """Show single role"""
+    """Display role details"""
 
     log = logging.getLogger(__name__ + '.ShowRole')
 
@@ -475,7 +476,7 @@ class ShowRole(show.ShowOne):
         parser.add_argument(
             'role',
             metavar='<role>',
-            help='Role to show (name or ID)',
+            help='Role to display (name or ID)',
         )
         return parser
 

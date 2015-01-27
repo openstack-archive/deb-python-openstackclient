@@ -15,6 +15,7 @@
 
 """Volume v1 Backup action implementations"""
 
+import copy
 import logging
 import six
 
@@ -26,7 +27,7 @@ from openstackclient.common import utils
 
 
 class CreateBackup(show.ShowOne):
-    """Create backup command"""
+    """Create new backup"""
 
     log = logging.getLogger(__name__ + '.CreateBackup')
 
@@ -35,13 +36,13 @@ class CreateBackup(show.ShowOne):
         parser.add_argument(
             'volume',
             metavar='<volume>',
-            help='The name or ID of the volume to backup',
+            help='Volume to backup (name or ID)',
         )
         parser.add_argument(
             '--container',
             metavar='<container>',
             required=False,
-            help='Optional backup container name.',
+            help='Optional backup container name',
         )
         parser.add_argument(
             '--name',
@@ -73,52 +74,89 @@ class CreateBackup(show.ShowOne):
 
 
 class DeleteBackup(command.Command):
-    """Delete backup command"""
+    """Delete backup(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteBackup')
 
     def get_parser(self, prog_name):
         parser = super(DeleteBackup, self).get_parser(prog_name)
         parser.add_argument(
-            'backup',
+            'backups',
             metavar='<backup>',
-            help='Name or ID of backup to delete',
+            nargs="+",
+            help='Backup(s) to delete (ID only)',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
-        backup_id = utils.find_resource(volume_client.backups,
-                                        parsed_args.backup).id
-        volume_client.backups.delete(backup_id)
+        for backup in parsed_args.backups:
+            backup_id = utils.find_resource(volume_client.backups,
+                                            backup).id
+            volume_client.backups.delete(backup_id)
         return
 
 
 class ListBackup(lister.Lister):
-    """List backup command"""
+    """List backups"""
 
     log = logging.getLogger(__name__ + '.ListBackup')
 
+    def get_parser(self, prog_name):
+        parser = super(ListBackup, self).get_parser(prog_name)
+        parser.add_argument(
+            '--long',
+            action='store_true',
+            default=False,
+            help='List additional fields in output',
+        )
+        return parser
+
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)', parsed_args)
-        columns = (
-            'ID',
-            'Display Name',
-            'Display Description',
-            'Status',
-            'Size'
-        )
+
+        def _format_volume_id(volume_id):
+            """Return a volume name if available
+
+            :param volume_id: a volume ID
+            :rtype: either the volume ID or name
+            """
+
+            volume = volume_id
+            if volume_id in volume_cache.keys():
+                volume = volume_cache[volume_id].display_name
+            return volume
+
+        if parsed_args.long:
+            columns = ['ID', 'Name', 'Description', 'Status', 'Size',
+                       'Availability Zone', 'Volume ID', 'Container']
+            column_headers = copy.deepcopy(columns)
+            column_headers[6] = 'Volume'
+        else:
+            columns = ['ID', 'Name', 'Description', 'Status', 'Size']
+            column_headers = columns
+
+        # Cache the volume list
+        volume_cache = {}
+        try:
+            for s in self.app.client_manager.volume.volumes.list():
+                volume_cache[s.id] = s
+        except Exception:
+            # Just forget it if there's any trouble
+            pass
+
         data = self.app.client_manager.volume.backups.list()
-        return (columns,
+
+        return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
-                    formatters={},
+                    formatters={'Volume ID': _format_volume_id},
                 ) for s in data))
 
 
 class RestoreBackup(command.Command):
-    """Restore backup command"""
+    """Restore backup"""
 
     log = logging.getLogger(__name__ + '.RestoreBackup')
 
@@ -127,11 +165,11 @@ class RestoreBackup(command.Command):
         parser.add_argument(
             'backup',
             metavar='<backup>',
-            help='ID of backup to restore')
+            help='Backup to restore (ID only)')
         parser.add_argument(
             'volume',
-            metavar='<dest-volume>',
-            help='ID of volume to restore to')
+            metavar='<volume>',
+            help='Volume to restore to (name or ID)')
         return parser
 
     def take_action(self, parsed_args):
@@ -146,7 +184,7 @@ class RestoreBackup(command.Command):
 
 
 class ShowBackup(show.ShowOne):
-    """Show backup command"""
+    """Display backup details"""
 
     log = logging.getLogger(__name__ + '.ShowBackup')
 
@@ -155,7 +193,7 @@ class ShowBackup(show.ShowOne):
         parser.add_argument(
             'backup',
             metavar='<backup>',
-            help='Name or ID of backup to display')
+            help='Backup to display (ID only)')
         return parser
 
     def take_action(self, parsed_args):

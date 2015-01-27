@@ -69,48 +69,54 @@ overlapping purposes there will be options to select which object to use, or
 the API resources will be merged, as in the ``quota`` object that has options
 referring to both Compute and Volume quotas.
 
-* ``access token``: Identity - long-lived OAuth-based token
+* ``access token``: (**Identity**) long-lived OAuth-based token
+* ``availability zone``: (**Compute**) a logical partition of hosts or volume services
 * ``aggregate``: (**Compute**) a grouping of servers
-* ``backup``: Volume - a volume copy
+* ``backup``: (**Volume**) a volume copy
 * ``catalog``: (**Identity**) service catalog
 * ``console log``: (**Compute**) server console text dump
 * ``console url``: (**Compute**) server remote console URL
-* ``consumer``: Identity - OAuth-based delegatee
-* ``container``: Object Store - a grouping of objects
+* ``consumer``: (**Identity**) OAuth-based delegatee
+* ``container``: (**Object Store**) a grouping of objects
 * ``credentials``: (**Identity**) specific to identity providers
-* ``domain``: Identity - a grouping of projects
+* ``domain``: (**Identity**) a grouping of projects
+* ``ec2 cedentials``: (**Identity**) AWS EC2-compatible credentials
 * ``endpoint``: (**Identity**) the base URL used to contact a specific service
 * ``extension``: (**Compute**, **Identity**, **Volume**) OpenStack server API extensions
-* ``flavor``: Compute - pre-defined configurations of servers: ram, root disk, etc
-* ``group``: Identity - a grouping of users
+* ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
+* ``flavor``: (**Compute**) predefined server configurations: ram, root disk, etc
+* ``group``: (**Identity**) a grouping of users
 * ``host``: Compute - the physical computer running a hypervisor
 * ``hypervisor``: Compute - the virtual machine manager
-* ``identity provider``: Identity - a source of users and authentication
-* ``image``: Image - a disk image
+* ``identity provider``: (**Identity**) a source of users and authentication
+* ``image``: (**Image**) a disk image
 * ``ip fixed``: Compute, Network - an internal IP address assigned to a server
 * ``ip floating``: Compute, Network - a public IP address that can be mapped to a server
 * ``keypair``: (**Compute**) an SSH public key
 * ``limits``: (**Compute**, **Volume**) resource usage limits
+* ``mapping``: (**Identity**) a definition to translate identity provider attributes to Identity concepts
 * ``module``: internal - installed Python modules in the OSC process
 * ``network``: Network - a virtual network for connecting servers and other resources
-* ``object``: Object Store - a single file in the Object Store
-* ``policy``: Identity - determines authorization
+* ``object``: (**Object Store**) a single file in the Object Store
+* ``policy``: (**Identity**) determines authorization
 * ``project``: (**Identity**) owns a group of resources
 * ``quota``: (**Compute**, **Volume**) resource usage restrictions
-* ``region``: (**Identity**)
-* ``request token``: Identity - temporary OAuth-based token
-* ``role``: Identity - a policy object used to determine authorization
+* ``region``: (**Identity**) a subset of an OpenStack deployment
+* ``request token``: (**Identity**) temporary OAuth-based token
+* ``role``: (**Identity**) a policy object used to determine authorization
+* ``role assignment``: (**Identity**) a relationship between roles, users or groups, and domains or projects
 * ``security group``: Compute, Network - groups of network access rules
 * ``security group rule``: Compute, Network - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
 * ``server image``: (**Compute**) saved server disk image
-* ``service``: Identity - a cloud service
-* ``snapshot``: Volume - a point-in-time copy of a volume
+* ``service``: (**Identity**) a cloud service
+* ``snapshot``: (**Volume**) a point-in-time copy of a volume
 * ``token``: (**Identity**) a bearer token managed by Identity service
+* ``usage``: (**Compute**) display host resources being consumed
 * ``user``: (**Identity**) individual cloud resources users
 * ``user role``: (**Identity**) roles assigned to a user
-* ``volume``: Volume - block volumes
-* ``volume type``: Volume - deployment-specific types of volumes available
+* ``volume``: (**Volume**) block volumes
+* ``volume type``: (**Volume**) deployment-specific types of volumes available
 
 Actions
 -------

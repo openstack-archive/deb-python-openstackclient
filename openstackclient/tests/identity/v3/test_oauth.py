@@ -26,6 +26,10 @@ class TestOAuth1(identity_fakes.TestOAuth1):
         self.access_tokens_mock.reset_mock()
         self.request_tokens_mock = identity_client.oauth1.request_tokens
         self.request_tokens_mock.reset_mock()
+        self.projects_mock = identity_client.projects
+        self.projects_mock.reset_mock()
+        self.roles_mock = identity_client.roles
+        self.roles_mock.reset_mock()
 
 
 class TestRequestTokenCreate(TestOAuth1):
@@ -39,18 +43,24 @@ class TestRequestTokenCreate(TestOAuth1):
             loaded=True,
         )
 
+        self.projects_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.PROJECT),
+            loaded=True,
+        )
+
         self.cmd = token.CreateRequestToken(self.app, None)
 
     def test_create_request_tokens(self):
         arglist = [
             '--consumer-key', identity_fakes.consumer_id,
             '--consumer-secret', identity_fakes.consumer_secret,
-            '--project-id', identity_fakes.project_id,
+            '--project', identity_fakes.project_id,
         ]
         verifylist = [
             ('consumer_key', identity_fakes.consumer_id),
             ('consumer_secret', identity_fakes.consumer_secret),
-            ('project_id', identity_fakes.project_id),
+            ('project', identity_fakes.project_id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
         columns, data = self.cmd.take_action(parsed_args)
@@ -77,6 +87,12 @@ class TestRequestTokenAuthorize(TestOAuth1):
     def setUp(self):
         super(TestRequestTokenAuthorize, self).setUp()
 
+        self.roles_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.ROLE),
+            loaded=True,
+        )
+
         copied_verifier = copy.deepcopy(identity_fakes.OAUTH_VERIFIER)
         resource = fakes.FakeResource(None, copied_verifier, loaded=True)
         self.request_tokens_mock.authorize.return_value = resource
@@ -85,11 +101,11 @@ class TestRequestTokenAuthorize(TestOAuth1):
     def test_authorize_request_tokens(self):
         arglist = [
             '--request-key', identity_fakes.request_token_id,
-            '--role-ids', identity_fakes.role_id,
+            '--role', identity_fakes.role_name,
         ]
         verifylist = [
             ('request_key', identity_fakes.request_token_id),
-            ('role_ids', identity_fakes.role_id),
+            ('role', [identity_fakes.role_name]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
         columns, data = self.cmd.take_action(parsed_args)

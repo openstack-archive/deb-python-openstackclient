@@ -15,6 +15,7 @@
 
 """Service action implementations"""
 
+import argparse
 import logging
 import six
 
@@ -36,19 +37,24 @@ class CreateService(show.ShowOne):
     def get_parser(self, prog_name):
         parser = super(CreateService, self).get_parser(prog_name)
         parser.add_argument(
-            'name',
-            metavar='<service-name>',
+            'type_or_name',
+            metavar='<type>',
+            help=_('New service type (compute, image, identity, volume, etc)'),
+        )
+        type_or_name_group = parser.add_mutually_exclusive_group()
+        type_or_name_group.add_argument(
+            '--type',
+            metavar='<type>',
+            help=argparse.SUPPRESS,
+        )
+        type_or_name_group.add_argument(
+            '--name',
+            metavar='<name>',
             help=_('New service name'),
         )
         parser.add_argument(
-            '--type',
-            metavar='<service-type>',
-            required=True,
-            help=_('New service type (compute, image, identity, volume, etc)'),
-        )
-        parser.add_argument(
             '--description',
-            metavar='<service-description>',
+            metavar='<description>',
             help=_('New service description'),
         )
         return parser
@@ -57,9 +63,28 @@ class CreateService(show.ShowOne):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
+        type_or_name = parsed_args.type_or_name
+        name = parsed_args.name
+        type = parsed_args.type
+
+        # If only a single positional is present, it's a <type>.
+        # This is not currently legal so it is considered a new case.
+        if not type and not name:
+            type = type_or_name
+        # If --type option is present then positional is handled as <name>;
+        # display deprecation message.
+        elif type:
+            name = type_or_name
+            self.log.warning(_('The argument --type is deprecated, use service'
+                               ' create --name <service-name> type instead.'))
+        # If --name option is present the positional is handled as <type>.
+        # Making --type optional is new, but back-compatible
+        elif name:
+            type = type_or_name
+
         service = identity_client.services.create(
-            parsed_args.name,
-            parsed_args.type,
+            name,
+            type,
             parsed_args.description)
 
         info = {}
@@ -100,7 +125,8 @@ class ListService(lister.Lister):
             '--long',
             action='store_true',
             default=False,
-            help=_('List additional fields in output'))
+            help=_('List additional fields in output'),
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -109,17 +135,16 @@ class ListService(lister.Lister):
         if parsed_args.long:
             columns = ('ID', 'Name', 'Type', 'Description')
         else:
-            columns = ('ID', 'Name')
+            columns = ('ID', 'Name', 'Type')
         data = self.app.client_manager.identity.services.list()
-        return (columns,
-                (utils.get_item_properties(
-                    s, columns,
-                    formatters={},
-                ) for s in data))
+        return (
+            columns,
+            (utils.get_item_properties(s, columns) for s in data),
+        )
 
 
 class ShowService(show.ShowOne):
-    """Show service details"""
+    """Display service details"""
 
     log = logging.getLogger(__name__ + '.ShowService')
 

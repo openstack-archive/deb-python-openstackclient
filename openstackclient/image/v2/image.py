@@ -27,16 +27,17 @@ from openstackclient.common import utils
 
 
 class DeleteImage(command.Command):
-    """Delete an image"""
+    """Delete image(s)"""
 
     log = logging.getLogger(__name__ + ".DeleteImage")
 
     def get_parser(self, prog_name):
         parser = super(DeleteImage, self).get_parser(prog_name)
         parser.add_argument(
-            "image",
+            "images",
             metavar="<image>",
-            help="Name or ID of image to delete",
+            nargs="+",
+            help="Image(s) to delete (name or ID)",
         )
         return parser
 
@@ -44,11 +45,12 @@ class DeleteImage(command.Command):
         self.log.debug("take_action(%s)", parsed_args)
 
         image_client = self.app.client_manager.image
-        image = utils.find_resource(
-            image_client.images,
-            parsed_args.image,
-        )
-        image_client.images.delete(image.id)
+        for image in parsed_args.images:
+            image_obj = utils.find_resource(
+                image_client.images,
+                image,
+            )
+            image_client.images.delete(image_obj.id)
 
 
 class ListImage(lister.Lister):
@@ -100,12 +102,12 @@ class SaveImage(command.Command):
         parser.add_argument(
             "--file",
             metavar="<filename>",
-            help="Downloaded image save filename [default: stdout]",
+            help="Downloaded image save filename (default: stdout)",
         )
         parser.add_argument(
             "image",
             metavar="<image>",
-            help="Name or ID of image to save",
+            help="Image to save (name or ID)",
         )
         return parser
 
@@ -123,7 +125,7 @@ class SaveImage(command.Command):
 
 
 class ShowImage(show.ShowOne):
-    """Show image details"""
+    """Display image details"""
 
     log = logging.getLogger(__name__ + ".ShowImage")
 
@@ -132,7 +134,7 @@ class ShowImage(show.ShowOne):
         parser.add_argument(
             "image",
             metavar="<image>",
-            help="Name or ID of image to display",
+            help="Image to display (name or ID)",
         )
         return parser
 

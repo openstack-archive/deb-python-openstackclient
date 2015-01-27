@@ -25,6 +25,7 @@ AUTH_TOKEN = "foobar"
 AUTH_URL = "http://0.0.0.0"
 USERNAME = "itchy"
 PASSWORD = "scratchy"
+PROJECT_NAME = "poochie"
 
 TEST_RESPONSE_DICT = fixture.V2Token(token_id=AUTH_TOKEN,
                                      user_name=USERNAME)
@@ -37,7 +38,7 @@ TEST_RESPONSE_DICT_V3.set_project_scope()
 TEST_VERSIONS = fixture.DiscoveryList(href=AUTH_URL)
 
 
-class FakeStdout:
+class FakeStdout(object):
     def __init__(self):
         self.content = []
 

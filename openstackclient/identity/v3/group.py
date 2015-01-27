@@ -22,7 +22,7 @@ import sys
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
@@ -39,12 +39,12 @@ class AddUserToGroup(command.Command):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Group name or ID that user will be added to',
+            help='Group to contain <user> (name or ID)',
         )
         parser.add_argument(
             'user',
             metavar='<user>',
-            help='User name or ID to add to group',
+            help='User to add to <group> (name or ID)',
         )
         return parser
 
@@ -68,7 +68,7 @@ class AddUserToGroup(command.Command):
 
 
 class CheckUserInGroup(command.Command):
-    """Checks that user is in a specific group"""
+    """Check user membership in group"""
 
     log = logging.getLogger(__name__ + '.CheckUserInGroup')
 
@@ -77,12 +77,12 @@ class CheckUserInGroup(command.Command):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Group name or ID that user will be added to',
+            help='Group to check (name or ID)',
         )
         parser.add_argument(
             'user',
             metavar='<user>',
-            help='User name or ID to add to group',
+            help='User to check (name or ID)',
         )
         return parser
 
@@ -106,7 +106,7 @@ class CheckUserInGroup(command.Command):
 
 
 class CreateGroup(show.ShowOne):
-    """Create group command"""
+    """Create new group"""
 
     log = logging.getLogger(__name__ + '.CreateGroup')
 
@@ -115,15 +115,18 @@ class CreateGroup(show.ShowOne):
         parser.add_argument(
             'name',
             metavar='<group-name>',
-            help='New group name')
-        parser.add_argument(
-            '--description',
-            metavar='<group-description>',
-            help='New group description')
+            help='New group name',
+        )
         parser.add_argument(
             '--domain',
-            metavar='<group-domain>',
-            help='References the domain ID or name which owns the group')
+            metavar='<domain>',
+            help='Domain to contain new group (name or ID)',
+        )
+        parser.add_argument(
+            '--description',
+            metavar='<description>',
+            help='New group description',
+        )
         parser.add_argument(
             '--or-show',
             action='store_true',
@@ -159,20 +162,21 @@ class CreateGroup(show.ShowOne):
 
 
 class DeleteGroup(command.Command):
-    """Delete group command"""
+    """Delete group(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteGroup')
 
     def get_parser(self, prog_name):
         parser = super(DeleteGroup, self).get_parser(prog_name)
         parser.add_argument(
-            'group',
+            'groups',
             metavar='<group>',
-            help='Name or ID of group to delete')
+            nargs="+",
+            help='Group(s) to delete (name or ID)')
         parser.add_argument(
             '--domain',
             metavar='<domain>',
-            help='Domain where group resides (name or ID)',
+            help='Domain containing group(s) (name or ID)',
         )
         return parser
 
@@ -180,16 +184,18 @@ class DeleteGroup(command.Command):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
+        domain = None
         if parsed_args.domain:
             domain = common.find_domain(identity_client, parsed_args.domain)
-            group = utils.find_resource(identity_client.groups,
-                                        parsed_args.group,
-                                        domain_id=domain.id)
-        else:
-            group = utils.find_resource(identity_client.groups,
-                                        parsed_args.group)
-
-        identity_client.groups.delete(group.id)
+        for group in parsed_args.groups:
+            if domain is not None:
+                group_obj = utils.find_resource(identity_client.groups,
+                                                group,
+                                                domain_id=domain.id)
+            else:
+                group_obj = utils.find_resource(identity_client.groups,
+                                                group)
+            identity_client.groups.delete(group_obj.id)
         return
 
 
@@ -208,7 +214,7 @@ class ListGroup(lister.Lister):
         parser.add_argument(
             '--user',
             metavar='<user>',
-            help='List group memberships for <user> (name or ID)',
+            help='Filter group list by <user> (name or ID)',
         )
         parser.add_argument(
             '--long',
@@ -256,7 +262,7 @@ class ListGroup(lister.Lister):
 
 
 class RemoveUserFromGroup(command.Command):
-    """Remove user to group"""
+    """Remove user from group"""
 
     log = logging.getLogger(__name__ + '.RemoveUserFromGroup')
 
@@ -265,12 +271,12 @@ class RemoveUserFromGroup(command.Command):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Group name or ID that user will be removed from',
+            help='Group containing <user> (name or ID)',
         )
         parser.add_argument(
             'user',
             metavar='<user>',
-            help='User name or ID to remove from group',
+            help='User to remove from <group> (name or ID)',
         )
         return parser
 
@@ -294,7 +300,7 @@ class RemoveUserFromGroup(command.Command):
 
 
 class SetGroup(command.Command):
-    """Set group command"""
+    """Set group properties"""
 
     log = logging.getLogger(__name__ + '.SetGroup')
 
@@ -303,18 +309,18 @@ class SetGroup(command.Command):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Name or ID of group to change')
+            help='Group to modify (name or ID)')
         parser.add_argument(
             '--name',
-            metavar='<new-group-name>',
+            metavar='<name>',
             help='New group name')
         parser.add_argument(
             '--domain',
-            metavar='<group-domain>',
-            help='New domain name or ID that will now own the group')
+            metavar='<domain>',
+            help='New domain to contain <group> (name or ID)')
         parser.add_argument(
             '--description',
-            metavar='<group-description>',
+            metavar='<description>',
             help='New group description')
         return parser
 
@@ -338,7 +344,7 @@ class SetGroup(command.Command):
 
 
 class ShowGroup(show.ShowOne):
-    """Show group command"""
+    """Display group details"""
 
     log = logging.getLogger(__name__ + '.ShowGroup')
 
@@ -347,12 +353,12 @@ class ShowGroup(show.ShowOne):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Name or ID of group to display',
+            help='Group to display (name or ID)',
         )
         parser.add_argument(
             '--domain',
             metavar='<domain>',
-            help='Domain where group resides (name or ID)',
+            help='Domain containing <group> (name or ID)',
         )
         return parser
 

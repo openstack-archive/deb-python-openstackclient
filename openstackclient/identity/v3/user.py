@@ -15,13 +15,14 @@
 
 """Identity v3 User action implementations"""
 
+import copy
 import logging
 import six
 
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient.openstack.common.apiclient import exceptions as ksc_exc
+from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
@@ -137,16 +138,22 @@ class CreateUser(show.ShowOne):
 
 
 class DeleteUser(command.Command):
-    """Delete user"""
+    """Delete user(s)"""
 
     log = logging.getLogger(__name__ + '.DeleteUser')
 
     def get_parser(self, prog_name):
         parser = super(DeleteUser, self).get_parser(prog_name)
         parser.add_argument(
-            'user',
+            'users',
             metavar='<user>',
-            help='User to delete (name or ID)',
+            nargs="+",
+            help='User(s) to delete (name or ID)',
+        )
+        parser.add_argument(
+            '--domain',
+            metavar='<domain>',
+            help='Domain owning <user> (name or ID)',
         )
         parser.add_argument(
             '--domain',
@@ -159,16 +166,18 @@ class DeleteUser(command.Command):
         self.log.debug('take_action(%s)', parsed_args)
         identity_client = self.app.client_manager.identity
 
+        domain = None
         if parsed_args.domain:
             domain = common.find_domain(identity_client, parsed_args.domain)
-            user = utils.find_resource(identity_client.users,
-                                       parsed_args.user,
-                                       domain_id=domain.id)
-        else:
-            user = utils.find_resource(identity_client.users,
-                                       parsed_args.user)
-
-        identity_client.users.delete(user.id)
+        for user in parsed_args.users:
+            if domain is not None:
+                user_obj = utils.find_resource(identity_client.users,
+                                               user,
+                                               domain_id=domain.id)
+            else:
+                user_obj = utils.find_resource(identity_client.users,
+                                               user)
+            identity_client.users.delete(user_obj.id)
         return
 
 
@@ -184,10 +193,16 @@ class ListUser(lister.Lister):
             metavar='<domain>',
             help='Filter users by <domain> (name or ID)',
         )
-        parser.add_argument(
+        project_or_group = parser.add_mutually_exclusive_group()
+        project_or_group.add_argument(
             '--group',
             metavar='<group>',
             help='Filter users by <group> membership (name or ID)',
+        )
+        project_or_group.add_argument(
+            '--project',
+            metavar='<project>',
+            help='Filter users by <project> (name or ID)',
         )
         parser.add_argument(
             '--long',
@@ -215,19 +230,56 @@ class ListUser(lister.Lister):
         else:
             group = None
 
-        # List users
-        if parsed_args.long:
-            columns = ('ID', 'Name', 'Project Id', 'Domain Id',
-                       'Description', 'Email', 'Enabled')
+        if parsed_args.project:
+            if domain is not None:
+                project = utils.find_resource(
+                    identity_client.projects,
+                    parsed_args.project,
+                    domain_id=domain
+                ).id
+            else:
+                project = utils.find_resource(
+                    identity_client.projects,
+                    parsed_args.project,
+                ).id
+
+            assignments = identity_client.role_assignments.list(
+                project=project)
+
+            # NOTE(stevemar): If a user has more than one role on a project
+            # then they will have two entries in the returned data. Since we
+            # are looking for any role, let's just track unique user IDs.
+            user_ids = set()
+            for assignment in assignments:
+                if hasattr(assignment, 'user'):
+                    user_ids.add(assignment.user['id'])
+
+            # NOTE(stevemar): Call find_resource once we have unique IDs, so
+            # it's fewer trips to the Identity API, then collect the data.
+            data = []
+            for user_id in user_ids:
+                user = utils.find_resource(identity_client.users, user_id)
+                data.append(user)
+
         else:
-            columns = ('ID', 'Name')
-        data = identity_client.users.list(
-            domain=domain,
-            group=group,
-        )
+            data = identity_client.users.list(
+                domain=domain,
+                group=group,
+            )
+
+        # Column handling
+        if parsed_args.long:
+            columns = ['ID', 'Name', 'Default Project Id', 'Domain Id',
+                       'Description', 'Email', 'Enabled']
+            column_headers = copy.deepcopy(columns)
+            column_headers[2] = 'Project'
+            column_headers[3] = 'Domain'
+        else:
+            columns = ['ID', 'Name']
+            column_headers = columns
 
         return (
-            columns,
+            column_headers,
             (utils.get_item_properties(
                 s, columns,
                 formatters={},
@@ -375,7 +427,7 @@ class SetPasswordUser(command.Command):
 
 
 class ShowUser(show.ShowOne):
-    """Show user details"""
+    """Display user details"""
 
     log = logging.getLogger(__name__ + '.ShowUser')
 

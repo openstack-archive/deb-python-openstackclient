@@ -50,13 +50,13 @@ Create new project
 project delete
 --------------
 
-Delete an existing project
+Delete project(s)
 
 .. program:: project delete
 .. code:: bash
 
     os project delete
-        <project>
+        <project> [<project> ...]
 
 .. option:: --domain <domain>
 
@@ -149,6 +149,8 @@ Set project properties
 project show
 ------------
 
+Display project details
+
 .. program:: project show
 .. code:: bash
 
@@ -165,4 +167,4 @@ project show
 .. _project_show-project:
 .. describe:: <project>
 
-    Project to show (name or ID)
+    Project to display (name or ID)
