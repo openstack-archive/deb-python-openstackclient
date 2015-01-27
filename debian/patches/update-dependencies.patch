@@ -8,7 +8,7 @@ Last-Update: <2014-12-17>
 
 --- a/requirements.txt
 +++ b/requirements.txt
-@@ -16,4 +16,4 @@
+@@ -17,4 +17,4 @@
  python-cinderclient>=1.1.0
  python-neutronclient>=2.3.6,<3
  requests>=2.2.0,!=2.4.0
