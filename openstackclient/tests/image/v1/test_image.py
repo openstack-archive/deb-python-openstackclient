@@ -300,6 +300,206 @@ class TestImageDelete(TestImage):
         )
 
 
+class TestImageList(TestImage):
+
+    def setUp(self):
+        super(TestImageList, self).setUp()
+
+        self.api_mock = mock.Mock()
+        self.api_mock.image_list.return_value = [
+            copy.deepcopy(image_fakes.IMAGE),
+        ]
+        self.app.client_manager.image.api = self.api_mock
+
+        # Get the command object to test
+        self.cmd = image.ListImage(self.app, None)
+
+    def test_image_list_no_options(self):
+        arglist = []
+        verifylist = [
+            ('public', False),
+            ('private', False),
+            ('long', False),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=False,
+        )
+
+        collist = ('ID', 'Name')
+
+        self.assertEqual(collist, columns)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name,
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    def test_image_list_public_option(self):
+        arglist = [
+            '--public',
+        ]
+        verifylist = [
+            ('public', True),
+            ('private', False),
+            ('long', False),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=False,
+            public=True,
+        )
+
+        collist = ('ID', 'Name')
+
+        self.assertEqual(collist, columns)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name,
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    def test_image_list_private_option(self):
+        arglist = [
+            '--private',
+        ]
+        verifylist = [
+            ('public', False),
+            ('private', True),
+            ('long', False),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=False,
+            private=True,
+        )
+
+        collist = ('ID', 'Name')
+
+        self.assertEqual(collist, columns)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name,
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    def test_image_list_long_option(self):
+        arglist = [
+            '--long',
+        ]
+        verifylist = [
+            ('long', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=True,
+        )
+
+        collist = (
+            'ID',
+            'Name',
+            'Disk Format',
+            'Container Format',
+            'Size',
+            'Status',
+            'Visibility',
+            'Protected',
+            'Owner',
+            'Properties',
+        )
+
+        self.assertEqual(collist, columns)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name,
+            '',
+            '',
+            '',
+            '',
+            'public',
+            False,
+            image_fakes.image_owner,
+            "Alpha='a', Beta='b', Gamma='g'",
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    @mock.patch('openstackclient.api.utils.simple_filter')
+    def test_image_list_property_option(self, sf_mock):
+        sf_mock.return_value = [
+            copy.deepcopy(image_fakes.IMAGE),
+        ]
+
+        arglist = [
+            '--property', 'a=1',
+        ]
+        verifylist = [
+            ('property', {'a': '1'}),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=True,
+        )
+        sf_mock.assert_called_with(
+            [image_fakes.IMAGE],
+            attr='a',
+            value='1',
+            property_field='properties',
+        )
+
+        collist = ('ID', 'Name')
+
+        self.assertEqual(columns, collist)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name,
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+    @mock.patch('openstackclient.common.utils.sort_items')
+    def test_image_list_sort_option(self, si_mock):
+        si_mock.return_value = [
+            copy.deepcopy(image_fakes.IMAGE)
+        ]
+
+        arglist = ['--sort', 'name:asc']
+        verifylist = [('sort', 'name:asc')]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.api_mock.image_list.assert_called_with(
+            detailed=False
+        )
+        si_mock.assert_called_with(
+            [image_fakes.IMAGE],
+            'name:asc'
+        )
+
+        collist = ('ID', 'Name')
+
+        self.assertEqual(collist, columns)
+        datalist = ((
+            image_fakes.image_id,
+            image_fakes.image_name
+        ), )
+        self.assertEqual(datalist, tuple(data))
+
+
 class TestImageSet(TestImage):
 
     def setUp(self):
@@ -453,48 +653,3 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
-
-
-class TestImageList(TestImage):
-
-    def setUp(self):
-        super(TestImageList, self).setUp()
-
-        # This is the return value for utils.find_resource()
-        self.images_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(image_fakes.IMAGE),
-                loaded=True,
-            ),
-        ]
-
-        # Get the command object to test
-        self.cmd = image.ListImage(self.app, None)
-
-    def test_image_list_long_option(self):
-        arglist = [
-            '--long',
-        ]
-        verifylist = [
-            ('long', True),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-        self.images_mock.list.assert_called_with()
-
-        collist = ('ID', 'Name', 'Disk Format', 'Container Format',
-                   'Size', 'Status')
-
-        self.assertEqual(columns, collist)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-            '',
-            '',
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))

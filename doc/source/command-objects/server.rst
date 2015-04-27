@@ -225,7 +225,7 @@ List servers
 server lock
 -----------
 
-Lock server
+Lock a server. A non-admin user will not be able to execute actions
 
 .. program:: server lock
 .. code:: bash
@@ -423,16 +423,16 @@ Scale server to a new flavor
         <server>
 
     os server resize
-        --verify | --revert
+        --confirm | --revert
         <server>
 
 .. option:: --flavor <flavor>
 
     Resize server to specified flavor
 
-.. option:: --verify
+.. option:: --confirm
 
-    Verify server resize is complete
+    Confirm server resize is complete
 
 .. option:: --revert
 

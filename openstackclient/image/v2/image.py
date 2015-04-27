@@ -15,6 +15,7 @@
 
 """Image V2 Action Implementations"""
 
+import argparse
 import logging
 import six
 
@@ -23,6 +24,8 @@ from cliff import lister
 from cliff import show
 
 from glanceclient.common import utils as gc_utils
+from openstackclient.api import utils as api_utils
+from openstackclient.common import parseractions
 from openstackclient.common import utils
 
 
@@ -60,16 +63,54 @@ class ListImage(lister.Lister):
 
     def get_parser(self, prog_name):
         parser = super(ListImage, self).get_parser(prog_name)
+        public_group = parser.add_mutually_exclusive_group()
+        public_group.add_argument(
+            "--public",
+            dest="public",
+            action="store_true",
+            default=False,
+            help="List only public images",
+        )
+        public_group.add_argument(
+            "--private",
+            dest="private",
+            action="store_true",
+            default=False,
+            help="List only private images",
+        )
+        public_group.add_argument(
+            "--shared",
+            dest="shared",
+            action="store_true",
+            default=False,
+            help="List only shared images",
+        )
         parser.add_argument(
-            "--page-size",
-            metavar="<size>",
-            help="Number of images to request in each paginated request",
+            '--property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help='Filter output based on property',
         )
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
             help='List additional fields in output',
+        )
+
+        # --page-size has never worked, leave here for silent compatability
+        # We'll implement limit/marker differently later
+        parser.add_argument(
+            "--page-size",
+            metavar="<size>",
+            help=argparse.SUPPRESS,
+        )
+        parser.add_argument(
+            '--sort',
+            metavar="<key>[:<direction>]",
+            help="Sort output by selected keys and directions(asc or desc) "
+                 "(default: asc), multiple keys and directions can be "
+                 "specified separated by comma",
         )
         return parser
 
@@ -79,17 +120,66 @@ class ListImage(lister.Lister):
         image_client = self.app.client_manager.image
 
         kwargs = {}
-        if parsed_args.page_size is not None:
-            kwargs["page_size"] = parsed_args.page_size
+        if parsed_args.public:
+            kwargs['public'] = True
+        if parsed_args.private:
+            kwargs['private'] = True
+        if parsed_args.shared:
+            kwargs['shared'] = True
 
-        data = image_client.images.list(**kwargs)
         if parsed_args.long:
-            columns = ('ID', 'Name', 'Disk Format', 'Container Format',
-                       'Size', 'Status')
+            columns = (
+                'ID',
+                'Name',
+                'Disk Format',
+                'Container Format',
+                'Size',
+                'Status',
+                'visibility',
+                'protected',
+                'owner',
+                'tags',
+            )
+            column_headers = (
+                'ID',
+                'Name',
+                'Disk Format',
+                'Container Format',
+                'Size',
+                'Status',
+                'Visibility',
+                'Protected',
+                'Owner',
+                'Tags',
+            )
         else:
             columns = ("ID", "Name")
+            column_headers = columns
 
-        return (columns, (utils.get_item_properties(s, columns) for s in data))
+        data = image_client.api.image_list(**kwargs)
+
+        if parsed_args.property:
+            # NOTE(dtroyer): coerce to a list to subscript it in py3
+            attr, value = list(parsed_args.property.items())[0]
+            api_utils.simple_filter(
+                data,
+                attr=attr,
+                value=value,
+                property_field='properties',
+            )
+
+        data = utils.sort_items(data, parsed_args.sort)
+
+        return (
+            column_headers,
+            (utils.get_dict_properties(
+                s,
+                columns,
+                formatters={
+                    'tags': utils.format_dict,
+                },
+            ) for s in data)
+        )
 
 
 class SaveImage(command.Command):

@@ -54,16 +54,18 @@ class ClientManager(object):
                     for o in auth.OPTIONS_LIST]:
             return self._auth_params[name[1:]]
 
+        raise AttributeError(name)
+
     def __init__(
         self,
-        auth_options,
+        cli_options,
         api_version=None,
         verify=True,
         pw_func=None,
     ):
         """Set up a ClientManager
 
-        :param auth_options:
+        :param cli_options:
             Options collected from the command-line, environment, or wherever
         :param api_version:
             Dict of API versions: key is API name, value is the version
@@ -77,52 +79,16 @@ class ClientManager(object):
             returns a string containing the password
         """
 
-        # If no auth type is named by the user, select one based on
-        # the supplied options
-        self.auth_plugin_name = auth.select_auth_plugin(auth_options)
-
-        # Basic option checking to avoid unhelpful error messages
-        auth.check_valid_auth_options(auth_options, self.auth_plugin_name)
-
-        # Horrible hack alert...must handle prompt for null password if
-        # password auth is requested.
-        if (self.auth_plugin_name.endswith('password') and
-                not auth_options.os_password):
-            auth_options.os_password = pw_func()
-
-        (auth_plugin, self._auth_params) = auth.build_auth_params(
-            self.auth_plugin_name,
-            auth_options,
-        )
-
-        self._url = auth_options.os_url
-        self._region_name = auth_options.os_region_name
+        self._cli_options = cli_options
         self._api_version = api_version
+        self._pw_callback = pw_func
+        self._url = self._cli_options.os_url
+        self._region_name = self._cli_options.os_region_name
+
+        self.timing = self._cli_options.timing
+
         self._auth_ref = None
-        self.timing = auth_options.timing
-
-        default_domain = auth_options.os_default_domain
-        # NOTE(stevemar): If PROJECT_DOMAIN_ID or PROJECT_DOMAIN_NAME is
-        # present, then do not change the behaviour. Otherwise, set the
-        # PROJECT_DOMAIN_ID to 'OS_DEFAULT_DOMAIN' for better usability.
-        if (self._api_version.get('identity') == '3' and
-            not self._auth_params.get('project_domain_id') and
-                not self._auth_params.get('project_domain_name')):
-            self._auth_params['project_domain_id'] = default_domain
-
-        # NOTE(stevemar): If USER_DOMAIN_ID or USER_DOMAIN_NAME is present,
-        # then do not change the behaviour. Otherwise, set the USER_DOMAIN_ID
-        # to 'OS_DEFAULT_DOMAIN' for better usability.
-        if (self._api_version.get('identity') == '3' and
-            not self._auth_params.get('user_domain_id') and
-                not self._auth_params.get('user_domain_name')):
-            self._auth_params['user_domain_id'] = default_domain
-
-        # For compatibility until all clients can be updated
-        if 'project_name' in self._auth_params:
-            self._project_name = self._auth_params['project_name']
-        elif 'tenant_name' in self._auth_params:
-            self._project_name = self._auth_params['tenant_name']
+        self.session = None
 
         # verify is the Requests-compatible form
         self._verify = verify
@@ -138,6 +104,55 @@ class ClientManager(object):
         root_logger = logging.getLogger('')
         LOG.setLevel(root_logger.getEffectiveLevel())
 
+    def setup_auth(self):
+        """Set up authentication
+
+        This is deferred until authentication is actually attempted because
+        it gets in the way of things that do not require auth.
+        """
+
+        # If no auth type is named by the user, select one based on
+        # the supplied options
+        self.auth_plugin_name = auth.select_auth_plugin(self._cli_options)
+
+        # Basic option checking to avoid unhelpful error messages
+        auth.check_valid_auth_options(self._cli_options, self.auth_plugin_name)
+
+        # Horrible hack alert...must handle prompt for null password if
+        # password auth is requested.
+        if (self.auth_plugin_name.endswith('password') and
+                not self._cli_options.os_password):
+            self._cli_options.os_password = self._pw_callback()
+
+        (auth_plugin, self._auth_params) = auth.build_auth_params(
+            self.auth_plugin_name,
+            self._cli_options,
+        )
+
+        default_domain = self._cli_options.os_default_domain
+        # NOTE(stevemar): If PROJECT_DOMAIN_ID or PROJECT_DOMAIN_NAME is
+        # present, then do not change the behaviour. Otherwise, set the
+        # PROJECT_DOMAIN_ID to 'OS_DEFAULT_DOMAIN' for better usability.
+        if (self._api_version.get('identity') == '3' and
+            not self._auth_params.get('project_domain_id') and
+                not self._auth_params.get('project_domain_name')):
+            self._auth_params['project_domain_id'] = default_domain
+
+        # NOTE(stevemar): If USER_DOMAIN_ID or USER_DOMAIN_NAME is present,
+        # then do not change the behaviour. Otherwise, set the USER_DOMAIN_ID
+        # to 'OS_DEFAULT_DOMAIN' for better usability.
+        if (self._api_version.get('identity') == '3' and
+            self.auth_plugin_name.endswith('password') and
+            not self._auth_params.get('user_domain_id') and
+                not self._auth_params.get('user_domain_name')):
+            self._auth_params['user_domain_id'] = default_domain
+
+        # For compatibility until all clients can be updated
+        if 'project_name' in self._auth_params:
+            self._project_name = self._auth_params['project_name']
+        elif 'tenant_name' in self._auth_params:
+            self._project_name = self._auth_params['tenant_name']
+
         LOG.info('Using auth plugin: %s' % self.auth_plugin_name)
         self.auth = auth_plugin.load_from_options(**self._auth_params)
         # needed by SAML authentication
@@ -145,7 +160,7 @@ class ClientManager(object):
         self.session = session.Session(
             auth=self.auth,
             session=request_session,
-            verify=verify,
+            verify=self._verify,
         )
 
         return
@@ -154,6 +169,7 @@ class ClientManager(object):
     def auth_ref(self):
         """Dereference will trigger an auth if it hasn't already"""
         if not self._auth_ref:
+            self.setup_auth()
             LOG.debug("Get auth_ref")
             self._auth_ref = self.auth.get_auth_ref(self.session)
         return self._auth_ref

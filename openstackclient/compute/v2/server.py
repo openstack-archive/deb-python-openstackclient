@@ -26,12 +26,17 @@ import sys
 from cliff import command
 from cliff import lister
 from cliff import show
-from novaclient.v1_1 import servers
+
+try:
+    from novaclient.v2 import servers
+except ImportError:
+    from novaclient.v1_1 import servers
 
 from openstackclient.common import exceptions
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
+from openstackclient.network import common
 
 
 def _format_servers_list_networks(networks):
@@ -86,6 +91,10 @@ def _prep_server_detail(compute_client, server):
     info.update(
         {'properties': utils.format_dict(info.pop('metadata'))}
     )
+
+    # Migrate tenant_id to project_id naming
+    if 'tenant_id' in info:
+        info['project_id'] = info.pop('tenant_id')
 
     # Remove values that are long and not too useful
     info.pop('links', None)
@@ -186,6 +195,10 @@ class CreateServer(show.ShowOne):
     """Create a new server"""
 
     log = logging.getLogger(__name__ + '.CreateServer')
+
+    def _is_neutron_enabled(self):
+        service_catalog = self.app.client_manager.auth_ref.service_catalog
+        return 'network' in service_catalog.get_endpoints()
 
     def get_parser(self, prog_name):
         parser = super(CreateServer, self).get_parser(prog_name)
@@ -372,10 +385,39 @@ class CreateServer(show.ShowOne):
                 block_device_mapping.update({dev_key: block_volume})
 
         nics = []
+        if parsed_args.nic:
+            neutron_enabled = self._is_neutron_enabled()
         for nic_str in parsed_args.nic:
-            nic_info = {"net-id": "", "v4-fixed-ip": ""}
+            nic_info = {"net-id": "", "v4-fixed-ip": "",
+                        "v6-fixed-ip": "", "port-id": ""}
             nic_info.update(dict(kv_str.split("=", 1)
                             for kv_str in nic_str.split(",")))
+            if bool(nic_info["net-id"]) == bool(nic_info["port-id"]):
+                msg = _("either net-id or port-id should be specified "
+                        "but not both")
+                raise exceptions.CommandError(msg)
+            if neutron_enabled:
+                network_client = self.app.client_manager.network
+                if nic_info["net-id"]:
+                    nic_info["net-id"] = common.find(network_client,
+                                                     'network',
+                                                     'networks',
+                                                     nic_info["net-id"])
+                if nic_info["port-id"]:
+                    nic_info["port-id"] = common.find(network_client,
+                                                      'port',
+                                                      'ports',
+                                                      nic_info["port-id"])
+            else:
+                if nic_info["net-id"]:
+                    nic_info["net-id"] = utils.find_resource(
+                        compute_client.networks,
+                        nic_info["net-id"]
+                    ).id
+                if nic_info["port-id"]:
+                    msg = _("can't create server with port specified "
+                            "since neutron not enabled")
+                    raise exceptions.CommandError(msg)
             nics.append(nic_info)
 
         hints = {}
@@ -659,7 +701,8 @@ class ListServer(lister.Lister):
 
 
 class LockServer(command.Command):
-    """Lock server"""
+
+    """Lock a server. A non-admin user will not be able to execute actions"""
 
     log = logging.getLogger(__name__ + '.LockServer')
 
@@ -1030,9 +1073,9 @@ class ResizeServer(command.Command):
             help=_('Resize server to specified flavor'),
         )
         phase_group.add_argument(
-            '--verify',
+            '--confirm',
             action="store_true",
-            help=_('Verify server resize is complete'),
+            help=_('Confirm server resize is complete'),
         )
         phase_group.add_argument(
             '--revert',
@@ -1071,7 +1114,7 @@ class ResizeServer(command.Command):
                 else:
                     sys.stdout.write(_('\nError resizing server'))
                     raise SystemExit
-        elif parsed_args.verify:
+        elif parsed_args.confirm:
             compute_client.servers.confirm_resize(server)
         elif parsed_args.revert:
             compute_client.servers.revert_resize(server)

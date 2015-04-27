@@ -25,44 +25,63 @@ from openstackclient.common import utils
 from openstackclient.network import common
 
 
-def filters(data):
-    if 'subnets' in data:
-        data['subnets'] = utils.format_list(data['subnets'])
-    return data
+def _prep_network_detail(net):
+    """Prepare network object for output"""
+
+    if 'subnets' in net:
+        net['subnets'] = utils.format_list(net['subnets'])
+    if 'admin_state_up' in net:
+        net['state'] = 'UP' if net['admin_state_up'] else 'DOWN'
+        net.pop('admin_state_up')
+    if 'router:external' in net:
+        net['router_type'] = 'External' if net['router:external'] \
+            else 'Internal'
+        net.pop('router:external')
+    if 'tenant_id' in net:
+        net['project_id'] = net.pop('tenant_id')
+    return net
 
 
 class CreateNetwork(show.ShowOne):
-    """Create a network"""
+    """Create new network"""
 
     log = logging.getLogger(__name__ + '.CreateNetwork')
 
     def get_parser(self, prog_name):
         parser = super(CreateNetwork, self).get_parser(prog_name)
         parser.add_argument(
-            'name', metavar='<network_name>',
-            help='Name of network to create')
+            'name',
+            metavar='<name>',
+            help='New network name',
+        )
         admin_group = parser.add_mutually_exclusive_group()
         admin_group.add_argument(
             '--enable',
             dest='admin_state',
-            default=True,
             action='store_true',
-            help='Set administrative state up')
+            default=True,
+            help='Enable network (default)',
+        )
         admin_group.add_argument(
             '--disable',
             dest='admin_state',
             action='store_false',
-            help='Set administrative state down')
+            help='Disable network',
+        )
         share_group = parser.add_mutually_exclusive_group()
         share_group.add_argument(
             '--share',
-            dest='shared', action='store_true',
+            dest='shared',
+            action='store_true',
             default=None,
-            help='Share the network across tenants')
+            help='Share the network between projects',
+        )
         share_group.add_argument(
             '--no-share',
-            dest='shared', action='store_false',
-            help='Do not share the network across tenants')
+            dest='shared',
+            action='store_false',
+            help='Do not share the network between projects',
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -72,7 +91,7 @@ class CreateNetwork(show.ShowOne):
         create_method = getattr(client, "create_network")
         data = create_method(body)['network']
         if data:
-            data = filters(data)
+            data = _prep_network_detail(data)
         else:
             data = {'': ''}
         return zip(*sorted(six.iteritems(data)))
@@ -96,7 +115,7 @@ class DeleteNetwork(command.Command):
             'networks',
             metavar="<network>",
             nargs="+",
-            help=("Network(s) to delete (name or ID)")
+            help=("Network to delete (name or ID)")
         )
         return parser
 
@@ -125,40 +144,63 @@ class ListNetwork(lister.Lister):
         )
         parser.add_argument(
             '--dhcp',
-            help='ID of the DHCP agent')
+            metavar='<dhcp-id>',
+            help='DHCP agent ID')
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
-            help='Long listing',
+            help='List additional fields in output',
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
+
         if parsed_args.dhcp:
-            list_method = getattr(client, 'list_networks_on_dhcp_agent')
-            resources = 'networks_on_dhcp_agent'
-            report_filter = {'dhcp_agent': parsed_args.dhcp}
-            data = list_method(**report_filter)[resources]
+            data = client.api.dhcp_agent_list(dhcp_id=parsed_args.dhcp)
+
+            columns = ('ID',)
+            column_headers = columns
         else:
-            list_method = getattr(client, "list_networks")
-            report_filter = {}
-            if parsed_args.external:
-                report_filter = {'router:external': True}
-            data = list_method(**report_filter)['networks']
-        columns = len(data) > 0 and sorted(data[0].keys()) or []
-        if parsed_args.columns:
-            list_columns = parsed_args.columns
-        else:
-            list_columns = ['id', 'name', 'subnets']
-        if not parsed_args.long and not parsed_args.dhcp:
-            columns = [x for x in list_columns if x in columns]
-        formatters = {'subnets': utils.format_list}
-        return (columns,
-                (utils.get_dict_properties(s, columns, formatters=formatters)
-                 for s in data))
+            data = client.api.network_list(external=parsed_args.external)
+
+            if parsed_args.long:
+                columns = (
+                    'ID',
+                    'Name',
+                    'Status',
+                    'project_id',
+                    'state',
+                    'Shared',
+                    'Subnets',
+                    'provider:network_type',
+                    'router_type',
+                )
+                column_headers = (
+                    'ID',
+                    'Name',
+                    'Status',
+                    'Project',
+                    'State',
+                    'Shared',
+                    'Subnets',
+                    'Network Type',
+                    'Router Type',
+                )
+            else:
+                columns = ('ID', 'Name', 'Subnets')
+                column_headers = columns
+
+        for d in data:
+            d = _prep_network_detail(d)
+
+        return (column_headers,
+                (utils.get_dict_properties(
+                    s, columns,
+                    formatters={'subnets': utils.format_list},
+                ) for s in data))
 
 
 class SetNetwork(command.Command):
@@ -171,34 +213,41 @@ class SetNetwork(command.Command):
         parser.add_argument(
             'identifier',
             metavar="<network>",
-            help=("Name or identifier of network to set")
+            help=("Network to modify (name or ID)")
+        )
+        parser.add_argument(
+            '--name',
+            metavar='<name>',
+            help='Set network name',
         )
         admin_group = parser.add_mutually_exclusive_group()
         admin_group.add_argument(
             '--enable',
             dest='admin_state',
-            default=None,
             action='store_true',
-            help='Set administrative state up')
+            default=None,
+            help='Enable network',
+        )
         admin_group.add_argument(
             '--disable',
             dest='admin_state',
             action='store_false',
-            help='Set administrative state down')
-        parser.add_argument(
-            '--name',
-            metavar='<network_name>',
-            help='New name for the network')
+            help='Disable network',
+        )
         share_group = parser.add_mutually_exclusive_group()
         share_group.add_argument(
             '--share',
-            dest='shared', action='store_true',
+            dest='shared',
+            action='store_true',
             default=None,
-            help='Share the network across tenants')
+            help='Share the network between projects',
+        )
         share_group.add_argument(
             '--no-share',
-            dest='shared', action='store_false',
-            help='Do not share the network across tenants')
+            dest='shared',
+            action='store_false',
+            help='Do not share the network between projects',
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -231,16 +280,16 @@ class ShowNetwork(show.ShowOne):
         parser.add_argument(
             'identifier',
             metavar="<network>",
-            help=("Name or identifier of network to show")
+            help=("Network to display (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-        _id = common.find(client, 'network', 'networks',
-                          parsed_args.identifier)
-        show_method = getattr(client, "show_network")
-        data = show_method(_id)['network']
-        data = filters(data)
+        net = client.api.find_attr(
+            'networks',
+            parsed_args.identifier,
+        )
+        data = _prep_network_detail(net)
         return zip(*sorted(six.iteritems(data)))

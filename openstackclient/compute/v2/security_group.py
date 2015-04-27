@@ -24,7 +24,12 @@ from cliff import lister
 from cliff import show
 
 from keystoneclient import exceptions as ksc_exc
-from novaclient.v1_1 import security_group_rules
+
+try:
+    from novaclient.v2 import security_group_rules
+except ImportError:
+    from novaclient.v1_1 import security_group_rules
+
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 
@@ -322,7 +327,7 @@ class DeleteSecurityGroupRule(command.Command):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Create rule in this security group',
+            help='Security group rule to delete (name or ID)',
         )
         parser.add_argument(
             "--proto",
@@ -375,7 +380,7 @@ class ListSecurityGroupRule(lister.Lister):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Create rule in this security group',
+            help='List all rules in this security group',
         )
         return parser
 

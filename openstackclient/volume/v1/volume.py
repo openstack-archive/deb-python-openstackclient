@@ -15,6 +15,7 @@
 
 """Volume v1 Volume action implementations"""
 
+import argparse
 import logging
 import six
 
@@ -45,10 +46,16 @@ class CreateVolume(show.ShowOne):
             type=int,
             help='New volume size in GB',
         )
-        parser.add_argument(
+        snapshot_group = parser.add_mutually_exclusive_group()
+        snapshot_group.add_argument(
+            '--snapshot',
+            metavar='<snapshot>',
+            help='Use <snapshot> as source of new volume',
+        )
+        snapshot_group.add_argument(
             '--snapshot-id',
             metavar='<snapshot-id>',
-            help='Use <snapshot-id> as source of new volume',
+            help=argparse.SUPPRESS,
         )
         parser.add_argument(
             '--description',
@@ -130,9 +137,11 @@ class CreateVolume(show.ShowOne):
                 parsed_args.image,
             ).id
 
+        snapshot = parsed_args.snapshot or parsed_args.snapshot_id
+
         volume = volume_client.volumes.create(
             parsed_args.size,
-            parsed_args.snapshot_id,
+            snapshot,
             source_volume,
             parsed_args.name,
             parsed_args.description,
@@ -328,6 +337,12 @@ class SetVolume(command.Command):
             help='New volume description',
         )
         parser.add_argument(
+            '--size',
+            metavar='<size>',
+            type=int,
+            help='Extend volume size in GB',
+        )
+        parser.add_argument(
             '--property',
             metavar='<key=value>',
             action=parseractions.KeyValueAction,
@@ -341,6 +356,18 @@ class SetVolume(command.Command):
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(volume_client.volumes, parsed_args.volume)
 
+        if parsed_args.size:
+            if volume.status != 'available':
+                self.app.log.error("Volume is in %s state, it must be "
+                                   "available before size can be extended" %
+                                   volume.status)
+                return
+            if parsed_args.size <= volume.size:
+                self.app.log.error("New size must be greater than %s GB" %
+                                   volume.size)
+                return
+            volume_client.volumes.extend(volume.id, parsed_args.size)
+
         if parsed_args.property:
             volume_client.volumes.set_metadata(volume.id, parsed_args.property)
 
@@ -352,7 +379,7 @@ class SetVolume(command.Command):
         if kwargs:
             volume_client.volumes.update(volume.id, **kwargs)
 
-        if not kwargs and not parsed_args.property:
+        if not kwargs and not parsed_args.property and not parsed_args.size:
             self.app.log.error("No changes requested\n")
 
         return

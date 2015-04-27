@@ -21,7 +21,7 @@ import os
 import six
 import time
 
-from oslo.utils import importutils
+from oslo_utils import importutils
 
 from openstackclient.common import exceptions
 
@@ -122,6 +122,17 @@ def format_list(data):
     return ', '.join(sorted(data))
 
 
+def get_field(item, field):
+    try:
+        if isinstance(item, dict):
+            return item[field]
+        else:
+            return getattr(item, field)
+    except Exception:
+        msg = "Resource doesn't have field %s" % field
+        raise exceptions.CommandError(msg)
+
+
 def get_item_properties(item, fields, mixed_case_fields=[], formatters={}):
     """Return a tuple containing the item properties.
 
@@ -168,6 +179,41 @@ def get_dict_properties(item, fields, mixed_case_fields=[], formatters={}):
         else:
             row.append(data)
     return tuple(row)
+
+
+def sort_items(items, sort_str):
+    """Sort items based on sort keys and sort directions given by sort_str.
+
+    :param items: a list or generator object of items
+    :param sort_str: a string defining the sort rules, the format is
+    '<key1>:[direction1],<key2>:[direction2]...', direction can be 'asc'
+    for ascending or 'desc' for descending, if direction is not given,
+    it's ascending by default
+    :return: sorted items
+    """
+    if not sort_str:
+        return items
+    # items may be a generator object, transform it to a list
+    items = list(items)
+    sort_keys = sort_str.strip().split(',')
+    for sort_key in reversed(sort_keys):
+        reverse = False
+        if ':' in sort_key:
+            sort_key, direction = sort_key.split(':', 1)
+            if not sort_key:
+                msg = "empty string is not a valid sort key"
+                raise exceptions.CommandError(msg)
+            if direction not in ['asc', 'desc']:
+                if not direction:
+                    direction = "empty string"
+                msg = ("%s is not a valid sort direction for sort key %s, "
+                       "use asc or desc instead" % (direction, sort_key))
+                raise exceptions.CommandError(msg)
+            if direction == 'desc':
+                reverse = True
+        items.sort(key=lambda item: get_field(item, sort_key),
+                   reverse=reverse)
+    return items
 
 
 def string_to_bool(arg):

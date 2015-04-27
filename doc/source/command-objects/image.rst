@@ -138,16 +138,37 @@ List available images
 .. code:: bash
 
     os image list
-        [--page-size <size>]
+        [--public | --private | --shared]
+        [--property <key=value>]
         [--long]
+        [--sort <key>[:<direction>]]
 
-.. option:: --page-size <size>
+.. option:: --public
 
-    Number of images to request in each paginated request
+    List only public images
+
+.. option:: --private
+
+    List only private images
+
+.. option:: --shared
+
+    List only shared images
+
+    *Image version 2 only.*
+
+.. option:: --property <key=value>
+
+    Filter output based on property
 
 .. option:: --long
 
     List additional fields in output
+
+.. option:: --sort <key>[:<direction>]
+
+    Sort output by selected keys and directions(asc or desc) (default: asc),
+    multiple keys and directions can be specified separated by comma
 
 image save
 ----------
