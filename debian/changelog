@@ -1,3 +1,11 @@
+python-openstackclient (1.5.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+    - d/control: Align requirements with upstream.
+    - d/gbp.conf: Update gbp configuration for liberty branch.
+
+ -- Corey Bryant <corey.bryant@canonical.com>  Fri, 12 Jun 2015 12:01:37 -0400
+
 python-openstackclient (1.0.3-1) unstable; urgency=medium
 
   * New upstream release.
