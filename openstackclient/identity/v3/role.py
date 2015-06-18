@@ -26,6 +26,101 @@ from keystoneclient import exceptions as ksc_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
+from openstackclient.identity import common
+
+
+def _add_identity_and_resource_options_to_parser(parser):
+    domain_or_project = parser.add_mutually_exclusive_group()
+    domain_or_project.add_argument(
+        '--domain',
+        metavar='<domain>',
+        help='Include <domain> (name or ID)',
+    )
+    domain_or_project.add_argument(
+        '--project',
+        metavar='<project>',
+        help='Include `<project>` (name or ID)',
+    )
+    user_or_group = parser.add_mutually_exclusive_group()
+    user_or_group.add_argument(
+        '--user',
+        metavar='<user>',
+        help='Include <user> (name or ID)',
+    )
+    user_or_group.add_argument(
+        '--group',
+        metavar='<group>',
+        help='Include <group> (name or ID)',
+    )
+    parser.add_argument(
+        '--user-domain',
+        metavar='<user-domain>',
+        help=('Domain the user belongs to (name or ID). '
+              'This can be used in case collisions between user names '
+              'exist.')
+    )
+    parser.add_argument(
+        '--group-domain',
+        metavar='<group-domain>',
+        help=('Domain the group belongs to (name or ID). '
+              'This can be used in case collisions between group names '
+              'exist.')
+    )
+    parser.add_argument(
+        '--project-domain',
+        metavar='<project-domain>',
+        help=('Domain the project belongs to (name or ID). '
+              'This can be used in case collisions between project names '
+              'exist.')
+    )
+
+
+def _process_identity_and_resource_options(parsed_args,
+                                           identity_client_manager):
+    kwargs = {}
+    if parsed_args.user and parsed_args.domain:
+        kwargs['user'] = common.find_user(
+            identity_client_manager,
+            parsed_args.user,
+            parsed_args.user_domain,
+        ).id
+        kwargs['domain'] = common.find_domain(
+            identity_client_manager,
+            parsed_args.domain,
+        ).id
+    elif parsed_args.user and parsed_args.project:
+        kwargs['user'] = common.find_user(
+            identity_client_manager,
+            parsed_args.user,
+            parsed_args.user_domain,
+        ).id
+        kwargs['project'] = common.find_project(
+            identity_client_manager,
+            parsed_args.project,
+            parsed_args.project_domain,
+        ).id
+    elif parsed_args.group and parsed_args.domain:
+        kwargs['group'] = common.find_group(
+            identity_client_manager,
+            parsed_args.group,
+            parsed_args.group_domain,
+        ).id
+        kwargs['domain'] = common.find_domain(
+            identity_client_manager,
+            parsed_args.domain,
+        ).id
+    elif parsed_args.group and parsed_args.project:
+        kwargs['group'] = common.find_group(
+            identity_client_manager,
+            parsed_args.group,
+            parsed_args.group_domain,
+        ).id
+        kwargs['project'] = common.find_project(
+            identity_client_manager,
+            parsed_args.project,
+            parsed_args.group_domain,
+        ).id
+    return kwargs
 
 
 class AddRole(command.Command):
@@ -40,28 +135,7 @@ class AddRole(command.Command):
             metavar='<role>',
             help='Role to add to <user> (name or ID)',
         )
-        domain_or_project = parser.add_mutually_exclusive_group()
-        domain_or_project.add_argument(
-            '--domain',
-            metavar='<domain>',
-            help='Include <domain> (name or ID)',
-        )
-        domain_or_project.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Include `<project>` (name or ID)',
-        )
-        user_or_group = parser.add_mutually_exclusive_group()
-        user_or_group.add_argument(
-            '--user',
-            metavar='<user>',
-            help='Include <user> (name or ID)',
-        )
-        user_or_group.add_argument(
-            '--group',
-            metavar='<group>',
-            help='Include <group> (name or ID)',
-        )
+        _add_identity_and_resource_options_to_parser(parser)
         return parser
 
     def take_action(self, parsed_args):
@@ -77,65 +151,15 @@ class AddRole(command.Command):
             parsed_args.role,
         )
 
-        if parsed_args.user and parsed_args.domain:
-            user = utils.find_resource(
-                identity_client.users,
-                parsed_args.user,
-            )
-            domain = utils.find_resource(
-                identity_client.domains,
-                parsed_args.domain,
-            )
-            identity_client.roles.grant(
-                role.id,
-                user=user.id,
-                domain=domain.id,
-            )
-        elif parsed_args.user and parsed_args.project:
-            user = utils.find_resource(
-                identity_client.users,
-                parsed_args.user,
-            )
-            project = utils.find_resource(
-                identity_client.projects,
-                parsed_args.project,
-            )
-            identity_client.roles.grant(
-                role.id,
-                user=user.id,
-                project=project.id,
-            )
-        elif parsed_args.group and parsed_args.domain:
-            group = utils.find_resource(
-                identity_client.groups,
-                parsed_args.group,
-            )
-            domain = utils.find_resource(
-                identity_client.domains,
-                parsed_args.domain,
-            )
-            identity_client.roles.grant(
-                role.id,
-                group=group.id,
-                domain=domain.id,
-            )
-        elif parsed_args.group and parsed_args.project:
-            group = utils.find_resource(
-                identity_client.groups,
-                parsed_args.group,
-            )
-            project = utils.find_resource(
-                identity_client.projects,
-                parsed_args.project,
-            )
-            identity_client.roles.grant(
-                role.id,
-                group=group.id,
-                project=project.id,
-            )
-        else:
-            sys.stderr.write("Role not added, incorrect set of arguments \
-            provided. See openstack --help for more details\n")
+        kwargs = _process_identity_and_resource_options(
+            parsed_args, self.app.client_manager.identity)
+        if not kwargs:
+            sys.stderr.write("Role not added, incorrect set of arguments "
+                             "provided. See openstack --help for more "
+                             "details\n")
+            return
+
+        identity_client.roles.grant(role.id, **kwargs)
         return
 
 
@@ -211,28 +235,7 @@ class ListRole(lister.Lister):
 
     def get_parser(self, prog_name):
         parser = super(ListRole, self).get_parser(prog_name)
-        domain_or_project = parser.add_mutually_exclusive_group()
-        domain_or_project.add_argument(
-            '--domain',
-            metavar='<domain>',
-            help='Filter roles by <domain> (name or ID)',
-        )
-        domain_or_project.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Filter roles by <project> (name or ID)',
-        )
-        user_or_group = parser.add_mutually_exclusive_group()
-        user_or_group.add_argument(
-            '--user',
-            metavar='<user>',
-            help='Filter roles by <user> (name or ID)',
-        )
-        user_or_group.add_argument(
-            '--group',
-            metavar='<group>',
-            help='Filter roles by <group> (name or ID)',
-        )
+        _add_identity_and_resource_options_to_parser(parser)
         return parser
 
     def take_action(self, parsed_args):
@@ -240,25 +243,28 @@ class ListRole(lister.Lister):
         identity_client = self.app.client_manager.identity
 
         if parsed_args.user:
-            user = utils.find_resource(
-                identity_client.users,
+            user = common.find_user(
+                identity_client,
                 parsed_args.user,
+                parsed_args.user_domain,
             )
         elif parsed_args.group:
-            group = utils.find_resource(
-                identity_client.groups,
+            group = common.find_group(
+                identity_client,
                 parsed_args.group,
+                parsed_args.group_domain,
             )
 
         if parsed_args.domain:
-            domain = utils.find_resource(
-                identity_client.domains,
+            domain = common.find_domain(
+                identity_client,
                 parsed_args.domain,
             )
         elif parsed_args.project:
-            project = utils.find_resource(
-                identity_client.projects,
+            project = common.find_project(
+                identity_client,
                 parsed_args.project,
+                parsed_args.project_domain,
             )
 
         # no user or group specified, list all roles in the system
@@ -332,28 +338,7 @@ class RemoveRole(command.Command):
             metavar='<role>',
             help='Role to remove (name or ID)',
         )
-        domain_or_project = parser.add_mutually_exclusive_group()
-        domain_or_project.add_argument(
-            '--domain',
-            metavar='<domain>',
-            help='Include <domain> (name or ID)',
-        )
-        domain_or_project.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Include <project> (name or ID)',
-        )
-        user_or_group = parser.add_mutually_exclusive_group()
-        user_or_group.add_argument(
-            '--user',
-            metavar='<user>',
-            help='Include <user> (name or ID)',
-        )
-        user_or_group.add_argument(
-            '--group',
-            metavar='<group>',
-            help='Include <group> (name or ID)',
-        )
+        _add_identity_and_resource_options_to_parser(parser)
         return parser
 
     def take_action(self, parsed_args):
@@ -369,65 +354,14 @@ class RemoveRole(command.Command):
             parsed_args.role,
         )
 
-        if parsed_args.user and parsed_args.domain:
-            user = utils.find_resource(
-                identity_client.users,
-                parsed_args.user,
-            )
-            domain = utils.find_resource(
-                identity_client.domains,
-                parsed_args.domain,
-            )
-            identity_client.roles.revoke(
-                role.id,
-                user=user.id,
-                domain=domain.id,
-            )
-        elif parsed_args.user and parsed_args.project:
-            user = utils.find_resource(
-                identity_client.users,
-                parsed_args.user,
-            )
-            project = utils.find_resource(
-                identity_client.projects,
-                parsed_args.project,
-            )
-            identity_client.roles.revoke(
-                role.id,
-                user=user.id,
-                project=project.id,
-            )
-        elif parsed_args.group and parsed_args.domain:
-            group = utils.find_resource(
-                identity_client.groups,
-                parsed_args.group,
-            )
-            domain = utils.find_resource(
-                identity_client.domains,
-                parsed_args.domain,
-            )
-            identity_client.roles.revoke(
-                role.id,
-                group=group.id,
-                domain=domain.id,
-            )
-        elif parsed_args.group and parsed_args.project:
-            group = utils.find_resource(
-                identity_client.groups,
-                parsed_args.group,
-            )
-            project = utils.find_resource(
-                identity_client.projects,
-                parsed_args.project,
-            )
-            identity_client.roles.revoke(
-                role.id,
-                group=group.id,
-                project=project.id,
-            )
-        else:
+        kwargs = _process_identity_and_resource_options(
+            parsed_args, self.app.client_manager.identity)
+        if not kwargs:
             sys.stderr.write("Role not removed, incorrect set of arguments \
             provided. See openstack --help for more details\n")
+            return
+
+        identity_client.roles.revoke(role.id, **kwargs)
         return
 
 

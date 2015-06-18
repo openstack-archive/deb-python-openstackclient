@@ -13,8 +13,8 @@ Add role to a user or group in a project or domain
 .. code:: bash
 
     os role add
-        --domain <domain> | --project <project>
-        --user <user> | --group <group>
+        --domain <domain> | --project <project> [--project-domain <project-domain>]
+        --user <user> [--user-domain <user-domain>] | --group <group> [--group-domain <group-domain>]
         <role>
 
 .. option:: --domain <domain>
@@ -34,6 +34,27 @@ Add role to a user or group in a project or domain
 .. option:: --group <group>
 
     Include `<group>` (name or ID)
+
+    .. versionadded:: 3
+
+.. option:: --user-domain <user-domain>
+
+    Domain the user belongs to (name or ID).
+    This can be used in case collisions between user names exist.
+
+    .. versionadded:: 3
+
+.. option:: --group-domain <group-domain>
+
+    Domain the group belongs to (name or ID).
+    This can be used in case collisions between group names exist.
+
+    .. versionadded:: 3
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
 
     .. versionadded:: 3
 
@@ -80,8 +101,8 @@ List roles
 .. code:: bash
 
     os role list
-        [--domain <domain> | --project <project]
-        [--user <user> | --group <group>]
+        --domain <domain> | --project <project> [--project-domain <project-domain>]
+        --user <user> [--user-domain <user-domain>] | --group <group> [--group-domain <group-domain>]
 
 .. option:: --domain <domain>
 
@@ -107,6 +128,27 @@ List roles
 
     .. versionadded:: 3
 
+.. option:: --user-domain <user-domain>
+
+    Domain the user belongs to (name or ID).
+    This can be used in case collisions between user names exist.
+
+    .. versionadded:: 3
+
+.. option:: --group-domain <group-domain>
+
+    Domain the group belongs to (name or ID).
+    This can be used in case collisions between group names exist.
+
+    .. versionadded:: 3
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
+    .. versionadded:: 3
+
 role remove
 -----------
 
@@ -116,8 +158,8 @@ Remove role from domain/project : user/group
 .. code:: bash
 
     os role remove
-        [--domain <domain> | --project <project]
-        [--user <user> | --group <group>]
+        --domain <domain> | --project <project> [--project-domain <project-domain>]
+        --user <user> [--user-domain <user-domain>] | --group <group> [--group-domain <group-domain>]
         <role>
 
 .. option:: --domain <domain>
@@ -137,6 +179,27 @@ Remove role from domain/project : user/group
 .. option:: --group <group>
 
     Include `<group>` (name or ID)
+
+    .. versionadded:: 3
+
+.. option:: --user-domain <user-domain>
+
+    Domain the user belongs to (name or ID).
+    This can be used in case collisions between user names exist.
+
+    .. versionadded:: 3
+
+.. option:: --group-domain <group-domain>
+
+    Domain the group belongs to (name or ID).
+    This can be used in case collisions between group names exist.
+
+    .. versionadded:: 3
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
 
     .. versionadded:: 3
 

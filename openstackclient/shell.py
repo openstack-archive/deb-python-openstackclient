@@ -1,4 +1,5 @@
 #   Copyright 2012-2013 OpenStack Foundation
+#   Copyright 2015 Dean Troyer
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain
@@ -19,9 +20,11 @@ import getpass
 import logging
 import sys
 import traceback
+import warnings
 
 from cliff import app
 from cliff import command
+from cliff import complete
 from cliff import help
 
 import openstackclient
@@ -31,6 +34,8 @@ from openstackclient.common import exceptions as exc
 from openstackclient.common import timing
 from openstackclient.common import utils
 
+from os_client_config import config as cloud_config
+
 
 DEFAULT_DOMAIN = 'default'
 
@@ -38,7 +43,7 @@ DEFAULT_DOMAIN = 'default'
 def prompt_for_password(prompt=None):
     """Prompt user for a password
 
-    Propmpt for a password if stdin is a tty.
+    Prompt for a password if stdin is a tty.
     """
 
     if not prompt:
@@ -72,54 +77,23 @@ class OpenStackShell(app.App):
 
         # Some commands do not need authentication
         help.HelpCommand.auth_required = False
+        complete.CompleteCommand.auth_required = False
 
         super(OpenStackShell, self).__init__(
             description=__doc__.strip(),
             version=openstackclient.__version__,
-            command_manager=commandmanager.CommandManager('openstack.cli'))
+            command_manager=commandmanager.CommandManager('openstack.cli'),
+            deferred_help=True)
 
         self.api_version = {}
 
         # Until we have command line arguments parsed, dump any stack traces
         self.dump_stack_trace = True
 
-        # This is instantiated in initialize_app() only when using
-        # password flow auth
-        self.auth_client = None
-
         # Assume TLS host certificate verification is enabled
         self.verify = True
 
         self.client_manager = None
-
-        # NOTE(dtroyer): This hack changes the help action that Cliff
-        #                automatically adds to the parser so we can defer
-        #                its execution until after the api-versioned commands
-        #                have been loaded.  There doesn't seem to be a
-        #                way to edit/remove anything from an existing parser.
-
-        # Replace the cliff-added help.HelpAction to defer its execution
-        self.DeferredHelpAction = None
-        for a in self.parser._actions:
-            if type(a) == help.HelpAction:
-                # Found it, save and replace it
-                self.DeferredHelpAction = a
-
-                # These steps are argparse-implementation-dependent
-                self.parser._actions.remove(a)
-                if self.parser._option_string_actions['-h']:
-                    del self.parser._option_string_actions['-h']
-                if self.parser._option_string_actions['--help']:
-                    del self.parser._option_string_actions['--help']
-
-                # Make a new help option to just set a flag
-                self.parser.add_argument(
-                    '-h', '--help',
-                    action='store_true',
-                    dest='deferred_help',
-                    default=False,
-                    help="Show this help message and exit",
-                )
 
     def configure_logging(self):
         """Configure logging for the app
@@ -139,12 +113,15 @@ class OpenStackShell(app.App):
         if self.options.verbose_level == 0:
             # --quiet
             root_logger.setLevel(logging.ERROR)
+            warnings.simplefilter("ignore")
         elif self.options.verbose_level == 1:
             # This is the default case, no --debug, --verbose or --quiet
             root_logger.setLevel(logging.WARNING)
+            warnings.simplefilter("ignore")
         elif self.options.verbose_level == 2:
             # One --verbose
             root_logger.setLevel(logging.INFO)
+            warnings.simplefilter("once")
         elif self.options.verbose_level >= 3:
             # Two or more --verbose
             root_logger.setLevel(logging.DEBUG)
@@ -162,12 +139,11 @@ class OpenStackShell(app.App):
             # --debug forces traceback
             self.dump_stack_trace = True
             requests_log.setLevel(logging.DEBUG)
-            cliff_log.setLevel(logging.DEBUG)
         else:
             self.dump_stack_trace = False
             requests_log.setLevel(logging.ERROR)
-            cliff_log.setLevel(logging.ERROR)
 
+        cliff_log.setLevel(logging.ERROR)
         stevedore_log.setLevel(logging.ERROR)
         iso8601_log.setLevel(logging.ERROR)
 
@@ -188,31 +164,44 @@ class OpenStackShell(app.App):
             description,
             version)
 
+        # service token auth argument
+        parser.add_argument(
+            '--os-cloud',
+            metavar='<cloud-config-name>',
+            dest='cloud',
+            default=utils.env('OS_CLOUD'),
+            help='Cloud name in clouds.yaml (Env: OS_CLOUD)',
+        )
         # Global arguments
         parser.add_argument(
             '--os-region-name',
             metavar='<auth-region-name>',
+            dest='region_name',
             default=utils.env('OS_REGION_NAME'),
             help='Authentication region name (Env: OS_REGION_NAME)')
         parser.add_argument(
             '--os-cacert',
             metavar='<ca-bundle-file>',
+            dest='cacert',
             default=utils.env('OS_CACERT'),
             help='CA certificate bundle file (Env: OS_CACERT)')
         verify_group = parser.add_mutually_exclusive_group()
         verify_group.add_argument(
             '--verify',
             action='store_true',
+            default=None,
             help='Verify server certificate (default)',
         )
         verify_group.add_argument(
             '--insecure',
             action='store_true',
+            default=None,
             help='Disable server certificate verification',
         )
         parser.add_argument(
             '--os-default-domain',
             metavar='<auth-domain>',
+            dest='default_domain',
             default=utils.env(
                 'OS_DEFAULT_DOMAIN',
                 default=DEFAULT_DOMAIN),
@@ -236,10 +225,63 @@ class OpenStackShell(app.App):
         * authenticate against Identity if requested
         """
 
+        # Parent __init__ parses argv into self.options
         super(OpenStackShell, self).initialize_app(argv)
 
+        # Set the default plugin to token_endpoint if url and token are given
+        if (self.options.url and self.options.token):
+            # Use service token authentication
+            cloud_config.set_default('auth_type', 'token_endpoint')
+        else:
+            cloud_config.set_default('auth_type', 'osc_password')
+        self.log.debug("options: %s", self.options)
+
+        project_id = getattr(self.options, 'project_id', None)
+        project_name = getattr(self.options, 'project_name', None)
+        tenant_id = getattr(self.options, 'tenant_id', None)
+        tenant_name = getattr(self.options, 'tenant_name', None)
+
+        # handle some v2/v3 authentication inconsistencies by just acting like
+        # both the project and tenant information are both present. This can
+        # go away if we stop registering all the argparse options together.
+        if project_id and not tenant_id:
+            self.options.tenant_id = project_id
+        if project_name and not tenant_name:
+            self.options.tenant_name = project_name
+        if tenant_id and not project_id:
+            self.options.project_id = tenant_id
+        if tenant_name and not project_name:
+            self.options.project_name = tenant_name
+
+        # Do configuration file handling
+        cc = cloud_config.OpenStackConfig()
+        self.log.debug("defaults: %s", cc.defaults)
+
+        self.cloud = cc.get_one_cloud(
+            cloud=self.options.cloud,
+            argparse=self.options,
+        )
+        self.log.debug("cloud cfg: %s", self.cloud.config)
+
+        # Set up client TLS
+        # NOTE(dtroyer): --insecure is the non-default condition that
+        #                overrides any verify setting in clouds.yaml
+        #                so check it first, then fall back to any verify
+        #                setting provided.
+        self.verify = not self.cloud.config.get(
+            'insecure',
+            not self.cloud.config.get('verify', True),
+        )
+
+        # NOTE(dtroyer): Per bug https://bugs.launchpad.net/bugs/1447784
+        #                --insecure now overrides any --os-cacert setting,
+        #                where before --insecure was ignored if --os-cacert
+        #                was set.
+        if self.verify and self.cloud.cacert:
+            self.verify = self.cloud.cacert
+
         # Save default domain
-        self.default_domain = self.options.os_default_domain
+        self.default_domain = self.options.default_domain
 
         # Loop through extensions to get API versions
         for mod in clientmanager.PLUGIN_MODULES:
@@ -247,6 +289,11 @@ class OpenStackShell(app.App):
             if version_opt:
                 api = mod.API_NAME
                 self.api_version[api] = version_opt
+                if version_opt not in mod.API_VERSIONS:
+                    self.log.warning(
+                        "The %s version <%s> is not in supported versions <%s>"
+                        % (api, version_opt,
+                           ', '.join(mod.API_VERSIONS.keys())))
                 # Command groups deal only with major versions
                 version = '.v' + version_opt.replace('.', '_').split('_')[0]
                 cmd_group = 'openstack.' + api.replace('-', '_') + version
@@ -276,17 +323,10 @@ class OpenStackShell(app.App):
         # set up additional clients to stuff in to client_manager??
 
         # Handle deferred help and exit
-        if self.options.deferred_help:
-            self.DeferredHelpAction(self.parser, self.parser, None, None)
-
-        # Set up common client session
-        if self.options.os_cacert:
-            self.verify = self.options.os_cacert
-        else:
-            self.verify = not self.options.insecure
+        self.print_help_if_requested()
 
         self.client_manager = clientmanager.ClientManager(
-            cli_options=self.options,
+            cli_options=self.cloud,
             verify=self.verify,
             api_version=self.api_version,
             pw_func=prompt_for_password,
@@ -301,26 +341,19 @@ class OpenStackShell(app.App):
             cmd.__class__.__name__,
         )
         if cmd.auth_required:
-            try:
-                # Trigger the Identity client to initialize
-                self.client_manager.auth_ref
-            except Exception:
-                pass
+            # Trigger the Identity client to initialize
+            self.client_manager.auth_ref
         return
 
     def clean_up(self, cmd, result, err):
-        self.log.debug('clean_up %s', cmd.__class__.__name__)
-
-        if err:
-            self.log.debug('got an error: %s', err)
+        self.log.debug('clean_up %s: %s', cmd.__class__.__name__, err or '')
 
         # Process collected timing data
         if self.options.timing:
-            # Loop through extensions
-            for mod in self.ext_modules:
-                client = getattr(self.client_manager, mod.API_NAME)
-                if hasattr(client, 'get_timings'):
-                    self.timing_data.extend(client.get_timings())
+            # Get session data
+            self.timing_data.extend(
+                self.client_manager.session.get_timings(),
+            )
 
             # Use the Timing pseudo-command to generate the output
             tcmd = timing.Timing(self, self.options)

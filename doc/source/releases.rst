@@ -2,6 +2,132 @@
 Release Notes
 =============
 
+1.5.0 (16 Jun 2015)
+===================
+
+* openstack 'ListEC2Creds' object has no attribute 'determine_ec2_user'
+  Bug `1465561 <https://bugs.launchpad.net/bugs/1465561>`_
+
+1.4.0 (04 Jun 2015)
+===================
+
+* AttributeError: 'Client' object has no attribute 'ec2'
+  Bug `1236326 <https://bugs.launchpad.net/bugs/1236326>`_
+
+* ``--insecure`` is ignored if ``OS_CACERT`` env var is set
+  Bug `1447784 <https://bugs.launchpad.net/bugs/1447784>`_
+
+* ``security group list`` always uses identity admin endpoint
+  Bug `1459629 <https://bugs.launchpad.net/bugs/1459629>`_
+
+* Race failure to delete security group
+  Bug `1460112 <https://bugs.launchpad.net/bugs/1460112>`_
+
+* v3 project set is missing ``--domain`` argument
+  Bug `1460122 <https://bugs.launchpad.net/bugs/1460122>`_
+
+* Project create is missing ``--parent`` argument in doc
+  Bug `1460256 <https://bugs.launchpad.net/bugs/1460256>`_
+
+* v3 ``role add`` is missing domain scope arguments in doc
+  Bug `1460296 <https://bugs.launchpad.net/bugs/1460296>`_
+
+* Cannot force v2password auth plugin
+  Bug `1460369 <https://bugs.launchpad.net/bugs/1460369>`_
+
+1.3.0 (27 May 2015)
+===================
+
+* Need to specify domain with role list
+  Bug `1421328 <https://bugs.launchpad.net/bugs/1421328>`_
+
+* Add support for keystone service providers
+  Bug `1435962 <https://bugs.launchpad.net/bugs/1435962>`_
+
+* Can't update disk_format and container_format of image
+  Bug `1446362 <https://bugs.launchpad.net/bugs/1446362>`_
+
+* Openstack --os-image-api-version 2 image show <image_id> fails
+  Bug `1450829 <https://bugs.launchpad.net/bugs/1450829>`_
+
+* The insecure option is ignored for command line options and OCC
+  Bug `1450855 <https://bugs.launchpad.net/bugs/1450855>`_
+
+* Delete security group rule broken
+  Bug `1450872 <https://bugs.launchpad.net/bugs/1450872>`_
+
+* Quota set sends invalid messages
+  Bug `1451640 <https://bugs.launchpad.net/bugs/1451640>`_
+
+* Keystone Access Log logs "python-keystoneclient" as User-Agent even when request is made by openstack client
+  Bug `1453995 <https://bugs.launchpad.net/bugs/1453995>`_
+
+* Client error while rescuing an instance
+  Bug `1457983 <https://bugs.launchpad.net/bugs/1457983>`_
+
+
+1.2.0 (30 Apr 2015)
+===================
+
+* Fix error in ``security group create`` command when ``--description`` is not
+  supplied.
+  Bug `1434172 <https://bugs.launchpad.net/bugs/1434172>`_
+
+* Correct ``image list`` pagination handling, all images are now correctly returned.
+  Bug `1443089 <https://bugs.launchpad.net/bugs/1443089>`_
+
+* Do not require ``--dst-port`` option with ``security group rule create`` when
+  ``--proto ICMP`` is selected.
+  Bug `1443963 <https://bugs.launchpad.net/bugs/1443963>`_
+
+* Correctly pass ``--location`` arguemnt in ``image create`` command.
+  Bug `1445460 <https://bugs.launchpad.net/bugs/1445460>`_
+
+* Correctly handle use of ``role`` commands for project admins.  Using IDs will
+  work for project admins even when names will not due to non-admin contraints.
+  Bug `1445528 <https://bugs.launchpad.net/bugs/1445528>`_
+
+* Correctly exit with an error when authentication can not be completed.
+  Bug `1444640 <https://bugs.launchpad.net/bugs/1444640>`_
+
+* Fix ``backup create`` to correctly use the ``--container`` value if supplied.
+  Bug `1446751 <https://bugs.launchpad.net/bugs/1446751>`_
+
+* Document the backward-compatibility-breaking changes in
+  :doc:`backwards-incompatibile`.
+  Bug `1406470 <https://bugs.launchpad.net/bugs/1406470>`_
+
+* Add `--parent`` option to `projct create` command.
+
+
+1.1.0 (21 Apr 2015)
+===================
+
+* Add global ``--os-cloud`` option to select from a list of cloud configurations.
+  See :doc:`configuration` for more details.
+
+* Fix global ``--timing`` option operation.
+  Bug `1402577 <https://bugs.launchpad.net/bugs/1402577>`_
+
+* Add ``flavor set`` and ``flavor unset`` commands.
+  Bug `1434137 <https://bugs.launchpad.net/bugs/1434137>`_
+
+* Add ``--domain`` and ``--project`` options to ``network create`` command.
+  Bug `1435640 <https://bugs.launchpad.net/bugs/1435640>`_
+
+* Add ``--volume-type`` option to ``quota set`` command.
+  Bug `1438377 <https://bugs.launchpad.net/bugs/1438377>`_
+
+* Add ``--domain`` and ``--project`` options to ``limits show`` command.
+  Bug `1438379 <https://bugs.launchpad.net/bugs/1438379>`_
+
+* Improve ``--nic`` option help for ``server create`` command.
+  Bug `1444685 <https://bugs.launchpad.net/bugs/1444685>`_
+
+* Add ``--remote-id`` and ``--remote-id-file`` options to
+  ``identity provider create`` and ``identity provider set`` commands.
+
+
 1.0.3 (10 Mar 2015)
 ===================
 

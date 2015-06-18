@@ -7,10 +7,8 @@
 *.swp
 *~
 .coverage
-.openstackclient-venv
 .testrepository
 .tox
-.venv
 AUTHORS
 build
 ChangeLog
@@ -21,3 +19,4 @@ doc/source/api/
 # Development environment files
 .project
 .pydevproject
+cover

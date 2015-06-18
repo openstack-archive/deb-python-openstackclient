@@ -29,12 +29,24 @@ import common
 
 from openstackclient.common import clientmanager
 
+from os_client_config import config as cloud_config
+
 
 LOG = logging.getLogger('')
 
 
 def run(opts):
     """Run the examples"""
+
+    # Do configuration file handling
+    cc = cloud_config.OpenStackConfig()
+    LOG.debug("defaults: %s", cc.defaults)
+
+    cloud = cc.get_one_cloud(
+        cloud=opts.cloud,
+        argparse=opts,
+    )
+    LOG.debug("cloud cfg: %s", cloud.config)
 
     # Loop through extensions to get API versions
     # Currently API versions are statically selected.  Once discovery
@@ -50,8 +62,8 @@ def run(opts):
     # NOTE(dtroyer): This converts from the usual OpenStack way to the single
     #                requests argument and is an app-specific thing because
     #                we want to be like OpenStackClient.
-    if opts.os_cacert:
-        verify = opts.os_cacert
+    if opts.cacert:
+        verify = opts.cacert
     else:
         verify = not opts.insecure
 
@@ -59,7 +71,7 @@ def run(opts):
     # Collect the auth and config options together and give them to
     # ClientManager and it will wrangle all of the goons into place.
     client_manager = clientmanager.ClientManager(
-        cli_options=opts,
+        cli_options=cloud,
         verify=verify,
         api_version=api_version,
     )

@@ -17,6 +17,10 @@
 
 from keystoneclient import exceptions as identity_exc
 from keystoneclient.v3 import domains
+from keystoneclient.v3 import groups
+from keystoneclient.v3 import projects
+from keystoneclient.v3 import users
+
 from openstackclient.common import exceptions
 from openstackclient.common import utils
 
@@ -39,21 +43,69 @@ def find_service(identity_client, name_type_or_id):
             raise exceptions.CommandError(msg)
 
 
+def _get_domain_id_if_requested(identity_client, domain_name_or_id):
+    if not domain_name_or_id:
+        return None
+    domain = find_domain(identity_client, domain_name_or_id)
+    return domain.id
+
+
 def find_domain(identity_client, name_or_id):
-    """Find a domain.
+    return _find_identity_resource(identity_client.domains, name_or_id,
+                                   domains.Domain)
 
-       If the user does not have permissions to access the v3 domain API, e.g.,
-       if the user is a project admin, assume that the domain given is the id
-       rather than the name. This method is used by the project list command,
-       so errors accessing the domain will be ignored and if the user has
-       access to the project API, everything will work fine.
 
-       Closes bugs #1317478 and #1317485.
+def find_group(identity_client, name_or_id, domain_name_or_id=None):
+    domain_id = _get_domain_id_if_requested(identity_client, domain_name_or_id)
+    return _find_identity_resource(identity_client.groups, name_or_id,
+                                   groups.Group, domain_id=domain_id)
+
+
+def find_project(identity_client, name_or_id, domain_name_or_id=None):
+    domain_id = _get_domain_id_if_requested(identity_client, domain_name_or_id)
+    return _find_identity_resource(identity_client.projects, name_or_id,
+                                   projects.Project, domain_id=domain_id)
+
+
+def find_user(identity_client, name_or_id, domain_name_or_id=None):
+    domain_id = _get_domain_id_if_requested(identity_client, domain_name_or_id)
+    return _find_identity_resource(identity_client.users, name_or_id,
+                                   users.User, domain_id=domain_id)
+
+
+def _find_identity_resource(identity_client_manager, name_or_id,
+                            resource_type, **kwargs):
+    """Find a specific identity resource.
+
+    Using keystoneclient's manager, attempt to find a specific resource by its
+    name or ID. If Forbidden to find the resource (a common case if the user
+    does not have permission), then return the resource by creating a local
+    instance of keystoneclient's Resource.
+
+    The parameter identity_client_manager is a keystoneclient manager,
+    for example: keystoneclient.v3.users or keystoneclient.v3.projects.
+
+    The parameter resource_type is a keystoneclient resource, for example:
+    keystoneclient.v3.users.User or keystoneclient.v3.projects.Project.
+
+    :param identity_client_manager: the manager that contains the resource
+    :type identity_client_manager: `keystoneclient.base.CrudManager`
+    :param name_or_id: the resources's name or ID
+    :type name_or_id: string
+    :param resource_type: class that represents the resource type
+    :type resource_type: `keystoneclient.base.Resource`
+
+    :returns: the resource in question
+    :rtype: `keystoneclient.base.Resource`
+
     """
+
     try:
-        dom = utils.find_resource(identity_client.domains, name_or_id)
-        if dom is not None:
-            return dom
+        identity_resource = utils.find_resource(identity_client_manager,
+                                                name_or_id, **kwargs)
+        if identity_resource is not None:
+            return identity_resource
     except identity_exc.Forbidden:
         pass
-    return domains.Domain(None, {'id': name_or_id})
+
+    return resource_type(None, {'id': name_or_id, 'name': name_or_id})

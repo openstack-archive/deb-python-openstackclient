@@ -14,6 +14,7 @@ Create new project
 
     os project create
         [--domain <domain>]
+        [--parent <project>]
         [--description <description>]
         [--enable | --disable]
         [--property <key=value>]
@@ -22,6 +23,12 @@ Create new project
 .. option:: --domain <domain>
 
     Domain owning the project (name or ID)
+
+    .. versionadded:: 3
+
+.. option:: --parent <project>
+
+    Parent of the project (name or ID)
 
     .. versionadded:: 3
 
@@ -117,6 +124,12 @@ Set project properties
 .. option:: --name <name>
 
     Set project name
+
+.. option:: --domain <domain>
+
+    Domain owning :ref:`\<project\> <project_set-project>` (name or ID)
+
+    .. versionadded:: 3
 
 .. option:: --description <description>
 

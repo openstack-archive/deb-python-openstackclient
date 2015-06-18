@@ -190,7 +190,7 @@ class CreateImage(show.ShowOne):
         kwargs = {}
         copy_attrs = ('name', 'id', 'store', 'container_format',
                       'disk_format', 'owner', 'size', 'min_disk', 'min_ram',
-                      'localtion', 'copy_from', 'volume', 'force',
+                      'location', 'copy_from', 'volume', 'force',
                       'checksum', 'properties')
         for attr in copy_attrs:
             if attr in parsed_args:
@@ -348,7 +348,7 @@ class ListImage(lister.Lister):
             help='List additional fields in output',
         )
 
-        # --page-size has never worked, leave here for silent compatability
+        # --page-size has never worked, leave here for silent compatibility
         # We'll implement limit/marker differently later
         parser.add_argument(
             "--page-size",
@@ -405,7 +405,17 @@ class ListImage(lister.Lister):
             columns = ("ID", "Name")
             column_headers = columns
 
-        data = image_client.api.image_list(**kwargs)
+        # List of image data received
+        data = []
+        # No pages received yet, so start the page marker at None.
+        marker = None
+        while True:
+            page = image_client.api.image_list(marker=marker, **kwargs)
+            if not page:
+                break
+            data.extend(page)
+            # Set the marker to the id of the last item we received
+            marker = page[-1]['id']
 
         if parsed_args.property:
             # NOTE(dtroyer): coerce to a list to subscript it in py3
@@ -498,6 +508,28 @@ class SetImage(show.ShowOne):
             type=int,
             help="Minimum RAM size needed to boot image, in megabytes",
         )
+        container_choices = ["ami", "ari", "aki", "bare", "ovf"]
+        parser.add_argument(
+            "--container-format",
+            metavar="<container-format>",
+            help=("Container format of image. Acceptable formats: %s" %
+                  container_choices),
+            choices=container_choices
+        )
+        disk_choices = ["ami", "ari", "aki", "vhd", "vmdk", "raw", "qcow2",
+                        "vdi", "iso"]
+        parser.add_argument(
+            "--disk-format",
+            metavar="<disk-format>",
+            help="Disk format of image. Acceptable formats: %s" % disk_choices,
+            choices=disk_choices
+        )
+        parser.add_argument(
+            "--size",
+            metavar="<size>",
+            type=int,
+            help="Size of image data (in bytes)"
+        )
         protected_group = parser.add_mutually_exclusive_group()
         protected_group.add_argument(
             "--protected",
@@ -535,7 +567,8 @@ class SetImage(show.ShowOne):
         image_client = self.app.client_manager.image
 
         kwargs = {}
-        copy_attrs = ('name', 'owner', 'min_disk', 'min_ram', 'properties')
+        copy_attrs = ('name', 'owner', 'min_disk', 'min_ram', 'properties',
+                      'container_format', 'disk_format', 'size')
         for attr in copy_attrs:
             if attr in parsed_args:
                 val = getattr(parsed_args, attr, None)

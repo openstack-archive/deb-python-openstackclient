@@ -275,10 +275,17 @@ class CreateServer(show.ShowOne):
         )
         parser.add_argument(
             '--nic',
-            metavar='<nic-config-string>',
+            metavar="<net-id=net-uuid,v4-fixed-ip=ip-addr,v6-fixed-ip=ip-addr,"
+                    "port-id=port-uuid>",
             action='append',
             default=[],
-            help=_('Specify NIC configuration (optional extension)'),
+            help=_("Create a NIC on the server. "
+                   "Specify option multiple times to create multiple NICs. "
+                   "Either net-id or port-id must be provided, but not both. "
+                   "net-id: attach NIC to network with this UUID, "
+                   "port-id: attach NIC to port with this UUID, "
+                   "v4-fixed-ip: IPv4 fixed address for NIC (optional), "
+                   "v6-fixed-ip: IPv6 fixed address for NIC (optional)."),
         )
         parser.add_argument(
             '--hint',
@@ -565,6 +572,11 @@ class DeleteServer(command.Command):
             nargs="+",
             help=_('Server(s) to delete (name or ID)'),
         )
+        parser.add_argument(
+            '--wait',
+            action='store_true',
+            help=_('Wait for delete to complete'),
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -574,6 +586,18 @@ class DeleteServer(command.Command):
             server_obj = utils.find_resource(
                 compute_client.servers, server)
             compute_client.servers.delete(server_obj.id)
+            if parsed_args.wait:
+                if utils.wait_for_delete(
+                    compute_client.servers,
+                    server_obj.id,
+                    callback=_show_progress,
+                ):
+                    sys.stdout.write('\n')
+                else:
+                    self.log.error(_('Error deleting server: %s'),
+                                   server_obj.id)
+                    sys.stdout.write(_('\nError deleting server'))
+                    raise SystemExit
         return
 
 
@@ -1047,11 +1071,11 @@ class RescueServer(show.ShowOne):
         self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
-        server = utils.find_resource(
+        _, body = utils.find_resource(
             compute_client.servers,
             parsed_args.server,
-        ).rescue()
-        return zip(*sorted(six.iteritems(server._info)))
+            ).rescue()
+        return zip(*sorted(six.iteritems(body)))
 
 
 class ResizeServer(command.Command):

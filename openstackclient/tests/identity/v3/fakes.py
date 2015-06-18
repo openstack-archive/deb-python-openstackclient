@@ -135,6 +135,16 @@ REGION = {
     'links': base_url + 'regions/' + region_id,
 }
 
+PROJECT_WITH_PARENT = {
+    'id': project_id + '-with-parent',
+    'name': project_name + ' and their parents',
+    'description': project_description + ' plus another four',
+    'enabled': True,
+    'domain_id': domain_id,
+    'parent_id': project_id,
+    'links': base_url + 'projects/' + (project_id + '-with-parent'),
+}
+
 role_id = 'r1'
 role_name = 'roller'
 
@@ -231,9 +241,11 @@ TOKEN_WITH_DOMAIN_ID = {
 
 idp_id = 'test_idp'
 idp_description = 'super exciting IdP description'
+idp_remote_ids = ['entity1', 'entity2']
 
 IDENTITY_PROVIDER = {
     'id': idp_id,
+    'remote_ids': idp_remote_ids,
     'enabled': True,
     'description': idp_description
 }
@@ -242,6 +254,20 @@ protocol_id = 'protocol'
 
 mapping_id = 'test_mapping'
 mapping_id_updated = 'prod_mapping'
+
+sp_id = 'BETA'
+sp_description = 'Service Provider to burst into'
+service_provider_url = 'https://beta.example.com/Shibboleth.sso/POST/SAML'
+sp_auth_url = ('https://beta.example.com/v3/OS-FEDERATION/identity_providers/'
+               'idp/protocol/saml2/auth')
+
+SERVICE_PROVIDER = {
+    'id': sp_id,
+    'enabled': True,
+    'description': sp_description,
+    'sp_url': service_provider_url,
+    'auth_url': sp_auth_url
+}
 
 PROTOCOL_ID_MAPPING = {
     'id': protocol_id,
@@ -380,6 +406,8 @@ class FakeFederationManager(object):
         self.projects.resource_class = fakes.FakeResource(None, {})
         self.domains = mock.Mock()
         self.domains.resource_class = fakes.FakeResource(None, {})
+        self.service_providers = mock.Mock()
+        self.service_providers.resource_class = fakes.FakeResource(None, {})
 
 
 class FakeFederatedClient(FakeIdentityv3Client):

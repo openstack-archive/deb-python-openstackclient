@@ -16,6 +16,9 @@
 import copy
 import mock
 
+import warlock
+
+from glanceclient.v2 import schemas
 from openstackclient.image.v2 import image
 from openstackclient.tests import fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
@@ -70,8 +73,8 @@ class TestImageList(TestImage):
         super(TestImageList, self).setUp()
 
         self.api_mock = mock.Mock()
-        self.api_mock.image_list.return_value = [
-            copy.deepcopy(image_fakes.IMAGE),
+        self.api_mock.image_list.side_effect = [
+            [copy.deepcopy(image_fakes.IMAGE)], [],
         ]
         self.app.client_manager.image.api = self.api_mock
 
@@ -90,7 +93,9 @@ class TestImageList(TestImage):
 
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
-        self.api_mock.image_list.assert_called_with()
+        self.api_mock.image_list.assert_called_with(
+            marker=image_fakes.image_id,
+        )
 
         collist = ('ID', 'Name')
 
@@ -117,6 +122,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             public=True,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -144,6 +150,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             private=True,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -171,6 +178,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             shared=True,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -193,7 +201,9 @@ class TestImageList(TestImage):
 
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
-        self.api_mock.image_list.assert_called_with()
+        self.api_mock.image_list.assert_called_with(
+            marker=image_fakes.image_id,
+        )
 
         collist = (
             'ID',
@@ -216,7 +226,7 @@ class TestImageList(TestImage):
             '',
             '',
             '',
-            '',
+            'public',
             False,
             image_fakes.image_owner,
             '',
@@ -239,7 +249,9 @@ class TestImageList(TestImage):
 
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
-        self.api_mock.image_list.assert_called_with()
+        self.api_mock.image_list.assert_called_with(
+            marker=image_fakes.image_id,
+        )
         sf_mock.assert_called_with(
             [image_fakes.IMAGE],
             attr='a',
@@ -268,7 +280,9 @@ class TestImageList(TestImage):
 
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
-        self.api_mock.image_list.assert_called_with()
+        self.api_mock.image_list.assert_called_with(
+            marker=image_fakes.image_id,
+        )
         si_mock.assert_called_with(
             [image_fakes.IMAGE],
             'name:asc'
@@ -282,3 +296,88 @@ class TestImageList(TestImage):
             image_fakes.image_name
         ), )
         self.assertEqual(datalist, tuple(data))
+
+
+class TestImageShow(TestImage):
+
+    def setUp(self):
+        super(TestImageShow, self).setUp()
+
+        # Set up the schema
+        self.model = warlock.model_factory(
+            image_fakes.IMAGE_schema,
+            schemas.SchemaBasedModel,
+        )
+
+        self.images_mock.get.return_value = self.model(**image_fakes.IMAGE)
+
+        # Get the command object to test
+        self.cmd = image.ShowImage(self.app, None)
+
+    def test_image_show(self):
+        arglist = [
+            image_fakes.image_id,
+        ]
+        verifylist = [
+            ('image', image_fakes.image_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.images_mock.get.assert_called_with(
+            image_fakes.image_id,
+        )
+
+        self.assertEqual(image_fakes.IMAGE_columns, columns)
+        self.assertEqual(image_fakes.IMAGE_data, data)
+
+
+class TestImageSet(TestImage):
+
+    def setUp(self):
+        super(TestImageSet, self).setUp()
+        # Set up the schema
+        self.model = warlock.model_factory(
+            image_fakes.IMAGE_schema,
+            schemas.SchemaBasedModel,
+        )
+
+        self.images_mock.get.return_value = self.model(**image_fakes.IMAGE)
+        self.images_mock.update.return_value = self.model(**image_fakes.IMAGE)
+        # Get the command object to test
+        self.cmd = image.SetImage(self.app, None)
+
+    def test_image_set_options(self):
+        arglist = [
+            '--name', 'new-name',
+            '--owner', 'new-owner',
+            '--min-disk', '2',
+            '--min-ram', '4',
+            image_fakes.image_id,
+        ]
+        verifylist = [
+            ('name', 'new-name'),
+            ('owner', 'new-owner'),
+            ('min_disk', 2),
+            ('min_ram', 4),
+            ('image', image_fakes.image_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'name': 'new-name',
+            'owner': 'new-owner',
+            'min_disk': 2,
+            'min_ram': 4,
+            'protected': False
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id, **kwargs)
+
+        self.assertEqual(image_fakes.IMAGE_columns, columns)
+        self.assertEqual(image_fakes.IMAGE_data, data)

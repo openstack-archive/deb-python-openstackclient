@@ -13,6 +13,7 @@
 #   under the License.
 #
 
+import copy
 import mock
 import os
 
@@ -24,18 +25,19 @@ DEFAULT_AUTH_URL = "http://127.0.0.1:5000/v2.0/"
 DEFAULT_PROJECT_ID = "xxxx-yyyy-zzzz"
 DEFAULT_PROJECT_NAME = "project"
 DEFAULT_DOMAIN_ID = "aaaa-bbbb-cccc"
-DEFAULT_DOMAIN_NAME = "domain"
+DEFAULT_DOMAIN_NAME = "default"
 DEFAULT_USER_DOMAIN_ID = "aaaa-bbbb-cccc"
 DEFAULT_USER_DOMAIN_NAME = "domain"
 DEFAULT_PROJECT_DOMAIN_ID = "aaaa-bbbb-cccc"
 DEFAULT_PROJECT_DOMAIN_NAME = "domain"
 DEFAULT_USERNAME = "username"
 DEFAULT_PASSWORD = "password"
+
+DEFAULT_CLOUD = "altocumulus"
 DEFAULT_REGION_NAME = "ZZ9_Plural_Z_Alpha"
 DEFAULT_TOKEN = "token"
 DEFAULT_SERVICE_URL = "http://127.0.0.1:8771/v3.0/"
 DEFAULT_AUTH_PLUGIN = "v2password"
-
 
 DEFAULT_COMPUTE_API_VERSION = "2"
 DEFAULT_IDENTITY_API_VERSION = "2"
@@ -48,6 +50,94 @@ LIB_IDENTITY_API_VERSION = "2"
 LIB_IMAGE_API_VERSION = "1"
 LIB_VOLUME_API_VERSION = "1"
 LIB_NETWORK_API_VERSION = "2"
+
+CLOUD_1 = {
+    'clouds': {
+        'scc': {
+            'auth': {
+                'auth_url': DEFAULT_AUTH_URL,
+                'project_name': DEFAULT_PROJECT_NAME,
+                'username': 'zaphod',
+            },
+            'region_name': 'occ-cloud',
+            'donut': 'glazed',
+        }
+    }
+}
+
+CLOUD_2 = {
+    'clouds': {
+        'megacloud': {
+            'cloud': 'megadodo',
+            'auth': {
+                'project_name': 'heart-o-gold',
+                'username': 'zaphod',
+            },
+            'region_name': 'occ-cloud',
+        }
+    }
+}
+
+PUBLIC_1 = {
+    'public-clouds': {
+        'megadodo': {
+            'auth': {
+                'auth_url': DEFAULT_AUTH_URL,
+                'project_name': DEFAULT_PROJECT_NAME,
+            },
+            'region_name': 'occ-public',
+            'donut': 'cake',
+        }
+    }
+}
+
+
+# The option table values is a tuple of (<value>, <test-opt>, <test-env>)
+# where <value> is the test value to use, <test-opt> is True if this option
+# should be tested as a CLI option and <test-env> is True of this option
+# should be tested as an environment variable.
+
+# Global options that should be parsed before shell.initialize_app() is called
+global_options = {
+    '--os-cloud': (DEFAULT_CLOUD, True, True),
+    '--os-region-name': (DEFAULT_REGION_NAME, True, True),
+    '--os-default-domain': (DEFAULT_DOMAIN_NAME, True, True),
+    '--os-cacert': ('/dev/null', True, True),
+    '--timing': (True, True, False),
+}
+
+auth_options = {
+    '--os-auth-url': (DEFAULT_AUTH_URL, True, True),
+    '--os-project-id': (DEFAULT_PROJECT_ID, True, True),
+    '--os-project-name': (DEFAULT_PROJECT_NAME, True, True),
+    '--os-domain-id': (DEFAULT_DOMAIN_ID, True, True),
+    '--os-domain-name': (DEFAULT_DOMAIN_NAME, True, True),
+    '--os-user-domain-id': (DEFAULT_USER_DOMAIN_ID, True, True),
+    '--os-user-domain-name': (DEFAULT_USER_DOMAIN_NAME, True, True),
+    '--os-project-domain-id': (DEFAULT_PROJECT_DOMAIN_ID, True, True),
+    '--os-project-domain-name': (DEFAULT_PROJECT_DOMAIN_NAME, True, True),
+    '--os-username': (DEFAULT_USERNAME, True, True),
+    '--os-password': (DEFAULT_PASSWORD, True, True),
+    '--os-region-name': (DEFAULT_REGION_NAME, True, True),
+    '--os-trust-id': ("1234", True, True),
+    '--os-auth-type': ("v2password", True, True),
+    '--os-token': (DEFAULT_TOKEN, True, True),
+    '--os-url': (DEFAULT_SERVICE_URL, True, True),
+}
+
+
+def opt2attr(opt):
+    if opt.startswith('--os-'):
+        attr = opt[5:]
+    elif opt.startswith('--'):
+        attr = opt[2:]
+    else:
+        attr = opt
+    return attr.lower().replace('-', '_')
+
+
+def opt2env(opt):
+    return opt[2:].upper().replace('-', '_')
 
 
 def make_shell():
@@ -75,41 +165,54 @@ class TestShell(utils.TestCase):
         super(TestShell, self).tearDown()
         self.cmd_patch.stop()
 
-    def _assert_password_auth(self, cmd_options, default_args):
-        with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
-                        self.app):
+    def _assert_initialize_app_arg(self, cmd_options, default_args):
+        """Check the args passed to initialize_app()
+
+        The argv argument to initialize_app() is the remainder from parsing
+        global options declared in both cliff.app and
+        openstackclient.OpenStackShell build_option_parser().  Any global
+        options passed on the commmad line should not be in argv but in
+        _shell.options.
+        """
+
+        with mock.patch(
+                "openstackclient.shell.OpenStackShell.initialize_app",
+                self.app,
+        ):
             _shell, _cmd = make_shell(), cmd_options + " list project"
             fake_execute(_shell, _cmd)
 
             self.app.assert_called_with(["list", "project"])
-            self.assertEqual(default_args["auth_url"],
-                             _shell.options.os_auth_url)
-            self.assertEqual(default_args["project_id"],
-                             _shell.options.os_project_id)
-            self.assertEqual(default_args["project_name"],
-                             _shell.options.os_project_name)
-            self.assertEqual(default_args["domain_id"],
-                             _shell.options.os_domain_id)
-            self.assertEqual(default_args["domain_name"],
-                             _shell.options.os_domain_name)
-            self.assertEqual(default_args["user_domain_id"],
-                             _shell.options.os_user_domain_id)
-            self.assertEqual(default_args["user_domain_name"],
-                             _shell.options.os_user_domain_name)
-            self.assertEqual(default_args["project_domain_id"],
-                             _shell.options.os_project_domain_id)
-            self.assertEqual(default_args["project_domain_name"],
-                             _shell.options.os_project_domain_name)
-            self.assertEqual(default_args["username"],
-                             _shell.options.os_username)
-            self.assertEqual(default_args["password"],
-                             _shell.options.os_password)
-            self.assertEqual(default_args["region_name"],
-                             _shell.options.os_region_name)
-            self.assertEqual(default_args["trust_id"],
-                             _shell.options.os_trust_id)
-            self.assertEqual(default_args['auth_type'],
-                             _shell.options.os_auth_type)
+            for k in default_args.keys():
+                self.assertEqual(
+                    default_args[k],
+                    vars(_shell.options)[k],
+                    "%s does not match" % k,
+                )
+
+    def _assert_cloud_config_arg(self, cmd_options, default_args):
+        """Check the args passed to cloud_config.get_one_cloud()
+
+        The argparse argument to get_one_cloud() is an argparse.Namespace
+        object that contains all of the options processed to this point in
+        initialize_app().
+        """
+
+        self.occ_get_one = mock.Mock("Test Shell")
+        with mock.patch(
+                "os_client_config.config.OpenStackConfig.get_one_cloud",
+                self.occ_get_one,
+        ):
+            _shell, _cmd = make_shell(), cmd_options + " list project"
+            fake_execute(_shell, _cmd)
+
+            opts = self.occ_get_one.call_args[1]['argparse']
+            for k in default_args.keys():
+                self.assertEqual(
+                    default_args[k],
+                    vars(opts)[k],
+                    "%s does not match" % k,
+                )
 
     def _assert_token_auth(self, cmd_options, default_args):
         with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
@@ -118,9 +221,34 @@ class TestShell(utils.TestCase):
             fake_execute(_shell, _cmd)
 
             self.app.assert_called_with(["list", "role"])
-            self.assertEqual(default_args["os_token"], _shell.options.os_token)
-            self.assertEqual(default_args["os_auth_url"],
-                             _shell.options.os_auth_url)
+            self.assertEqual(
+                default_args.get("token", ''),
+                _shell.options.token,
+                "token"
+            )
+            self.assertEqual(
+                default_args.get("auth_url", ''),
+                _shell.options.auth_url,
+                "auth_url"
+            )
+
+    def _assert_token_endpoint_auth(self, cmd_options, default_args):
+        with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
+                        self.app):
+            _shell, _cmd = make_shell(), cmd_options + " list role"
+            fake_execute(_shell, _cmd)
+
+            self.app.assert_called_with(["list", "role"])
+            self.assertEqual(
+                default_args.get("token", ''),
+                _shell.options.token,
+                "token",
+            )
+            self.assertEqual(
+                default_args.get("url", ''),
+                _shell.options.url,
+                "url",
+            )
 
     def _assert_cli(self, cmd_options, default_args):
         with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
@@ -165,314 +293,127 @@ class TestShellHelp(TestShell):
                              _shell.options.deferred_help)
 
 
-class TestShellPasswordAuth(TestShell):
+class TestShellOptions(TestShell):
     def setUp(self):
-        super(TestShellPasswordAuth, self).setUp()
+        super(TestShellOptions, self).setUp()
         self.orig_env, os.environ = os.environ, {}
 
     def tearDown(self):
-        super(TestShellPasswordAuth, self).tearDown()
+        super(TestShellOptions, self).tearDown()
         os.environ = self.orig_env
 
-    def test_only_url_flow(self):
-        flag = "--os-auth-url " + DEFAULT_AUTH_URL
-        kwargs = {
-            "auth_url": DEFAULT_AUTH_URL,
-            "project_id": "",
-            "project_name": "",
-            "user_domain_id": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def _test_options_init_app(self, test_opts):
+        for opt in test_opts.keys():
+            if not test_opts[opt][1]:
+                continue
+            key = opt2attr(opt)
+            if type(test_opts[opt][0]) is str:
+                cmd = opt + " " + test_opts[opt][0]
+            else:
+                cmd = opt
+            kwargs = {
+                key: test_opts[opt][0],
+            }
+            self._assert_initialize_app_arg(cmd, kwargs)
 
-    def test_only_project_id_flow(self):
-        flag = "--os-project-id " + DEFAULT_PROJECT_ID
-        kwargs = {
-            "auth_url": "",
-            "project_id": DEFAULT_PROJECT_ID,
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def _test_options_get_one_cloud(self, test_opts):
+        for opt in test_opts.keys():
+            if not test_opts[opt][1]:
+                continue
+            key = opt2attr(opt)
+            if type(test_opts[opt][0]) is str:
+                cmd = opt + " " + test_opts[opt][0]
+            else:
+                cmd = opt
+            kwargs = {
+                key: test_opts[opt][0],
+            }
+            self._assert_cloud_config_arg(cmd, kwargs)
 
-    def test_only_project_name_flow(self):
-        flag = "--os-project-name " + DEFAULT_PROJECT_NAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": DEFAULT_PROJECT_NAME,
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def _test_env_init_app(self, test_opts):
+        for opt in test_opts.keys():
+            if not test_opts[opt][2]:
+                continue
+            key = opt2attr(opt)
+            kwargs = {
+                key: test_opts[opt][0],
+            }
+            env = {
+                opt2env(opt): test_opts[opt][0],
+            }
+            os.environ = env.copy()
+            self._assert_initialize_app_arg("", kwargs)
 
-    def test_only_domain_id_flow(self):
-        flag = "--os-domain-id " + DEFAULT_DOMAIN_ID
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": DEFAULT_DOMAIN_ID,
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def _test_env_get_one_cloud(self, test_opts):
+        for opt in test_opts.keys():
+            if not test_opts[opt][2]:
+                continue
+            key = opt2attr(opt)
+            kwargs = {
+                key: test_opts[opt][0],
+            }
+            env = {
+                opt2env(opt): test_opts[opt][0],
+            }
+            os.environ = env.copy()
+            self._assert_cloud_config_arg("", kwargs)
 
-    def test_only_domain_name_flow(self):
-        flag = "--os-domain-name " + DEFAULT_DOMAIN_NAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": DEFAULT_DOMAIN_NAME,
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def test_empty_auth(self):
+        os.environ = {}
+        self._assert_initialize_app_arg("", {})
+        self._assert_cloud_config_arg("", {})
 
-    def test_only_user_domain_id_flow(self):
-        flag = "--os-user-domain-id " + DEFAULT_USER_DOMAIN_ID
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": DEFAULT_USER_DOMAIN_ID,
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def test_global_options(self):
+        self._test_options_init_app(global_options)
+        self._test_options_get_one_cloud(global_options)
 
-    def test_only_user_domain_name_flow(self):
-        flag = "--os-user-domain-name " + DEFAULT_USER_DOMAIN_NAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": DEFAULT_USER_DOMAIN_NAME,
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def test_auth_options(self):
+        self._test_options_init_app(auth_options)
+        self._test_options_get_one_cloud(auth_options)
 
-    def test_only_project_domain_id_flow(self):
-        flag = "--os-project-domain-id " + DEFAULT_PROJECT_DOMAIN_ID
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": DEFAULT_PROJECT_DOMAIN_ID,
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
+    def test_global_env(self):
+        self._test_env_init_app(global_options)
+        self._test_env_get_one_cloud(global_options)
 
-    def test_only_project_domain_name_flow(self):
-        flag = "--os-project-domain-name " + DEFAULT_PROJECT_DOMAIN_NAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": DEFAULT_PROJECT_DOMAIN_NAME,
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
-
-    def test_only_username_flow(self):
-        flag = "--os-username " + DEFAULT_USERNAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": DEFAULT_USERNAME,
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
-
-    def test_only_password_flow(self):
-        flag = "--os-password " + DEFAULT_PASSWORD
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": DEFAULT_PASSWORD,
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
-
-    def test_only_region_name_flow(self):
-        flag = "--os-region-name " + DEFAULT_REGION_NAME
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": DEFAULT_REGION_NAME,
-            "trust_id": "",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
-
-    def test_only_trust_id_flow(self):
-        flag = "--os-trust-id " + "1234"
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "1234",
-            "auth_type": "",
-        }
-        self._assert_password_auth(flag, kwargs)
-
-    def test_only_auth_type_flow(self):
-        flag = "--os-auth-type " + "v2password"
-        kwargs = {
-            "auth_url": "",
-            "project_id": "",
-            "project_name": "",
-            "domain_id": "",
-            "domain_name": "",
-            "user_domain_id": "",
-            "user_domain_name": "",
-            "project_domain_id": "",
-            "project_domain_name": "",
-            "username": "",
-            "password": "",
-            "region_name": "",
-            "trust_id": "",
-            "auth_type": DEFAULT_AUTH_PLUGIN
-        }
-        self._assert_password_auth(flag, kwargs)
+    def test_auth_env(self):
+        self._test_env_init_app(auth_options)
+        self._test_env_get_one_cloud(auth_options)
 
 
-class TestShellTokenAuth(TestShell):
+class TestShellTokenAuthEnv(TestShell):
     def setUp(self):
-        super(TestShellTokenAuth, self).setUp()
+        super(TestShellTokenAuthEnv, self).setUp()
         env = {
             "OS_TOKEN": DEFAULT_TOKEN,
-            "OS_AUTH_URL": DEFAULT_SERVICE_URL,
+            "OS_AUTH_URL": DEFAULT_AUTH_URL,
         }
         self.orig_env, os.environ = os.environ, env.copy()
 
     def tearDown(self):
-        super(TestShellTokenAuth, self).tearDown()
+        super(TestShellTokenAuthEnv, self).tearDown()
         os.environ = self.orig_env
 
-    def test_default_auth(self):
+    def test_env(self):
         flag = ""
         kwargs = {
-            "os_token": DEFAULT_TOKEN,
-            "os_auth_url": DEFAULT_SERVICE_URL
+            "token": DEFAULT_TOKEN,
+            "auth_url": DEFAULT_AUTH_URL,
+        }
+        self._assert_token_auth(flag, kwargs)
+
+    def test_only_token(self):
+        flag = "--os-token xyzpdq"
+        kwargs = {
+            "token": "xyzpdq",
+            "auth_url": DEFAULT_AUTH_URL,
+        }
+        self._assert_token_auth(flag, kwargs)
+
+    def test_only_auth_url(self):
+        flag = "--os-auth-url http://cloud.local:555"
+        kwargs = {
+            "token": DEFAULT_TOKEN,
+            "auth_url": "http://cloud.local:555",
         }
         self._assert_token_auth(flag, kwargs)
 
@@ -480,8 +421,55 @@ class TestShellTokenAuth(TestShell):
         os.environ = {}
         flag = ""
         kwargs = {
-            "os_token": "",
-            "os_auth_url": ""
+            "token": '',
+            "auth_url": '',
+        }
+        self._assert_token_auth(flag, kwargs)
+
+
+class TestShellTokenEndpointAuthEnv(TestShell):
+    def setUp(self):
+        super(TestShellTokenEndpointAuthEnv, self).setUp()
+        env = {
+            "OS_TOKEN": DEFAULT_TOKEN,
+            "OS_URL": DEFAULT_SERVICE_URL,
+        }
+        self.orig_env, os.environ = os.environ, env.copy()
+
+    def tearDown(self):
+        super(TestShellTokenEndpointAuthEnv, self).tearDown()
+        os.environ = self.orig_env
+
+    def test_env(self):
+        flag = ""
+        kwargs = {
+            "token": DEFAULT_TOKEN,
+            "url": DEFAULT_SERVICE_URL,
+        }
+        self._assert_token_auth(flag, kwargs)
+
+    def test_only_token(self):
+        flag = "--os-token xyzpdq"
+        kwargs = {
+            "token": "xyzpdq",
+            "url": DEFAULT_SERVICE_URL,
+        }
+        self._assert_token_auth(flag, kwargs)
+
+    def test_only_url(self):
+        flag = "--os-url http://cloud.local:555"
+        kwargs = {
+            "token": DEFAULT_TOKEN,
+            "url": "http://cloud.local:555",
+        }
+        self._assert_token_auth(flag, kwargs)
+
+    def test_empty_auth(self):
+        os.environ = {}
+        flag = ""
+        kwargs = {
+            "token": '',
+            "url": '',
         }
         self._assert_token_auth(flag, kwargs)
 
@@ -502,12 +490,65 @@ class TestShellCli(TestShell):
         super(TestShellCli, self).tearDown()
         os.environ = self.orig_env
 
-    def test_shell_args(self):
+    def test_shell_args_no_options(self):
         _shell = make_shell()
         with mock.patch("openstackclient.shell.OpenStackShell.initialize_app",
                         self.app):
             fake_execute(_shell, "list user")
             self.app.assert_called_with(["list", "user"])
+
+    def test_shell_args_ca_options(self):
+        _shell = make_shell()
+
+        # NOTE(dtroyer): The commented out asserts below are the desired
+        #                behaviour and will be uncommented when the
+        #                handling for --verify and --insecure is fixed.
+
+        # Default
+        fake_execute(_shell, "list user")
+        self.assertIsNone(_shell.options.verify)
+        self.assertIsNone(_shell.options.insecure)
+        self.assertEqual('', _shell.options.cacert)
+        self.assertTrue(_shell.verify)
+
+        # --verify
+        fake_execute(_shell, "--verify list user")
+        self.assertTrue(_shell.options.verify)
+        self.assertIsNone(_shell.options.insecure)
+        self.assertEqual('', _shell.options.cacert)
+        self.assertTrue(_shell.verify)
+
+        # --insecure
+        fake_execute(_shell, "--insecure list user")
+        self.assertIsNone(_shell.options.verify)
+        self.assertTrue(_shell.options.insecure)
+        self.assertEqual('', _shell.options.cacert)
+        self.assertFalse(_shell.verify)
+
+        # --os-cacert
+        fake_execute(_shell, "--os-cacert foo list user")
+        self.assertIsNone(_shell.options.verify)
+        self.assertIsNone(_shell.options.insecure)
+        self.assertEqual('foo', _shell.options.cacert)
+        self.assertTrue(_shell.verify)
+
+        # --os-cacert and --verify
+        fake_execute(_shell, "--os-cacert foo --verify list user")
+        self.assertTrue(_shell.options.verify)
+        self.assertIsNone(_shell.options.insecure)
+        self.assertEqual('foo', _shell.options.cacert)
+        self.assertTrue(_shell.verify)
+
+        # --os-cacert and --insecure
+        # NOTE(dtroyer): Per bug https://bugs.launchpad.net/bugs/1447784
+        #                in this combination --insecure now overrides any
+        #                --os-cacert setting, where before --insecure
+        #                was ignored if --os-cacert was set.
+        fake_execute(_shell, "--os-cacert foo --insecure list user")
+        self.assertIsNone(_shell.options.verify)
+        self.assertTrue(_shell.options.insecure)
+        self.assertEqual('foo', _shell.options.cacert)
+        self.assertFalse(_shell.verify)
 
     def test_default_env(self):
         flag = ""
@@ -531,3 +572,217 @@ class TestShellCli(TestShell):
             "network_api_version": LIB_NETWORK_API_VERSION
         }
         self._assert_cli(flag, kwargs)
+
+    @mock.patch("os_client_config.config.OpenStackConfig._load_config_file")
+    def test_shell_args_cloud_no_vendor(self, config_mock):
+        config_mock.return_value = ('file.yaml', copy.deepcopy(CLOUD_1))
+        _shell = make_shell()
+
+        fake_execute(
+            _shell,
+            "--os-cloud scc list user",
+        )
+        self.assertEqual(
+            'scc',
+            _shell.cloud.name,
+        )
+
+        # These come from clouds.yaml
+        self.assertEqual(
+            DEFAULT_AUTH_URL,
+            _shell.cloud.config['auth']['auth_url'],
+        )
+        self.assertEqual(
+            DEFAULT_PROJECT_NAME,
+            _shell.cloud.config['auth']['project_name'],
+        )
+        self.assertEqual(
+            'zaphod',
+            _shell.cloud.config['auth']['username'],
+        )
+        self.assertEqual(
+            'occ-cloud',
+            _shell.cloud.config['region_name'],
+        )
+        self.assertEqual(
+            'glazed',
+            _shell.cloud.config['donut'],
+        )
+
+    @mock.patch("os_client_config.config.OpenStackConfig._load_vendor_file")
+    @mock.patch("os_client_config.config.OpenStackConfig._load_config_file")
+    def test_shell_args_cloud_public(self, config_mock, public_mock):
+        config_mock.return_value = ('file.yaml', copy.deepcopy(CLOUD_2))
+        public_mock.return_value = ('file.yaml', copy.deepcopy(PUBLIC_1))
+        _shell = make_shell()
+
+        fake_execute(
+            _shell,
+            "--os-cloud megacloud list user",
+        )
+        self.assertEqual(
+            'megacloud',
+            _shell.cloud.name,
+        )
+
+        # These come from clouds-public.yaml
+        self.assertEqual(
+            DEFAULT_AUTH_URL,
+            _shell.cloud.config['auth']['auth_url'],
+        )
+        self.assertEqual(
+            'cake',
+            _shell.cloud.config['donut'],
+        )
+
+        # These come from clouds.yaml
+        self.assertEqual(
+            'heart-o-gold',
+            _shell.cloud.config['auth']['project_name'],
+        )
+        self.assertEqual(
+            'zaphod',
+            _shell.cloud.config['auth']['username'],
+        )
+        self.assertEqual(
+            'occ-cloud',
+            _shell.cloud.config['region_name'],
+        )
+
+    @mock.patch("os_client_config.config.OpenStackConfig._load_vendor_file")
+    @mock.patch("os_client_config.config.OpenStackConfig._load_config_file")
+    def test_shell_args_precedence(self, config_mock, vendor_mock):
+        config_mock.return_value = ('file.yaml', copy.deepcopy(CLOUD_2))
+        vendor_mock.return_value = ('file.yaml', copy.deepcopy(PUBLIC_1))
+        _shell = make_shell()
+
+        # Test command option overriding config file value
+        fake_execute(
+            _shell,
+            "--os-cloud megacloud --os-region-name krikkit list user",
+        )
+        self.assertEqual(
+            'megacloud',
+            _shell.cloud.name,
+        )
+
+        # These come from clouds-public.yaml
+        self.assertEqual(
+            DEFAULT_AUTH_URL,
+            _shell.cloud.config['auth']['auth_url'],
+        )
+        self.assertEqual(
+            'cake',
+            _shell.cloud.config['donut'],
+        )
+
+        # These come from clouds.yaml
+        self.assertEqual(
+            'heart-o-gold',
+            _shell.cloud.config['auth']['project_name'],
+        )
+        self.assertEqual(
+            'zaphod',
+            _shell.cloud.config['auth']['username'],
+        )
+        self.assertEqual(
+            'krikkit',
+            _shell.cloud.config['region_name'],
+        )
+
+
+class TestShellCliEnv(TestShell):
+    def setUp(self):
+        super(TestShellCliEnv, self).setUp()
+        env = {
+            'OS_REGION_NAME': 'occ-env',
+        }
+        self.orig_env, os.environ = os.environ, env.copy()
+
+    def tearDown(self):
+        super(TestShellCliEnv, self).tearDown()
+        os.environ = self.orig_env
+
+    @mock.patch("os_client_config.config.OpenStackConfig._load_vendor_file")
+    @mock.patch("os_client_config.config.OpenStackConfig._load_config_file")
+    def test_shell_args_precedence_1(self, config_mock, vendor_mock):
+        config_mock.return_value = ('file.yaml', copy.deepcopy(CLOUD_2))
+        vendor_mock.return_value = ('file.yaml', copy.deepcopy(PUBLIC_1))
+        _shell = make_shell()
+
+        # Test env var
+        fake_execute(
+            _shell,
+            "--os-cloud megacloud list user",
+        )
+        self.assertEqual(
+            'megacloud',
+            _shell.cloud.name,
+        )
+
+        # These come from clouds-public.yaml
+        self.assertEqual(
+            DEFAULT_AUTH_URL,
+            _shell.cloud.config['auth']['auth_url'],
+        )
+        self.assertEqual(
+            'cake',
+            _shell.cloud.config['donut'],
+        )
+
+        # These come from clouds.yaml
+        self.assertEqual(
+            'heart-o-gold',
+            _shell.cloud.config['auth']['project_name'],
+        )
+        self.assertEqual(
+            'zaphod',
+            _shell.cloud.config['auth']['username'],
+        )
+        self.assertEqual(
+            'occ-env',
+            _shell.cloud.config['region_name'],
+        )
+
+    @mock.patch("os_client_config.config.OpenStackConfig._load_vendor_file")
+    @mock.patch("os_client_config.config.OpenStackConfig._load_config_file")
+    def test_shell_args_precedence_2(self, config_mock, vendor_mock):
+        config_mock.return_value = ('file.yaml', copy.deepcopy(CLOUD_2))
+        vendor_mock.return_value = ('file.yaml', copy.deepcopy(PUBLIC_1))
+        _shell = make_shell()
+
+        # Test command option overriding config file value
+        fake_execute(
+            _shell,
+            "--os-cloud megacloud --os-region-name krikkit list user",
+        )
+        self.assertEqual(
+            'megacloud',
+            _shell.cloud.name,
+        )
+
+        # These come from clouds-public.yaml
+        self.assertEqual(
+            DEFAULT_AUTH_URL,
+            _shell.cloud.config['auth']['auth_url'],
+        )
+        self.assertEqual(
+            'cake',
+            _shell.cloud.config['donut'],
+        )
+
+        # These come from clouds.yaml
+        self.assertEqual(
+            'heart-o-gold',
+            _shell.cloud.config['auth']['project_name'],
+        )
+        self.assertEqual(
+            'zaphod',
+            _shell.cloud.config['auth']['username'],
+        )
+
+        # These come from the command line
+        self.assertEqual(
+            'krikkit',
+            _shell.cloud.config['region_name'],
+        )

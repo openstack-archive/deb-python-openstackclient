@@ -306,8 +306,8 @@ class TestImageList(TestImage):
         super(TestImageList, self).setUp()
 
         self.api_mock = mock.Mock()
-        self.api_mock.image_list.return_value = [
-            copy.deepcopy(image_fakes.IMAGE),
+        self.api_mock.image_list.side_effect = [
+            [copy.deepcopy(image_fakes.IMAGE)], [],
         ]
         self.app.client_manager.image.api = self.api_mock
 
@@ -327,6 +327,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=False,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -354,6 +355,7 @@ class TestImageList(TestImage):
         self.api_mock.image_list.assert_called_with(
             detailed=False,
             public=True,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -381,6 +383,7 @@ class TestImageList(TestImage):
         self.api_mock.image_list.assert_called_with(
             detailed=False,
             private=True,
+            marker=image_fakes.image_id,
         )
 
         collist = ('ID', 'Name')
@@ -405,6 +408,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
+            marker=image_fakes.image_id,
         )
 
         collist = (
@@ -437,8 +441,8 @@ class TestImageList(TestImage):
 
     @mock.patch('openstackclient.api.utils.simple_filter')
     def test_image_list_property_option(self, sf_mock):
-        sf_mock.return_value = [
-            copy.deepcopy(image_fakes.IMAGE),
+        sf_mock.side_effect = [
+            [copy.deepcopy(image_fakes.IMAGE)], [],
         ]
 
         arglist = [
@@ -453,6 +457,7 @@ class TestImageList(TestImage):
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
+            marker=image_fakes.image_id,
         )
         sf_mock.assert_called_with(
             [image_fakes.IMAGE],
@@ -472,8 +477,8 @@ class TestImageList(TestImage):
 
     @mock.patch('openstackclient.common.utils.sort_items')
     def test_image_list_sort_option(self, si_mock):
-        si_mock.return_value = [
-            copy.deepcopy(image_fakes.IMAGE)
+        si_mock.side_effect = [
+            [copy.deepcopy(image_fakes.IMAGE)], [],
         ]
 
         arglist = ['--sort', 'name:asc']
@@ -483,7 +488,8 @@ class TestImageList(TestImage):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
-            detailed=False
+            detailed=False,
+            marker=image_fakes.image_id,
         )
         si_mock.assert_called_with(
             [image_fakes.IMAGE],
@@ -541,6 +547,9 @@ class TestImageSet(TestImage):
             '--owner', 'new-owner',
             '--min-disk', '2',
             '--min-ram', '4',
+            '--container-format', 'ovf',
+            '--disk-format', 'vmdk',
+            '--size', '35165824',
             image_fakes.image_name,
         ]
         verifylist = [
@@ -548,6 +557,9 @@ class TestImageSet(TestImage):
             ('owner', 'new-owner'),
             ('min_disk', 2),
             ('min_ram', 4),
+            ('container_format', 'ovf'),
+            ('disk_format', 'vmdk'),
+            ('size', 35165824),
             ('image', image_fakes.image_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -560,6 +572,9 @@ class TestImageSet(TestImage):
             'owner': 'new-owner',
             'min_disk': 2,
             'min_ram': 4,
+            'container_format': 'ovf',
+            'disk_format': 'vmdk',
+            'size': 35165824
         }
         # ImageManager.update(image, **kwargs)
         self.images_mock.update.assert_called_with(
@@ -653,3 +668,36 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
+
+
+class TestImageShow(TestImage):
+
+    def setUp(self):
+        super(TestImageShow, self).setUp()
+
+        self.images_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(image_fakes.IMAGE),
+            loaded=True,
+        )
+
+        # Get the command object to test
+        self.cmd = image.ShowImage(self.app, None)
+
+    def test_image_show(self):
+        arglist = [
+            image_fakes.image_id,
+        ]
+        verifylist = [
+            ('image', image_fakes.image_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+        self.images_mock.get.assert_called_with(
+            image_fakes.image_id,
+        )
+
+        self.assertEqual(image_fakes.IMAGE_columns, columns)
+        self.assertEqual(image_fakes.IMAGE_data, data)

@@ -19,16 +19,18 @@ import logging
 import pkg_resources
 import sys
 
-from keystoneclient import session
 import requests
 
 from openstackclient.api import auth
+from openstackclient.common import session as osc_session
 from openstackclient.identity import client as identity_client
 
 
 LOG = logging.getLogger(__name__)
 
 PLUGIN_MODULES = []
+
+USER_AGENT = 'python-openstackclient'
 
 
 class ClientCache(object):
@@ -58,7 +60,7 @@ class ClientManager(object):
 
     def __init__(
         self,
-        cli_options,
+        cli_options=None,
         api_version=None,
         verify=True,
         pw_func=None,
@@ -82,8 +84,8 @@ class ClientManager(object):
         self._cli_options = cli_options
         self._api_version = api_version
         self._pw_callback = pw_func
-        self._url = self._cli_options.os_url
-        self._region_name = self._cli_options.os_region_name
+        self._url = self._cli_options.auth.get('url', None)
+        self._region_name = self._cli_options.region_name
 
         self.timing = self._cli_options.timing
 
@@ -121,7 +123,7 @@ class ClientManager(object):
         # Horrible hack alert...must handle prompt for null password if
         # password auth is requested.
         if (self.auth_plugin_name.endswith('password') and
-                not self._cli_options.os_password):
+                not self._cli_options.auth.get('password', None)):
             self._cli_options.os_password = self._pw_callback()
 
         (auth_plugin, self._auth_params) = auth.build_auth_params(
@@ -129,13 +131,17 @@ class ClientManager(object):
             self._cli_options,
         )
 
-        default_domain = self._cli_options.os_default_domain
+        # TODO(mordred): This is a usability improvement that's broadly useful
+        # We should port it back up into os-client-config.
+        default_domain = self._cli_options.default_domain
         # NOTE(stevemar): If PROJECT_DOMAIN_ID or PROJECT_DOMAIN_NAME is
         # present, then do not change the behaviour. Otherwise, set the
         # PROJECT_DOMAIN_ID to 'OS_DEFAULT_DOMAIN' for better usability.
         if (self._api_version.get('identity') == '3' and
-            not self._auth_params.get('project_domain_id') and
-                not self._auth_params.get('project_domain_name')):
+            self.auth_plugin_name.endswith('password') and
+            not self._auth_params.get('project_domain_id', None) and
+            not self.auth_plugin_name.startswith('v2') and
+                not self._auth_params.get('project_domain_name', None)):
             self._auth_params['project_domain_id'] = default_domain
 
         # NOTE(stevemar): If USER_DOMAIN_ID or USER_DOMAIN_NAME is present,
@@ -143,8 +149,9 @@ class ClientManager(object):
         # to 'OS_DEFAULT_DOMAIN' for better usability.
         if (self._api_version.get('identity') == '3' and
             self.auth_plugin_name.endswith('password') and
-            not self._auth_params.get('user_domain_id') and
-                not self._auth_params.get('user_domain_name')):
+            not self.auth_plugin_name.startswith('v2') and
+            not self._auth_params.get('user_domain_id', None) and
+                not self._auth_params.get('user_domain_name', None)):
             self._auth_params['user_domain_id'] = default_domain
 
         # For compatibility until all clients can be updated
@@ -154,13 +161,15 @@ class ClientManager(object):
             self._project_name = self._auth_params['tenant_name']
 
         LOG.info('Using auth plugin: %s' % self.auth_plugin_name)
+        LOG.debug('Using parameters %s' % self._auth_params)
         self.auth = auth_plugin.load_from_options(**self._auth_params)
         # needed by SAML authentication
         request_session = requests.session()
-        self.session = session.Session(
+        self.session = osc_session.TimingSession(
             auth=self.auth,
             session=request_session,
             verify=self._verify,
+            user_agent=USER_AGENT,
         )
 
         return
