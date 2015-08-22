@@ -9,14 +9,14 @@ Build-Depends: debhelper (>= 9),
                python-all,
                python-pbr (>= 1.3.0),
                python-setuptools,
-               python-sphinx,
+               python-sphinx
 Build-Depends-Indep: cliff-tablib,
                      python-babel,
                      python-cinderclient (>= 1:1.3.1),
                      python-cliff (>= 1.10.0),
                      python-coverage,
                      python-crypto,
-                     python-fixtures,
+                     python-fixtures (>=1.3.1),
                      python-glanceclient (>= 1:0.18.0),
                      python-hacking (>= 0.10.0),
                      python-keyring,
@@ -35,10 +35,10 @@ Build-Depends-Indep: cliff-tablib,
                      python-requests-mock (>= 0.6.0),
                      python-six (>= 1.9.0),
                      python-stevedore (>= 1.5.0),
-                     python-testtools (>= 0.9.36),
+                     python-testtools (>= 1.4.0),
                      python-webob,
                      subunit,
-                     testrepository (>= 0.0.18),
+                     testrepository (>= 0.0.18)
 Standards-Version: 3.9.6
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-openstackclient.git
 Vcs-Git: git://anonscm.debian.org/openstack/python-openstackclient.git
@@ -66,7 +66,7 @@ Depends: cliff-tablib,
          python-stevedore (>= 1.5.0),
          ${misc:Depends},
          ${python:Depends},
-         ${sphinxdoc:Depends},
+         ${sphinxdoc:Depends}
 Recommends: ${python:Recommends}
 Description: OpenStack Command-line Client
  python-openstackclient is a unified command-line client for the OpenStack APIs.
