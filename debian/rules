@@ -9,7 +9,8 @@ export OSLO_PACKAGE_VERSION=$(VERSION)
 	dh $@ --with python2,sphinxdoc
 
 override_dh_auto_clean:
-	rm -rf doc/build build python_openstackclient.egg-info .testrepository
+	dh_auto_clean
+	rm -rf doc/build build python_openstackclient.egg-info .testrepository doc/source/api
 
 override_dh_auto_build:
 	dh_auto_build
