@@ -1,8 +1,12 @@
 python-openstackclient (1.6.0-1) experimental; urgency=medium
 
+  [ gustavo panizzo ]
   * New upstream release.
 
- -- gustavo panizzo <gfa@zumbi.com.ar>  Sat, 22 Aug 2015 23:47:56 +0800
+  [ Thomas Goirand ]
+  * Fixed (build-)depends for this release.
+
+ -- Thomas Goirand <zigo@debian.org>  Sat, 05 Sep 2015 14:13:01 +0000
 
 python-openstackclient (1.5.0-1) experimental; urgency=medium
 
