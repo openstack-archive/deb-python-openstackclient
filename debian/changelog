@@ -1,3 +1,9 @@
+python-openstackclient (1.7.0-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Thomas Goirand <zigo@debian.org>  Sat, 26 Sep 2015 19:37:25 +0000
+
 python-openstackclient (1.6.0-1) experimental; urgency=medium
 
   [ gustavo panizzo ]
