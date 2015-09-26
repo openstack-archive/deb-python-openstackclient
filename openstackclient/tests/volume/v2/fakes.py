@@ -15,7 +15,6 @@
 import copy
 import mock
 
-from openstackclient.tests.compute.v2 import fakes as compute_fakes
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
