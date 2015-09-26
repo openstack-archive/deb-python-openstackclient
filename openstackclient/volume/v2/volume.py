@@ -223,8 +223,8 @@ class ListVolume(lister.Lister):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         volume_client = self.app.client_manager.volume
         compute_client = self.app.client_manager.compute
@@ -238,7 +238,7 @@ class ListVolume(lister.Lister):
 
             msg = ''
             for attachment in attachments:
-                server = attachment['id']
+                server = attachment['server_id']
                 if server in server_cache:
                     server = server_cache[server].name
                 device = attachment['device']
@@ -335,8 +335,8 @@ class SetVolume(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(volume_client.volumes, parsed_args.volume)
 
@@ -383,8 +383,8 @@ class ShowVolume(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(volume_client.volumes, parsed_args.volume)
 
@@ -416,8 +416,8 @@ class UnsetVolume(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(
             volume_client.volumes, parsed_args.volume)

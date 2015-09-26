@@ -50,10 +50,10 @@ def _xform_security_group_rule(sgroup):
         info['ip_range'] = info['ip_range']['cidr']
     else:
         info['ip_range'] = ''
-    if info['ip_protocol'] == 'icmp':
-        info['port_range'] = ''
-    elif info['ip_protocol'] is None:
+    if info['ip_protocol'] is None:
         info['ip_protocol'] = ''
+    elif info['ip_protocol'].lower() == 'icmp':
+        info['port_range'] = ''
     return info
 
 
@@ -107,8 +107,8 @@ class DeleteSecurityGroup(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         data = utils.find_resource(
@@ -199,8 +199,8 @@ class SetSecurityGroup(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         data = utils.find_resource(
@@ -240,8 +240,8 @@ class ShowSecurityGroup(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         info = {}
@@ -307,7 +307,10 @@ class CreateSecurityGroupRule(show.ShowOne):
             compute_client.security_groups,
             parsed_args.group,
         )
-        from_port, to_port = parsed_args.dst_port
+        if parsed_args.proto.lower() == 'icmp':
+            from_port, to_port = -1, -1
+        else:
+            from_port, to_port = parsed_args.dst_port
         data = compute_client.security_group_rules.create(
             group.id,
             parsed_args.proto,
@@ -334,8 +337,8 @@ class DeleteSecurityGroupRule(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         compute_client.security_group_rules.delete(parsed_args.rule)

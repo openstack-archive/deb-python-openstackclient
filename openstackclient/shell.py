@@ -20,7 +20,6 @@ import getpass
 import logging
 import sys
 import traceback
-import warnings
 
 from cliff import app
 from cliff import command
@@ -30,6 +29,7 @@ from cliff import help
 import openstackclient
 from openstackclient.common import clientmanager
 from openstackclient.common import commandmanager
+from openstackclient.common import context
 from openstackclient.common import exceptions as exc
 from openstackclient.common import timing
 from openstackclient.common import utils
@@ -94,62 +94,19 @@ class OpenStackShell(app.App):
         self.verify = True
 
         self.client_manager = None
+        self.command_options = None
 
     def configure_logging(self):
-        """Configure logging for the app
-
-        Cliff sets some defaults we don't want so re-work it a bit
-        """
-
-        if self.options.debug:
-            # --debug forces verbose_level 3
-            # Set this here so cliff.app.configure_logging() can work
-            self.options.verbose_level = 3
-
-        super(OpenStackShell, self).configure_logging()
-        root_logger = logging.getLogger('')
-
-        # Set logging to the requested level
-        if self.options.verbose_level == 0:
-            # --quiet
-            root_logger.setLevel(logging.ERROR)
-            warnings.simplefilter("ignore")
-        elif self.options.verbose_level == 1:
-            # This is the default case, no --debug, --verbose or --quiet
-            root_logger.setLevel(logging.WARNING)
-            warnings.simplefilter("ignore")
-        elif self.options.verbose_level == 2:
-            # One --verbose
-            root_logger.setLevel(logging.INFO)
-            warnings.simplefilter("once")
-        elif self.options.verbose_level >= 3:
-            # Two or more --verbose
-            root_logger.setLevel(logging.DEBUG)
-
-        # Requests logs some stuff at INFO that we don't want
-        # unless we have DEBUG
-        requests_log = logging.getLogger("requests")
-
-        # Other modules we don't want DEBUG output for
-        cliff_log = logging.getLogger('cliff')
-        stevedore_log = logging.getLogger('stevedore')
-        iso8601_log = logging.getLogger("iso8601")
-
-        if self.options.debug:
-            # --debug forces traceback
-            self.dump_stack_trace = True
-            requests_log.setLevel(logging.DEBUG)
-        else:
-            self.dump_stack_trace = False
-            requests_log.setLevel(logging.ERROR)
-
-        cliff_log.setLevel(logging.ERROR)
-        stevedore_log.setLevel(logging.ERROR)
-        iso8601_log.setLevel(logging.ERROR)
+        """Configure logging for the app."""
+        self.log_configurator = context.LogConfigurator(self.options)
+        self.dump_stack_trace = self.log_configurator.dump_trace
 
     def run(self, argv):
+        ret_val = 1
+        self.command_options = argv
         try:
-            return super(OpenStackShell, self).run(argv)
+            ret_val = super(OpenStackShell, self).run(argv)
+            return ret_val
         except Exception as e:
             if not logging.getLogger('').handlers:
                 logging.basicConfig()
@@ -157,7 +114,11 @@ class OpenStackShell(app.App):
                 self.log.error(traceback.format_exc(e))
             else:
                 self.log.error('Exception raised: ' + str(e))
-            return 1
+
+            return ret_val
+
+        finally:
+            self.log.info("END return value: %s", ret_val)
 
     def build_option_parser(self, description, version):
         parser = super(OpenStackShell, self).build_option_parser(
@@ -236,14 +197,15 @@ class OpenStackShell(app.App):
 
         # Parent __init__ parses argv into self.options
         super(OpenStackShell, self).initialize_app(argv)
+        self.log.info("START with options: %s", self.command_options)
+        self.log.debug("options: %s", self.options)
 
         # Set the default plugin to token_endpoint if url and token are given
         if (self.options.url and self.options.token):
             # Use service token authentication
             auth_type = 'token_endpoint'
         else:
-            auth_type = 'osc_password'
-        self.log.debug("options: %s", self.options)
+            auth_type = 'password'
 
         project_id = getattr(self.options, 'project_id', None)
         project_name = getattr(self.options, 'project_name', None)
@@ -266,14 +228,20 @@ class OpenStackShell(app.App):
         # Ignore the default value of interface. Only if it is set later
         # will it be used.
         cc = cloud_config.OpenStackConfig(
-            override_defaults={'interface': None,
-                               'auth_type': auth_type, })
-        self.log.debug("defaults: %s", cc.defaults)
+            override_defaults={
+                'interface': None,
+                'auth_type': auth_type,
+                },
+            )
 
         self.cloud = cc.get_one_cloud(
             cloud=self.options.cloud,
             argparse=self.options,
         )
+
+        self.log_configurator.configure(self.cloud)
+        self.dump_stack_trace = self.log_configurator.dump_trace
+        self.log.debug("defaults: %s", cc.defaults)
         self.log.debug("cloud cfg: %s", self.cloud.config)
 
         # Set up client TLS
@@ -304,11 +272,23 @@ class OpenStackShell(app.App):
             if version_opt:
                 api = mod.API_NAME
                 self.api_version[api] = version_opt
-                if version_opt not in mod.API_VERSIONS:
-                    self.log.warning(
-                        "The %s version <%s> is not in supported versions <%s>"
-                        % (api, version_opt,
-                           ', '.join(mod.API_VERSIONS.keys())))
+
+                # Add a plugin interface to let the module validate the version
+                # requested by the user
+                skip_old_check = False
+                mod_check_api_version = getattr(mod, 'check_api_version', None)
+                if mod_check_api_version:
+                    # this throws an exception if invalid
+                    skip_old_check = mod_check_api_version(version_opt)
+
+                mod_versions = getattr(mod, 'API_VERSIONS', None)
+                if not skip_old_check and mod_versions:
+                    if version_opt not in mod_versions:
+                        self.log.warning(
+                            "%s version %s is not in supported versions %s"
+                            % (api, version_opt,
+                               ', '.join(mod.API_VERSIONS.keys())))
+
                 # Command groups deal only with major versions
                 version = '.v' + version_opt.replace('.', '_').split('_')[0]
                 cmd_group = 'openstack.' + api.replace('-', '_') + version

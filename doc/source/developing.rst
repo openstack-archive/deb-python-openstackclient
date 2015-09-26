@@ -2,6 +2,16 @@
 Developing with OpenStackClient
 ===============================
 
+Communication
+-------------
+
+Meetings
+=========
+The OpenStackClient team meets regularly on every Thursday.  For details
+please refer to the `wiki`_.
+
+.. _`wiki`: https://wiki.openstack.org/wiki/Meetings/OpenStackClient
+
 Testing
 -------
 
@@ -87,3 +97,20 @@ create HTML docs, run the following:
     $ tox -e docs
 
 The resultant HTML will be the ``doc/build/html`` directory.
+
+Testing new code
+----------------
+
+If a developer wants to test new code (feature, command or option) that
+they have written, OpenStackClient may be installed from source by running
+the following commands in the base directory of the project:
+
+.. code-block:: bash
+
+   $ python setup.py develop
+
+or
+
+.. code-block:: bash
+
+   $ pip install -e

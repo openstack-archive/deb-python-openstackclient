@@ -77,6 +77,8 @@ CLOUD_2 = {
                 'username': 'zaphod',
             },
             'region_name': 'occ-cloud',
+            'log_file': '/tmp/test_log_file',
+            'log_level': 'debug',
         }
     }
 }

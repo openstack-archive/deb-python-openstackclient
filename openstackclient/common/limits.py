@@ -31,7 +31,7 @@ class ShowLimits(lister.Lister):
 
     def get_parser(self, prog_name):
         parser = super(ShowLimits, self).get_parser(prog_name)
-        type_group = parser.add_mutually_exclusive_group()
+        type_group = parser.add_mutually_exclusive_group(required=True)
         type_group.add_argument(
             "--absolute",
             dest="is_absolute",
@@ -64,8 +64,8 @@ class ShowLimits(lister.Lister):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume

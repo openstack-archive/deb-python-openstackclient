@@ -36,6 +36,7 @@ from openstackclient.common import exceptions
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
+from openstackclient.identity import common as identity_common
 from openstackclient.network import common
 
 
@@ -107,14 +108,20 @@ def _prep_server_detail(compute_client, server):
     image_info = info.get('image', {})
     if image_info:
         image_id = image_info.get('id', '')
-        image = utils.find_resource(compute_client.images, image_id)
-        info['image'] = "%s (%s)" % (image.name, image_id)
+        try:
+            image = utils.find_resource(compute_client.images, image_id)
+            info['image'] = "%s (%s)" % (image.name, image_id)
+        except Exception:
+            info['image'] = image_id
 
     # Convert the flavor blob to a name
     flavor_info = info.get('flavor', {})
     flavor_id = flavor_info.get('id', '')
-    flavor = utils.find_resource(compute_client.flavors, flavor_id)
-    info['flavor'] = "%s (%s)" % (flavor.name, flavor_id)
+    try:
+        flavor = utils.find_resource(compute_client.flavors, flavor_id)
+        info['flavor'] = "%s (%s)" % (flavor.name, flavor_id)
+    except Exception:
+        info['flavor'] = flavor_id
 
     # NOTE(dtroyer): novaclient splits these into separate entries...
     # Format addresses in a useful way
@@ -355,8 +362,8 @@ class CreateServer(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume
 
@@ -553,8 +560,8 @@ class CreateServerImage(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         image_client = self.app.client_manager.image
         server = utils.find_resource(
@@ -612,8 +619,8 @@ class DeleteServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         for server in parsed_args.servers:
             server_obj = utils.find_resource(
@@ -694,6 +701,17 @@ class ListServer(lister.Lister):
             help=_('Include all projects (admin only)'),
         )
         parser.add_argument(
+            '--project',
+            metavar='<project>',
+            help="Search by project (admin only) (name or ID)")
+        identity_common.add_project_domain_option_to_parser(parser)
+        parser.add_argument(
+            '--user',
+            metavar='<user>',
+            help=_('Search by user (admin only) (name or ID)'),
+        )
+        identity_common.add_user_domain_option_to_parser(parser)
+        parser.add_argument(
             '--long',
             action='store_true',
             default=False,
@@ -701,9 +719,28 @@ class ListServer(lister.Lister):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
+        identity_client = self.app.client_manager.identity
+
+        project_id = None
+        if parsed_args.project:
+            project_id = identity_common.find_project(
+                identity_client,
+                parsed_args.project,
+                parsed_args.project_domain,
+            ).id
+            parsed_args.all_projects = True
+
+        user_id = None
+        if parsed_args.user:
+            user_id = identity_common.find_project(
+                identity_client,
+                parsed_args.user,
+                parsed_args.user_domain,
+            ).id
+
         search_opts = {
             'reservation_id': parsed_args.reservation_id,
             'ip': parsed_args.ip,
@@ -714,7 +751,9 @@ class ListServer(lister.Lister):
             'flavor': parsed_args.flavor,
             'image': parsed_args.image,
             'host': parsed_args.host,
+            'tenant_id': project_id,
             'all_tenants': parsed_args.all_projects,
+            'user_id': user_id,
         }
         self.log.debug('search options: %s', search_opts)
 
@@ -772,8 +811,8 @@ class LockServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -845,8 +884,8 @@ class MigrateServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
 
@@ -889,8 +928,8 @@ class PauseServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -935,8 +974,8 @@ class RebootServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
             compute_client.servers, parsed_args.server)
@@ -984,8 +1023,8 @@ class RebuildServer(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
 
         # Lookup parsed_args.image
@@ -1100,8 +1139,8 @@ class RescueServer(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         _, body = utils.find_resource(
@@ -1146,8 +1185,8 @@ class ResizeServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
@@ -1191,8 +1230,8 @@ class ResumeServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -1232,8 +1271,8 @@ class SetServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
@@ -1280,8 +1319,8 @@ class ShowServer(show.ShowOne):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(compute_client.servers,
                                      parsed_args.server)
@@ -1403,8 +1442,8 @@ class SshServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
@@ -1458,8 +1497,8 @@ class SuspendServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -1482,8 +1521,8 @@ class UnlockServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -1506,8 +1545,8 @@ class UnpauseServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -1530,8 +1569,8 @@ class UnrescueServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
 
         compute_client = self.app.client_manager.compute
         utils.find_resource(
@@ -1562,8 +1601,8 @@ class UnsetServer(command.Command):
         )
         return parser
 
+    @utils.log_method(log)
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)', parsed_args)
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
             compute_client.servers,
