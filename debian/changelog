@@ -1,8 +1,12 @@
-python-openstackclient (1.7.1-1) UNRELEASED; urgency=medium
+python-openstackclient (1.7.1-1) unstable; urgency=medium
 
+  [ Corey Bryant ]
   * New upstream release.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Mon, 05 Oct 2015 15:59:33 -0400
+  [ Thomas Goirand ]
+  * Uploading to unstable.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 15 Oct 2015 22:27:37 +0000
 
 python-openstackclient (1.7.0-1) experimental; urgency=medium
 
