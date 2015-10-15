@@ -5,6 +5,7 @@ python-openstackclient (1.7.1-1) unstable; urgency=medium
 
   [ Thomas Goirand ]
   * Uploading to unstable.
+  * Fixed watch file to use github tag.
 
  -- Thomas Goirand <zigo@debian.org>  Thu, 15 Oct 2015 22:27:37 +0000
 
