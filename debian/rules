@@ -37,3 +37,9 @@ ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
 	PYTHONPATH=. sphinx-build -b html doc/source $(CURDIR)/debian/python-openstackclient/usr/share/doc/python-openstackclient/html
 	dh_sphinxdoc -O--buildsystem=python2
 endif
+
+override_dh_installman:
+ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
+	sphinx-build -b man doc/source doc/build/man
+	dh_installman
+endif
