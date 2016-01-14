@@ -43,7 +43,7 @@ from openstackclient.network import common
 def _format_servers_list_networks(networks):
     """Return a formatted string of a server's networks
 
-    :param server: a Server.networks field
+    :param networks: a Server.networks field
     :rtype: a string of formatted network addresses
     """
     output = []
@@ -54,6 +54,29 @@ def _format_servers_list_networks(networks):
         group = "%s=%s" % (network, addresses_csv)
         output.append(group)
     return '; '.join(output)
+
+
+def _format_servers_list_power_state(state):
+    """Return a formatted string of a server's power state
+
+    :param state: the power state number of a server
+    :rtype: a string mapped to the power state number
+    """
+    power_states = [
+        'NOSTATE',      # 0x00
+        'Running',      # 0x01
+        '',             # 0x02
+        'Paused',       # 0x03
+        'Shutdown',     # 0x04
+        '',             # 0x05
+        'Crashed',      # 0x06
+        'Suspended'     # 0x07
+    ]
+
+    try:
+        return power_states[state]
+    except Exception:
+        return 'N/A'
 
 
 def _get_ip_address(addresses, address_type, ip_address_family):
@@ -425,10 +448,17 @@ class CreateServer(show.ShowOne):
                 dev_key, dev_vol = dev_map.split('=', 1)
                 block_volume = None
                 if dev_vol:
-                    block_volume = utils.find_resource(
-                        volume_client.volumes,
-                        dev_vol,
-                    ).id
+                    vol = dev_vol.split(':', 1)[0]
+                    if vol:
+                        vol_id = utils.find_resource(
+                            volume_client.volumes,
+                            vol,
+                        ).id
+                        block_volume = dev_vol.replace(vol, vol_id)
+                    else:
+                        msg = _("Volume name or ID must be specified if "
+                                "--block-device-mapping is specified")
+                        raise exceptions.CommandError(msg)
                 block_device_mapping.update({dev_key: block_volume})
 
         nics = []
@@ -607,7 +637,7 @@ class DeleteServer(command.Command):
     def get_parser(self, prog_name):
         parser = super(DeleteServer, self).get_parser(prog_name)
         parser.add_argument(
-            'servers',
+            'server',
             metavar='<server>',
             nargs="+",
             help=_('Server(s) to delete (name or ID)'),
@@ -622,7 +652,7 @@ class DeleteServer(command.Command):
     @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        for server in parsed_args.servers:
+        for server in parsed_args.server:
             server_obj = utils.find_resource(
                 compute_client.servers, server)
             compute_client.servers.delete(server_obj.id)
@@ -717,6 +747,24 @@ class ListServer(lister.Lister):
             default=False,
             help=_('List additional fields in output'),
         )
+        parser.add_argument(
+            '--marker',
+            metavar='<marker>',
+            default=None,
+            help=('The last server (name or ID) of the previous page. Display'
+                  ' list of servers after marker. Display all servers if not'
+                  ' specified.')
+        )
+        parser.add_argument(
+            '--limit',
+            metavar='<limit>',
+            type=int,
+            default=None,
+            help=("Maximum number of servers to display. If limit equals -1,"
+                  " all servers will be displayed. If limit is greater than"
+                  " 'osapi_max_limit' option of Nova API,"
+                  " 'osapi_max_limit' will be used instead."),
+        )
         return parser
 
     @utils.log_method(log)
@@ -735,7 +783,7 @@ class ListServer(lister.Lister):
 
         user_id = None
         if parsed_args.user:
-            user_id = identity_common.find_project(
+            user_id = identity_common.find_user(
                 identity_client,
                 parsed_args.user,
                 parsed_args.user_domain,
@@ -762,6 +810,8 @@ class ListServer(lister.Lister):
                 'ID',
                 'Name',
                 'Status',
+                'OS-EXT-STS:task_state',
+                'OS-EXT-STS:power_state',
                 'Networks',
                 'OS-EXT-AZ:availability_zone',
                 'OS-EXT-SRV-ATTR:host',
@@ -771,25 +821,49 @@ class ListServer(lister.Lister):
                 'ID',
                 'Name',
                 'Status',
+                'Task State',
+                'Power State',
                 'Networks',
                 'Availability Zone',
                 'Host',
                 'Properties',
             )
             mixed_case_fields = [
+                'OS-EXT-STS:task_state',
+                'OS-EXT-STS:power_state',
                 'OS-EXT-AZ:availability_zone',
                 'OS-EXT-SRV-ATTR:host',
             ]
         else:
-            columns = ('ID', 'Name', 'Status', 'Networks')
-            column_headers = columns
+            columns = (
+                'ID',
+                'Name',
+                'Status',
+                'Networks',
+            )
+            column_headers = (
+                'ID',
+                'Name',
+                'Status',
+                'Networks',
+            )
             mixed_case_fields = []
-        data = compute_client.servers.list(search_opts=search_opts)
+
+        marker_id = None
+        if parsed_args.marker:
+            marker_id = utils.find_resource(compute_client.servers,
+                                            parsed_args.marker).id
+
+        data = compute_client.servers.list(search_opts=search_opts,
+                                           marker=marker_id,
+                                           limit=parsed_args.limit)
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
                     mixed_case_fields=mixed_case_fields,
                     formatters={
+                        'OS-EXT-STS:power_state':
+                            _format_servers_list_power_state,
                         'Networks': _format_servers_list_networks,
                         'Metadata': utils.format_dict,
                     },
@@ -798,7 +872,7 @@ class ListServer(lister.Lister):
 
 class LockServer(command.Command):
 
-    """Lock a server. A non-admin user will not be able to execute actions"""
+    """Lock server(s). A non-admin user will not be able to execute actions"""
 
     log = logging.getLogger(__name__ + '.LockServer')
 
@@ -807,7 +881,8 @@ class LockServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to lock (name or ID)'),
         )
         return parser
 
@@ -815,10 +890,11 @@ class LockServer(command.Command):
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ).lock()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).lock()
 
 
 # FIXME(dtroyer): Here is what I want, how with argparse/cliff?
@@ -915,7 +991,7 @@ class MigrateServer(command.Command):
 
 
 class PauseServer(command.Command):
-    """Pause server"""
+    """Pause server(s)"""
 
     log = logging.getLogger(__name__ + '.PauseServer')
 
@@ -924,18 +1000,19 @@ class PauseServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to pause (name or ID)'),
         )
         return parser
 
     @utils.log_method(log)
     def take_action(self, parsed_args):
-
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ).pause()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server
+            ).pause()
 
 
 class RebootServer(command.Command):
@@ -1217,7 +1294,7 @@ class ResizeServer(command.Command):
 
 
 class ResumeServer(command.Command):
-    """Resume server"""
+    """Resume server(s)"""
 
     log = logging.getLogger(__name__ + '.ResumeServer')
 
@@ -1226,7 +1303,8 @@ class ResumeServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to resume (name or ID)'),
         )
         return parser
 
@@ -1234,10 +1312,11 @@ class ResumeServer(command.Command):
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ) .resume()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).resume()
 
 
 class SetServer(command.Command):
@@ -1297,6 +1376,31 @@ class SetServer(command.Command):
             else:
                 msg = _("Passwords do not match, password unchanged")
                 raise exceptions.CommandError(msg)
+
+
+class ShelveServer(command.Command):
+    """Shelve server(s)"""
+
+    log = logging.getLogger(__name__ + '.ShelveServer')
+
+    def get_parser(self, prog_name):
+        parser = super(ShelveServer, self).get_parser(prog_name)
+        parser.add_argument(
+            'server',
+            metavar='<server>',
+            nargs='+',
+            help=_('Server(s) to shelve (name or ID)'),
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).shelve()
 
 
 class ShowServer(show.ShowOne):
@@ -1483,8 +1587,58 @@ class SshServer(command.Command):
         os.system(cmd % (login, ip_address))
 
 
+class StartServer(command.Command):
+    """Start server(s)."""
+
+    log = logging.getLogger(__name__ + '.StartServer')
+
+    def get_parser(self, prog_name):
+        parser = super(StartServer, self).get_parser(prog_name)
+        parser.add_argument(
+            'server',
+            metavar='<server>',
+            nargs="+",
+            help=_('Server(s) to start (name or ID)'),
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).start()
+
+
+class StopServer(command.Command):
+    """Stop server(s)."""
+
+    log = logging.getLogger(__name__ + '.StopServer')
+
+    def get_parser(self, prog_name):
+        parser = super(StopServer, self).get_parser(prog_name)
+        parser.add_argument(
+            'server',
+            metavar='<server>',
+            nargs="+",
+            help=_('Server(s) to stop (name or ID)'),
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).stop()
+
+
 class SuspendServer(command.Command):
-    """Suspend server"""
+    """Suspend server(s)"""
 
     log = logging.getLogger(__name__ + '.SuspendServer')
 
@@ -1493,7 +1647,8 @@ class SuspendServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to suspend (name or ID)'),
         )
         return parser
 
@@ -1501,14 +1656,15 @@ class SuspendServer(command.Command):
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ).suspend()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).suspend()
 
 
 class UnlockServer(command.Command):
-    """Unlock server"""
+    """Unlock server(s)"""
 
     log = logging.getLogger(__name__ + '.UnlockServer')
 
@@ -1517,7 +1673,8 @@ class UnlockServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to unlock (name or ID)'),
         )
         return parser
 
@@ -1525,14 +1682,15 @@ class UnlockServer(command.Command):
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ).unlock()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).unlock()
 
 
 class UnpauseServer(command.Command):
-    """Unpause server"""
+    """Unpause server(s)"""
 
     log = logging.getLogger(__name__ + '.UnpauseServer')
 
@@ -1541,7 +1699,8 @@ class UnpauseServer(command.Command):
         parser.add_argument(
             'server',
             metavar='<server>',
-            help=_('Server (name or ID)'),
+            nargs='+',
+            help=_('Server(s) to unpause (name or ID)'),
         )
         return parser
 
@@ -1549,10 +1708,11 @@ class UnpauseServer(command.Command):
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
-        utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        ).unpause()
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).unpause()
 
 
 class UnrescueServer(command.Command):
@@ -1614,3 +1774,28 @@ class UnsetServer(command.Command):
                 server,
                 parsed_args.property,
             )
+
+
+class UnshelveServer(command.Command):
+    """Unshelve server(s)"""
+
+    log = logging.getLogger(__name__ + '.UnshelveServer')
+
+    def get_parser(self, prog_name):
+        parser = super(UnshelveServer, self).get_parser(prog_name)
+        parser.add_argument(
+            'server',
+            metavar='<server>',
+            nargs='+',
+            help=_('Server(s) to unshelve (name or ID)'),
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        for server in parsed_args.server:
+            utils.find_resource(
+                compute_client.servers,
+                server,
+            ).unshelve()

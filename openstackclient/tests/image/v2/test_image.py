@@ -96,7 +96,7 @@ class TestImageCreate(TestImage):
         )
 
         self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
+        self.assertEqual(image_fakes.IMAGE_SHOW_data, data)
 
     @mock.patch('glanceclient.common.utils.get_data_file', name='Open')
     def test_image_reserve_options(self, mock_open):
@@ -112,6 +112,7 @@ class TestImageCreate(TestImage):
             '--disk-format', 'fs',
             '--min-disk', '10',
             '--min-ram', '4',
+            '--owner', '123456',
             '--protected',
             '--private',
             image_fakes.image_name,
@@ -121,6 +122,7 @@ class TestImageCreate(TestImage):
             ('disk_format', 'fs'),
             ('min_disk', 10),
             ('min_ram', 4),
+            ('owner', '123456'),
             ('protected', True),
             ('unprotected', False),
             ('public', False),
@@ -139,6 +141,7 @@ class TestImageCreate(TestImage):
             disk_format='fs',
             min_disk=10,
             min_ram=4,
+            owner='123456',
             protected=True,
             visibility='private',
         )
@@ -151,7 +154,7 @@ class TestImageCreate(TestImage):
         )
 
         self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
+        self.assertEqual(image_fakes.IMAGE_SHOW_data, data)
 
     @mock.patch('glanceclient.common.utils.get_data_file', name='Open')
     def test_image_create_file(self, mock_open):
@@ -208,16 +211,15 @@ class TestImageCreate(TestImage):
         )
 
         self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
+        self.assertEqual(image_fakes.IMAGE_SHOW_data, data)
 
-    def test_image_dead_options(self):
+    def test_image_create_dead_options(self):
 
         arglist = [
-            '--owner', 'nobody',
+            '--store', 'somewhere',
             image_fakes.image_name,
         ]
         verifylist = [
-            ('owner', 'nobody'),
             ('name', image_fakes.image_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -238,10 +240,8 @@ class TestAddProjectToImage(TestImage):
             copy.deepcopy(image_fakes.IMAGE),
             loaded=True,
         )
-        self.image_members_mock.create.return_value = fakes.FakeResource(
-            None,
+        self.image_members_mock.create.return_value = fakes.FakeModel(
             copy.deepcopy(image_fakes.MEMBER),
-            loaded=True,
         )
         self.project_mock.get.return_value = fakes.FakeResource(
             None,
@@ -374,12 +374,13 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -402,12 +403,13 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -430,12 +432,13 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -458,12 +461,13 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(columns, collist)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -536,12 +540,13 @@ class TestImageList(TestImage):
             property_field='properties',
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(columns, collist)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -565,12 +570,13 @@ class TestImageList(TestImage):
             'name:asc'
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
-            image_fakes.image_name
+            image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -639,6 +645,268 @@ class TestRemoveProjectImage(TestImage):
         )
 
 
+class TestImageSet(TestImage):
+
+    def setUp(self):
+        super(TestImageSet, self).setUp()
+        # Set up the schema
+        self.model = warlock.model_factory(
+            image_fakes.IMAGE_schema,
+            schemas.SchemaBasedModel,
+        )
+
+        self.images_mock.get.return_value = self.model(**image_fakes.IMAGE)
+        self.images_mock.update.return_value = self.model(**image_fakes.IMAGE)
+        # Get the command object to test
+        self.cmd = image.SetImage(self.app, None)
+
+    def test_image_set_options(self):
+        arglist = [
+            '--name', 'new-name',
+            '--owner', 'new-owner',
+            '--min-disk', '2',
+            '--min-ram', '4',
+            '--container-format', 'ovf',
+            '--disk-format', 'vmdk',
+            image_fakes.image_id,
+        ]
+        verifylist = [
+            ('name', 'new-name'),
+            ('owner', 'new-owner'),
+            ('min_disk', 2),
+            ('min_ram', 4),
+            ('container_format', 'ovf'),
+            ('disk_format', 'vmdk'),
+            ('image', image_fakes.image_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'name': 'new-name',
+            'owner': 'new-owner',
+            'min_disk': 2,
+            'min_ram': 4,
+            'container_format': 'ovf',
+            'disk_format': 'vmdk',
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id, **kwargs)
+
+    def test_image_set_bools1(self):
+        arglist = [
+            '--protected',
+            '--private',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('protected', True),
+            ('unprotected', False),
+            ('public', False),
+            ('private', True),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'protected': True,
+            'visibility': 'private',
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id,
+            **kwargs
+        )
+
+    def test_image_set_bools2(self):
+        arglist = [
+            '--unprotected',
+            '--public',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('protected', False),
+            ('unprotected', True),
+            ('public', True),
+            ('private', False),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'protected': False,
+            'visibility': 'public',
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id,
+            **kwargs
+        )
+
+    def test_image_set_properties(self):
+        arglist = [
+            '--property', 'Alpha=1',
+            '--property', 'Beta=2',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('properties', {'Alpha': '1', 'Beta': '2'}),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'Alpha': '1',
+            'Beta': '2',
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id,
+            **kwargs
+        )
+
+    def test_image_set_fake_properties(self):
+        arglist = [
+            '--architecture', 'z80',
+            '--instance-id', '12345',
+            '--kernel-id', '67890',
+            '--os-distro', 'cpm',
+            '--os-version', '2.2H',
+            '--ramdisk-id', 'xyzpdq',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('architecture', 'z80'),
+            ('instance_id', '12345'),
+            ('kernel_id', '67890'),
+            ('os_distro', 'cpm'),
+            ('os_version', '2.2H'),
+            ('ramdisk_id', 'xyzpdq'),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'architecture': 'z80',
+            'instance_id': '12345',
+            'kernel_id': '67890',
+            'os_distro': 'cpm',
+            'os_version': '2.2H',
+            'ramdisk_id': 'xyzpdq',
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id,
+            **kwargs
+        )
+
+    def test_image_set_tag(self):
+        arglist = [
+            '--tag', 'test-tag',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('tags', ['test-tag']),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'tags': ['test-tag'],
+        }
+        # ImageManager.update(image, **kwargs)
+        self.images_mock.update.assert_called_with(
+            image_fakes.image_id,
+            **kwargs
+        )
+
+    def test_image_set_tag_merge(self):
+        old_image = copy.copy(image_fakes.IMAGE)
+        old_image['tags'] = ['old1', 'new2']
+        self.images_mock.get.return_value = self.model(**old_image)
+        arglist = [
+            '--tag', 'test-tag',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('tags', ['test-tag']),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'tags': ['old1', 'new2', 'test-tag'],
+        }
+        # ImageManager.update(image, **kwargs)
+        a, k = self.images_mock.update.call_args
+        self.assertEqual(image_fakes.image_id, a[0])
+        self.assertTrue('tags' in k)
+        self.assertEqual(set(kwargs['tags']), set(k['tags']))
+
+    def test_image_set_tag_merge_dupe(self):
+        old_image = copy.copy(image_fakes.IMAGE)
+        old_image['tags'] = ['old1', 'new2']
+        self.images_mock.get.return_value = self.model(**old_image)
+        arglist = [
+            '--tag', 'old1',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('tags', ['old1']),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # DisplayCommandBase.take_action() returns two tuples
+        self.cmd.take_action(parsed_args)
+
+        kwargs = {
+            'tags': ['new2', 'old1'],
+        }
+        # ImageManager.update(image, **kwargs)
+        a, k = self.images_mock.update.call_args
+        self.assertEqual(image_fakes.image_id, a[0])
+        self.assertTrue('tags' in k)
+        self.assertEqual(set(kwargs['tags']), set(k['tags']))
+
+    def test_image_set_dead_options(self):
+
+        arglist = [
+            '--visibility', '1-mile',
+            image_fakes.image_name,
+        ]
+        verifylist = [
+            ('visibility', '1-mile'),
+            ('image', image_fakes.image_name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(
+            exceptions.CommandError,
+            self.cmd.take_action, parsed_args)
+
+
 class TestImageShow(TestImage):
 
     def setUp(self):
@@ -671,53 +939,4 @@ class TestImageShow(TestImage):
         )
 
         self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
-
-
-class TestImageSet(TestImage):
-
-    def setUp(self):
-        super(TestImageSet, self).setUp()
-        # Set up the schema
-        self.model = warlock.model_factory(
-            image_fakes.IMAGE_schema,
-            schemas.SchemaBasedModel,
-        )
-
-        self.images_mock.get.return_value = self.model(**image_fakes.IMAGE)
-        self.images_mock.update.return_value = self.model(**image_fakes.IMAGE)
-        # Get the command object to test
-        self.cmd = image.SetImage(self.app, None)
-
-    def test_image_set_options(self):
-        arglist = [
-            '--name', 'new-name',
-            '--owner', 'new-owner',
-            '--min-disk', '2',
-            '--min-ram', '4',
-            image_fakes.image_id,
-        ]
-        verifylist = [
-            ('name', 'new-name'),
-            ('owner', 'new-owner'),
-            ('min_disk', 2),
-            ('min_ram', 4),
-            ('image', image_fakes.image_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        kwargs = {
-            'name': 'new-name',
-            'owner': 'new-owner',
-            'min_disk': 2,
-            'min_ram': 4
-        }
-        # ImageManager.update(image, **kwargs)
-        self.images_mock.update.assert_called_with(
-            image_fakes.image_id, **kwargs)
-
-        self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
+        self.assertEqual(image_fakes.IMAGE_SHOW_data, data)

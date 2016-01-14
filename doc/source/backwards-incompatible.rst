@@ -90,6 +90,30 @@ List of Backwards Incompatible Changes
   * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1453229
   * Commit: https://review.openstack.org/#/c/181514/
 
+7. `image set` commands will no longer return the modified resource
+
+  Previously, modifying an image would result in the new image being displayed
+  to the user. To keep things consistent with other `set` commands, we will
+  no longer be showing the modified resource.
+
+  * In favor of: Use `set` then `show`
+  * As of: NA
+  * Removed in: NA
+  * Bug: NA
+  * Commit: NA
+
+8. `region` commands no longer support `url`
+
+  The Keystone team removed support for thr `url` attribute from the client
+  and server side. Changes to the `create`, `set` and `list` commands for
+  regions have been affected.
+
+  * In favor of: NA
+  * As of 1.9.0
+  * Removed in: NA
+  * Bug: https://launchpad.net/bugs/1506841
+  * Commit: https://review.openstack.org/#/c/236736/
+
 For Developers
 ==============
 

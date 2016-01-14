@@ -123,13 +123,11 @@ PROJECT_2 = {
 }
 
 region_id = 'region_one'
-region_url = 'http://localhost:1111'
 region_parent_region_id = 'region_two'
 region_description = 'region one'
 
 REGION = {
     'id': region_id,
-    'url': region_url,
     'description': region_description,
     'parent_region_id': region_parent_region_id,
     'links': base_url + 'regions/' + region_id,
@@ -194,6 +192,8 @@ SERVICE_WITHOUT_NAME = {
     'enabled': True,
     'links': base_url + 'services/' + service_id,
 }
+
+credential_id = 'c-123'
 
 endpoint_id = 'e-123'
 endpoint_url = 'http://127.0.0.1:35357'
@@ -261,6 +261,7 @@ TOKEN_WITH_DOMAIN_ID = {
 idp_id = 'test_idp'
 idp_description = 'super exciting IdP description'
 idp_remote_ids = ['entity1', 'entity2']
+formatted_idp_remote_ids = 'entity1, entity2'
 
 IDENTITY_PROVIDER = {
     'id': idp_id,
@@ -400,6 +401,8 @@ class FakeIdentityv3Client(object):
     def __init__(self, **kwargs):
         self.domains = mock.Mock()
         self.domains.resource_class = fakes.FakeResource(None, {})
+        self.credentials = mock.Mock()
+        self.credentials.resource_class = fakes.FakeResource(None, {})
         self.endpoints = mock.Mock()
         self.endpoints.resource_class = fakes.FakeResource(None, {})
         self.groups = mock.Mock()

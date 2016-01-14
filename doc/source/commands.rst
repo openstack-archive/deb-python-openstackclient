@@ -77,10 +77,10 @@ referring to both Compute and Volume quotas.
 * ``console log``: (**Compute**) server console text dump
 * ``console url``: (**Compute**) server remote console URL
 * ``consumer``: (**Identity**) OAuth-based delegatee
-* ``container``: (**Object Store**) a grouping of objects
+* ``container``: (**Object Storage**) a grouping of objects
 * ``credentials``: (**Identity**) specific to identity providers
 * ``domain``: (**Identity**) a grouping of projects
-* ``ec2 cedentials``: (**Identity**) AWS EC2-compatible credentials
+* ``ec2 credentials``: (**Identity**) AWS EC2-compatible credentials
 * ``endpoint``: (**Identity**) the base URL used to contact a specific service
 * ``extension``: (**Compute**, **Identity**, **Volume**) OpenStack server API extensions
 * ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
@@ -91,14 +91,15 @@ referring to both Compute and Volume quotas.
 * ``hypervisor stats``: (**Compute**) hypervisor statistics over all compute nodes
 * ``identity provider``: (**Identity**) a source of users and authentication
 * ``image``: (**Image**) a disk image
-* ``ip fixed``: Compute, Network - an internal IP address assigned to a server
-* ``ip floating``: Compute, Network - a public IP address that can be mapped to a server
+* ``ip fixed``: (**Compute**, **Network**) - an internal IP address assigned to a server
+* ``ip floating``: (**Compute**, **Network**) - a public IP address that can be mapped to a server
+* ``ip floating pool``: (**Compute**, **Network**) - a pool of public IP addresses
 * ``keypair``: (**Compute**) an SSH public key
 * ``limits``: (**Compute**, **Volume**) resource usage limits
 * ``mapping``: (**Identity**) a definition to translate identity provider attributes to Identity concepts
 * ``module``: internal - installed Python modules in the OSC process
-* ``network``: Network - a virtual network for connecting servers and other resources
-* ``object``: (**Object Store**) a single file in the Object Store
+* ``network``: (**Network**) - a virtual network for connecting servers and other resources
+* ``object``: (**Object Storage**) a single file in the Object Storage
 * ``policy``: (**Identity**) determines authorization
 * ``project``: (**Identity**) owns a group of resources
 * ``quota``: (**Compute**, **Volume**) resource usage restrictions
@@ -106,8 +107,8 @@ referring to both Compute and Volume quotas.
 * ``request token``: (**Identity**) temporary OAuth-based token
 * ``role``: (**Identity**) a policy object used to determine authorization
 * ``role assignment``: (**Identity**) a relationship between roles, users or groups, and domains or projects
-* ``security group``: Compute, Network - groups of network access rules
-* ``security group rule``: Compute, Network - the individual rules that define protocol/IP/port access
+* ``security group``: (**Compute**, **Network**) - groups of network access rules
+* ``security group rule``: (**Compute**, **Network**) - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
 * ``server image``: (**Compute**) saved server disk image
 * ``service``: (**Identity**) a cloud service
@@ -119,6 +120,41 @@ referring to both Compute and Volume quotas.
 * ``user role``: (**Identity**) roles assigned to a user
 * ``volume``: (**Volume**) block volumes
 * ``volume type``: (**Volume**) deployment-specific types of volumes available
+
+
+Plugin Objects
+--------------
+
+The following are known `Objects` used by OpenStack :doc:`plugins`. These are
+listed here to avoid name conflicts when creating new plugins. For a complete
+list check out :doc:`plugin-commands`.
+
+* ``baremetal``: (**Baremetal (Ironic)**)
+* ``congress datasource``: (**Policy (Congress)**)
+* ``congress driver``: (**Policy (Congress)**)
+* ``congress policy``: (**Policy (Congress)**)
+* ``congress policy rule``: (**Policy (Congress)**)
+* ``dataprocessing data source``: (**Data Processing (Sahara)**)
+* ``dataprocessing image``: (**Data Processing (Sahara)**)
+* ``dataprocessing image tags``: (**Data Processing (Sahara)**)
+* ``dataprocessing plugin``: (**Data Processing (Sahara)**)
+* ``management plan``: (**Management (Tuskar)**)
+* ``management role``: (**Management (Tuskar)**)
+* ``message-broker cluster``: (**Message Broker (Cue)**)
+* ``message flavor``: (**Messaging (Zaqar)**)
+* ``pool``: (**Messaging (Zaqar)**)
+* ``ptr record``: (**DNS (Designate)**)
+* ``queue``: (**Messaging (Zaqar)**)
+* ``recordset``: (**DNS (Designate)**)
+* ``secret``: (**Key Manager (Barbican)**)
+* ``secret container``: (**Key Manager (Barbican)**)
+* ``secret order``: (**Key Manager (Barbican)**)
+* ``stack``: (**Orchestration (Heat)**)
+* ``tld``: (**DNS (Designate)**)
+* ``zone``: (**DNS (Designate)**)
+* ``zone blacklist``: (**DNS (Designate)**)
+* ``zone transfer``: (**DNS (Designate)**)
+
 
 Actions
 -------
@@ -132,28 +168,32 @@ Those actions with an opposite action are noted in parens if applicable.
   is built in the order of ``container add object <container> <object>``,
   the positional arguments appear in the same order
 * ``create`` (``delete``) - create a new occurrence of the specified object
-* ``delete`` (``create``) - delete a specific occurrence of the specified object
+* ``delete`` (``create``) - delete specific occurrences of the specified objects
 * ``issue`` (``revoke``) - issue a token
 * ``list`` - display summary information about multiple objects
-* ``lock`` (``unlock``)
+* ``lock`` (``unlock``) - lock one or more servers so that non-admin user won't be able to execute actions
 * ``migrate`` - move a server to a different host; ``--live`` performs a
   live migration if possible
-* ``pause`` (``unpause``) - stop a server and leave it in memory
+* ``pause`` (``unpause``) - stop one or more servers and leave them in memory
 * ``reboot`` - forcibly reboot a server
 * ``rebuild`` - rebuild a server using (most of) the same arguments as in the original create
 * ``remove`` (``add``) - remove an object from a group of objects
 * ``rescue`` (``unrescue``) - reboot a server in a special rescue mode allowing access to the original disks
 * ``resize`` - change a server's flavor
-* ``resume`` (``suspend``) - return a suspended server to running state
+* ``resume`` (``suspend``) - return one or more suspended servers to running state
 * ``revoke`` (``issue``) - revoke a token
 * ``save`` - download an object locally
 * ``set`` (``unset``) - set a property on the object, formerly called metadata
+* ``shelve`` (``unshelve``) - shelve one or more servers
 * ``show`` - display detailed information about the specific object
-* ``suspend`` (``resume``) - stop a server and save to disk freeing memory
-* ``unlock`` (``lock``)
-* ``unpause`` (``pause``) - return a paused server to running state
+* ``start`` (``stop``) - start one or more servers
+* ``stop`` (``start``) - stop one or more servers
+* ``suspend`` (``resume``) - stop one or more servers and save to disk freeing memory
+* ``unlock`` (``lock``) - unlock one or more servers
+* ``unpause`` (``pause``) - return one or more paused servers to running state
 * ``unrescue`` (``rescue``) - return a server to normal boot mode
 * ``unset`` (``set``) - remove an attribute of the object
+* ``unshelve`` (``shelve``) - unshelve one or more servers
 
 
 Implementation

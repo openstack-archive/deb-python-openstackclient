@@ -183,25 +183,16 @@ class ShowUsage(show.ShowOne):
             ))
 
         info = {}
-        info['Servers'] = len(usage.server_usages)
-        info['RAM MB-Hours'] = float("%.2f" % usage.total_memory_mb_usage)
-        info['CPU Hours'] = float("%.2f" % usage.total_vcpus_usage)
-        info['Disk GB-Hours'] = float("%.2f" % usage.total_local_gb_usage)
+        info['Servers'] = (
+            len(usage.server_usages)
+            if hasattr(usage, "server_usages") else None)
+        info['RAM MB-Hours'] = (
+            float("%.2f" % usage.total_memory_mb_usage)
+            if hasattr(usage, "total_memory_mb_usage") else None)
+        info['CPU Hours'] = (
+            float("%.2f" % usage.total_vcpus_usage)
+            if hasattr(usage, "total_vcpus_usage") else None)
+        info['Disk GB-Hours'] = (
+            float("%.2f" % usage.total_local_gb_usage)
+            if hasattr(usage, "total_local_gb_usage") else None)
         return zip(*sorted(six.iteritems(info)))
-
-
-# This is out of order due to the subclass, will eventually be removed
-
-class ListProjectUsage(ListUsage):
-    """List resource usage per project"""
-
-    deprecated = True
-
-    log = logging.getLogger('DEPRECATED:')
-
-    def take_action(self, parsed_args):
-        self.log.warning(
-            "%s is deprecated, use 'usage list'",
-            getattr(self, 'cmd_name', 'this command'),
-        )
-        return super(ListProjectUsage, self).take_action(parsed_args)

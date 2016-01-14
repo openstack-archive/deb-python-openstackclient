@@ -207,14 +207,14 @@ class ListVolume(lister.Lister):
     def get_parser(self, prog_name):
         parser = super(ListVolume, self).get_parser(prog_name)
         parser.add_argument(
+            '--name',
+            metavar='<name>',
+            help='Filter results by volume name',
+        )
+        parser.add_argument(
             '--status',
             metavar='<status>',
             help='Filter results by status',
-        )
-        parser.add_argument(
-            '--name',
-            metavar='<name>',
-            help='Filter results by name',
         )
         parser.add_argument(
             '--all-projects',
@@ -239,7 +239,7 @@ class ListVolume(lister.Lister):
         def _format_attach(attachments):
             """Return a formatted string of a volume's attached instances
 
-            :param volume: a volume.attachments field
+            :param attachments: a volume.attachments field
             :rtype: a string of formatted instances
             """
 

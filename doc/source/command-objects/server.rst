@@ -165,7 +165,7 @@ Delete server(s)
 
 .. describe:: <server>
 
-    Server to delete (name or ID)
+    Server(s) to delete (name or ID)
 
 server list
 -----------
@@ -187,6 +187,8 @@ List servers
         [--all-projects]
         [--project <project> [--project-domain <project-domain>]]
         [--long]
+        [--marker <server>]
+        [--limit <limit>]
 
 .. option:: --reservation-id <reservation-id>
 
@@ -250,20 +252,31 @@ List servers
 
     List additional fields in output
 
+.. option:: --marker <server>
+
+    The last server (name or ID) of the previous page. Display list of servers
+    after marker. Display all servers if not specified.
+
+.. option:: --limit <limit>
+
+    Maximum number of servers to display. If limit equals -1, all servers will
+    be displayed. If limit is greater than 'osapi_max_limit' option of Nova
+    API, 'osapi_max_limit' will be used instead.
+
 server lock
 -----------
 
-Lock a server. A non-admin user will not be able to execute actions
+Lock server(s). A non-admin user will not be able to execute actions
 
 .. program:: server lock
 .. code:: bash
 
     os server lock
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+    Server(s) to lock (name or ID)
 
 server migrate
 --------------
@@ -311,17 +324,17 @@ Migrate server to different host
 server pause
 ------------
 
-Pause server
+Pause server(s)
 
 .. program:: server pause
 .. code:: bash
 
     os server pause
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+    Server(s) to pause (name or ID)
 
 server reboot
 -------------
@@ -483,17 +496,17 @@ a revert to release the new server and restart the old one.
 server resume
 -------------
 
-Resume server
+Resume server(s)
 
 .. program:: server resume
 .. code:: bash
 
     os server resume
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+    Server(s) to resume (name or ID)
 
 server set
 ----------
@@ -526,6 +539,21 @@ Set server properties
 .. describe:: <server>
 
     Server (name or ID)
+
+server shelve
+-------------
+
+Shelve server(s)
+
+.. program:: server shelve
+.. code:: bash
+
+    os server shelve
+        <server> [<server> ...]
+
+.. describe:: <server>
+
+    Server(s) to shelve (name or ID)
 
 server show
 -----------
@@ -595,50 +623,80 @@ Ssh to server
 
     Server (name or ID)
 
+server start
+------------
+
+Start server(s)
+
+.. program:: server start
+.. code:: bash
+
+    os server start
+        <server> [<server> ...]
+
+.. describe:: <server>
+
+    Server(s) to start (name or ID)
+
+server stop
+-----------
+
+Stop server(s)
+
+.. program:: server stop
+.. code:: bash
+
+    os server stop
+        <server> [<server> ...]
+
+.. describe:: <server>
+
+    Server(s) to stop (name or ID)
+
 server suspend
 --------------
 
-Suspend server
+Suspend server(s)
 
 .. program:: server suspend
 .. code:: bash
 
     os server suspend
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+    Server(s) to suspend (name or ID)
 
 server unlock
 -------------
 
-Unlock server
+Unlock server(s)
 
 .. program:: server unlock
 .. code:: bash
 
     os server unlock
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+    Server(s) to unlock (name or ID)
 
 server unpause
 --------------
 
-Unpause server
+Unpause server(s)
 
 .. program:: server unpause
 .. code:: bash
 
     os server unpause
-        <server>
+        <server> [<server> ...]
 
 .. describe:: <server>
 
-    Server (name or ID)
+   Server(s) to unpause (name or ID)
 
 server unrescue
 ---------------
@@ -675,3 +733,18 @@ Unset server properties
 .. describe:: <server>
 
     Server (name or ID)
+
+server unshelve
+---------------
+
+Unshelve server(s)
+
+.. program:: server unshelve
+.. code:: bash
+
+    os server unshelve
+        <server> [<server> ...]
+
+.. describe:: <server>
+
+    Server(s) to unshelve (name or ID)

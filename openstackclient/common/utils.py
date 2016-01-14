@@ -94,12 +94,15 @@ def find_resource(manager, name_or_id, **kwargs):
     if len(kwargs) == 0:
         kwargs = {}
 
-    # Prepare the kwargs for calling find
-    if 'NAME_ATTR' in manager.resource_class.__dict__:
-        # novaclient does this for oddball resources
-        kwargs[manager.resource_class.NAME_ATTR] = name_or_id
-    else:
-        kwargs['name'] = name_or_id
+    try:
+        # Prepare the kwargs for calling find
+        if 'NAME_ATTR' in manager.resource_class.__dict__:
+            # novaclient does this for oddball resources
+            kwargs[manager.resource_class.NAME_ATTR] = name_or_id
+        else:
+            kwargs['name'] = name_or_id
+    except Exception:
+        pass
 
     # finally try to find entity by name
     try:
@@ -118,14 +121,30 @@ def find_resource(manager, name_or_id, **kwargs):
                 (manager.resource_class.__name__.lower(), name_or_id)
             raise exceptions.CommandError(msg)
         else:
-            raise
+            pass
+
+    try:
+        for resource in manager.list():
+            # short circuit and return the first match
+            if (resource.get('id') == name_or_id or
+                    resource.get('name') == name_or_id):
+                return resource
+        else:
+            # we found no match, keep going to bomb out
+            pass
+    except Exception:
+        # in case the list fails for some reason
+        pass
+
+    # if we hit here, we've failed, report back this error:
+    msg = "Could not find resource %s" % name_or_id
+    raise exceptions.CommandError(msg)
 
 
 def format_dict(data):
     """Return a formatted string of key value pairs
 
     :param data: a dict
-    :param format: optional formatting hints
     :rtype: a string formatted to key='value'
     """
 
@@ -278,14 +297,16 @@ def wait_for_status(status_f,
                     res_id,
                     status_field='status',
                     success_status=['active'],
+                    error_status=['error'],
                     sleep_time=5,
                     callback=None):
     """Wait for status change on a resource during a long-running operation
 
     :param status_f: a status function that takes a single id argument
     :param res_id: the resource id to watch
-    :param success_status: a list of status strings for successful completion
     :param status_field: the status attribute in the returned resource object
+    :param success_status: a list of status strings for successful completion
+    :param error_status: a list of status strings for error
     :param sleep_time: wait this long (seconds)
     :param callback: called per sleep cycle, useful to display progress
     :rtype: True on success
@@ -296,7 +317,7 @@ def wait_for_status(status_f,
         if status in success_status:
             retval = True
             break
-        elif status == 'error':
+        elif status in error_status:
             retval = False
             break
         if callback:
@@ -314,6 +335,7 @@ def wait_for_delete(manager,
                     callback=None):
     """Wait for resource deletion
 
+    :param manager: the manager from which we can get the resource
     :param res_id: the resource id to watch
     :param status_field: the status attribute in the returned resource object,
         this is used to check for error states while the resource is being
@@ -355,7 +377,7 @@ def wait_for_delete(manager,
 def get_effective_log_level():
     """Returns the lowest logging level considered by logging handlers
 
-    Retrieve an return the smallest log level set among the root
+    Retrieve and return the smallest log level set among the root
     logger's handlers (in case of multiple handlers).
     """
     root_log = logging.getLogger()
@@ -399,3 +421,11 @@ def build_kwargs_dict(arg_name, value):
     if value:
         kwargs[arg_name] = value
     return kwargs
+
+
+def is_ascii(string):
+    try:
+        string.decode('ascii')
+        return True
+    except UnicodeDecodeError:
+        return False

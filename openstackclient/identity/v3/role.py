@@ -22,7 +22,7 @@ import sys
 from cliff import command
 from cliff import lister
 from cliff import show
-from keystoneclient import exceptions as ksc_exc
+from keystoneauth1 import exceptions as ks_exc
 
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
@@ -172,7 +172,7 @@ class CreateRole(show.ShowOne):
 
         try:
             role = identity_client.roles.create(name=parsed_args.name)
-        except ksc_exc.Conflict as e:
+        except ks_exc.Conflict as e:
             if parsed_args.or_show:
                 role = utils.find_resource(identity_client.roles,
                                            parsed_args.name)
@@ -260,6 +260,7 @@ class ListRole(lister.Lister):
             data = identity_client.roles.list(
                 user=user,
                 domain=domain,
+                os_inherit_extension_inherited=parsed_args.inherited
             )
             for user_role in data:
                 user_role.user = user.name
@@ -269,6 +270,7 @@ class ListRole(lister.Lister):
             data = identity_client.roles.list(
                 user=user,
                 project=project,
+                os_inherit_extension_inherited=parsed_args.inherited
             )
             for user_role in data:
                 user_role.user = user.name
@@ -278,12 +280,14 @@ class ListRole(lister.Lister):
             data = identity_client.roles.list(
                 user=user,
                 domain='default',
+                os_inherit_extension_inherited=parsed_args.inherited
             )
         elif parsed_args.group and parsed_args.domain:
             columns = ('ID', 'Name', 'Domain', 'Group')
             data = identity_client.roles.list(
                 group=group,
                 domain=domain,
+                os_inherit_extension_inherited=parsed_args.inherited
             )
             for group_role in data:
                 group_role.group = group.name
@@ -293,6 +297,7 @@ class ListRole(lister.Lister):
             data = identity_client.roles.list(
                 group=group,
                 project=project,
+                os_inherit_extension_inherited=parsed_args.inherited
             )
             for group_role in data:
                 group_role.group = group.name

@@ -81,6 +81,7 @@ class SetQuota(command.Command):
             parser.add_argument(
                 '--%s' % v,
                 metavar='<%s>' % v,
+                dest=k,
                 type=int,
                 help='New value for the %s quota' % v,
             )
@@ -94,6 +95,7 @@ class SetQuota(command.Command):
     @utils.log_method(log)
     def take_action(self, parsed_args):
 
+        identity_client = self.app.client_manager.identity
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume
 
@@ -115,23 +117,29 @@ class SetQuota(command.Command):
             sys.stderr.write("No quotas updated")
             return
 
+        if parsed_args.project:
+            project = utils.find_resource(
+                identity_client.projects,
+                parsed_args.project,
+            )
+
         if parsed_args.quota_class:
             if compute_kwargs:
                 compute_client.quota_classes.update(
-                    parsed_args.project,
+                    project.id,
                     **compute_kwargs)
             if volume_kwargs:
                 volume_client.quota_classes.update(
-                    parsed_args.project,
+                    project.id,
                     **volume_kwargs)
         else:
             if compute_kwargs:
                 compute_client.quotas.update(
-                    parsed_args.project,
+                    project.id,
                     **compute_kwargs)
             if volume_kwargs:
                 volume_client.quotas.update(
-                    parsed_args.project,
+                    project.id,
                     **volume_kwargs)
 
 
@@ -165,13 +173,19 @@ class ShowQuota(show.ShowOne):
         return parser
 
     def get_compute_volume_quota(self, client, parsed_args):
+        identity_client = self.app.client_manager.identity
+        project = utils.find_resource(
+            identity_client.projects,
+            parsed_args.project,
+            ).id
+
         try:
             if parsed_args.quota_class:
-                quota = client.quota_classes.get(parsed_args.project)
+                quota = client.quota_classes.get(project)
             elif parsed_args.default:
-                quota = client.quotas.defaults(parsed_args.project)
+                quota = client.quotas.defaults(project)
             else:
-                quota = client.quotas.get(parsed_args.project)
+                quota = client.quotas.get(project)
         except Exception as e:
             if type(e).__name__ == 'EndpointNotFound':
                 return {}

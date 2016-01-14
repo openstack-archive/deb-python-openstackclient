@@ -16,7 +16,6 @@
 
 import copy
 import logging
-import os
 
 from cliff import command
 from cliff import lister
@@ -25,6 +24,7 @@ import six
 
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.identity import common as identity_common
 
 
 class CreateVolume(show.ShowOne):
@@ -175,7 +175,7 @@ class DeleteVolume(command.Command):
             action="store_true",
             default=False,
             help="Attempt forced removal of volume(s), regardless of state "
-                 "(defaults to False"
+                 "(defaults to False)"
         )
         return parser
 
@@ -185,10 +185,10 @@ class DeleteVolume(command.Command):
         for volume in parsed_args.volumes:
             volume_obj = utils.find_resource(
                 volume_client.volumes, volume)
-        if parsed_args.force:
-            volume_client.volumes.force_delete(volume_obj.id)
-        else:
-            volume_client.volumes.delete(volume_obj.id)
+            if parsed_args.force:
+                volume_client.volumes.force_delete(volume_obj.id)
+            else:
+                volume_client.volumes.delete(volume_obj.id)
         return
 
 
@@ -200,9 +200,31 @@ class ListVolume(lister.Lister):
     def get_parser(self, prog_name):
         parser = super(ListVolume, self).get_parser(prog_name)
         parser.add_argument(
+            '--project',
+            metavar='<project-id>',
+            help='Filter results by project (name or ID) (admin only)'
+        )
+        identity_common.add_project_domain_option_to_parser(parser)
+        parser.add_argument(
+            '--user',
+            metavar='<user-id>',
+            help='Filter results by user (name or ID) (admin only)'
+        )
+        identity_common.add_user_domain_option_to_parser(parser)
+        parser.add_argument(
+            '--name',
+            metavar='<name>',
+            help='Filter results by volume name',
+        )
+        parser.add_argument(
+            '--status',
+            metavar='<status>',
+            help='Filter results by status',
+        )
+        parser.add_argument(
             '--all-projects',
             action='store_true',
-            default=bool(int(os.environ.get("ALL_PROJECTS", 0))),
+            default=False,
             help='Include all projects (admin only)',
         )
         parser.add_argument(
@@ -211,16 +233,6 @@ class ListVolume(lister.Lister):
             default=False,
             help='List additional fields in output',
         )
-        parser.add_argument(
-            '--name',
-            metavar='<name>',
-            help='Filter results by name',
-        )
-        parser.add_argument(
-            '--status',
-            metavar='<status>',
-            help='Filter results by status',
-        )
         return parser
 
     @utils.log_method(log)
@@ -228,11 +240,12 @@ class ListVolume(lister.Lister):
 
         volume_client = self.app.client_manager.volume
         compute_client = self.app.client_manager.compute
+        identity_client = self.app.client_manager.identity
 
         def _format_attach(attachments):
             """Return a formatted string of a volume's attached instances
 
-            :param volume: a volume.attachments field
+            :param attachments: a volume.attachments field
             :rtype: a string of formatted instances
             """
 
@@ -282,8 +295,23 @@ class ListVolume(lister.Lister):
             # Just forget it if there's any trouble
             pass
 
+        project_id = None
+        if parsed_args.project:
+            project_id = identity_common.find_project(
+                identity_client,
+                parsed_args.project,
+                parsed_args.project_domain)
+
+        user_id = None
+        if parsed_args.user:
+            user_id = identity_common.find_user(identity_client,
+                                                parsed_args.user,
+                                                parsed_args.user_domain)
+
         search_opts = {
-            'all_projects': parsed_args.all_projects,
+            'all_tenants': parsed_args.all_projects,
+            'project_id': project_id,
+            'user_id': user_id,
             'display_name': parsed_args.name,
             'status': parsed_args.status,
         }

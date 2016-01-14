@@ -261,16 +261,17 @@ class TestImageList(TestImage):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
-            detailed=False,
+            detailed=True,
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -288,17 +289,18 @@ class TestImageList(TestImage):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
-            detailed=False,
+            detailed=True,
             public=True,
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -316,17 +318,18 @@ class TestImageList(TestImage):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
-            detailed=False,
+            detailed=True,
             private=True,
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -401,12 +404,13 @@ class TestImageList(TestImage):
             property_field='properties',
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(columns, collist)
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -423,7 +427,7 @@ class TestImageList(TestImage):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
-            detailed=False,
+            detailed=True,
             marker=image_fakes.image_id,
         )
         si_mock.assert_called_with(
@@ -431,12 +435,13 @@ class TestImageList(TestImage):
             'name:asc'
         )
 
-        collist = ('ID', 'Name')
+        collist = ('ID', 'Name', 'Status')
 
         self.assertEqual(collist, columns)
         datalist = ((
             image_fakes.image_id,
-            image_fakes.image_name
+            image_fakes.image_name,
+            '',
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -499,8 +504,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
 
         kwargs = {
             'name': 'new-name',
@@ -516,9 +520,6 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
-
-        self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
 
     def test_image_set_bools1(self):
         arglist = [
@@ -644,8 +645,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
 
         # VolumeManager.upload_to_image(volume, force, image_name,
         #     container_format, disk_format)
@@ -663,9 +663,6 @@ class TestImageSet(TestImage):
             name='updated_image',
             volume='volly',
         )
-
-        self.assertEqual(image_fakes.IMAGE_columns, columns)
-        self.assertEqual(image_fakes.IMAGE_data, data)
 
 
 class TestImageShow(TestImage):

@@ -14,8 +14,11 @@
 """Object Store v1 API Library"""
 
 import io
+import logging
 import os
+
 import six
+from six.moves import urllib
 
 try:
     from urllib.parse import urlparse  # noqa
@@ -23,6 +26,7 @@ except ImportError:
     from urlparse import urlparse  # noqa
 
 from openstackclient.api import api
+from openstackclient.common import utils
 
 
 class APIv1(api.BaseAPI):
@@ -42,11 +46,9 @@ class APIv1(api.BaseAPI):
         :returns:
             dict of returned headers
         """
-
-        response = self.create(container, method='PUT')
-        url_parts = urlparse(self.endpoint)
+        response = self.create(urllib.parse.quote(container), method='PUT')
         data = {
-            'account': url_parts.path.split('/')[-1],
+            'account': self._find_account_id(),
             'container': container,
             'x-trans-id': response.headers.get('x-trans-id', None),
         }
@@ -64,7 +66,7 @@ class APIv1(api.BaseAPI):
         """
 
         if container:
-            self.delete(container)
+            self.delete(urllib.parse.quote(container))
 
     def container_list(
         self,
@@ -140,6 +142,23 @@ class APIv1(api.BaseAPI):
         for object in objects:
             self.object_save(container=container, object=object['name'])
 
+    def container_set(
+        self,
+        container,
+        properties,
+    ):
+        """Set container properties
+
+        :param string container:
+            name of container to modify
+        :param dict properties:
+            properties to add or update for the container
+        """
+
+        headers = self._set_properties(properties, 'X-Container-Meta-%s')
+        if headers:
+            self.create(urllib.parse.quote(container), headers=headers)
+
     def container_show(
         self,
         container=None,
@@ -152,21 +171,51 @@ class APIv1(api.BaseAPI):
             dict of returned headers
         """
 
-        response = self._request('HEAD', container)
+        response = self._request('HEAD', urllib.parse.quote(container))
         data = {
-            'account': response.headers.get('x-container-meta-owner', None),
+            'account': self._find_account_id(),
             'container': container,
             'object_count': response.headers.get(
                 'x-container-object-count',
                 None,
             ),
-            'bytes_used': response.headers.get('x-container-bytes-used', None),
-            'read_acl': response.headers.get('x-container-read', None),
-            'write_acl': response.headers.get('x-container-write', None),
-            'sync_to': response.headers.get('x-container-sync-to', None),
-            'sync_key': response.headers.get('x-container-sync-key', None),
+            'bytes_used': response.headers.get('x-container-bytes-used', None)
         }
+
+        if 'x-container-read' in response.headers:
+            data['read_acl'] = response.headers.get('x-container-read', None)
+        if 'x-container-write' in response.headers:
+            data['write_acl'] = response.headers.get('x-container-write', None)
+        if 'x-container-sync-to' in response.headers:
+            data['sync_to'] = response.headers.get('x-container-sync-to', None)
+        if 'x-container-sync-key' in response.headers:
+            data['sync_key'] = response.headers.get('x-container-sync-key',
+                                                    None)
+
+        properties = self._get_properties(response.headers,
+                                          'x-container-meta-')
+        if properties:
+            data['properties'] = properties
+
         return data
+
+    def container_unset(
+        self,
+        container,
+        properties,
+    ):
+        """Unset container properties
+
+        :param string container:
+            name of container to modify
+        :param dict properties:
+            properties to remove from the container
+        """
+
+        headers = self._unset_properties(properties,
+                                         'X-Remove-Container-Meta-%s')
+        if headers:
+            self.create(urllib.parse.quote(container), headers=headers)
 
     def object_create(
         self,
@@ -187,16 +236,16 @@ class APIv1(api.BaseAPI):
             # TODO(dtroyer): What exception to raise here?
             return {}
 
-        full_url = "%s/%s" % (container, object)
+        full_url = "%s/%s" % (urllib.parse.quote(container),
+                              urllib.parse.quote(object))
         with io.open(object, 'rb') as f:
             response = self.create(
                 full_url,
                 method='PUT',
                 data=f,
             )
-        url_parts = urlparse(self.endpoint)
         data = {
-            'account': url_parts.path.split('/')[-1],
+            'account': self._find_account_id(),
             'container': container,
             'object': object,
             'x-trans-id': response.headers.get('X-Trans-Id', None),
@@ -221,7 +270,8 @@ class APIv1(api.BaseAPI):
         if container is None or object is None:
             return
 
-        self.delete("%s/%s" % (container, object))
+        self.delete("%s/%s" % (urllib.parse.quote(container),
+                               urllib.parse.quote(object)))
 
     def object_list(
         self,
@@ -298,7 +348,7 @@ class APIv1(api.BaseAPI):
         if delimiter:
             params['delimiter'] = delimiter
 
-        return self.list(container, **params)
+        return self.list(urllib.parse.quote(container), **params)
 
     def object_save(
         self,
@@ -321,7 +371,8 @@ class APIv1(api.BaseAPI):
 
         response = self._request(
             'GET',
-            "%s/%s" % (container, object),
+            "%s/%s" % (urllib.parse.quote(container),
+                       urllib.parse.quote(object)),
             stream=True,
         )
         if response.status_code == 200:
@@ -331,6 +382,50 @@ class APIv1(api.BaseAPI):
             with open(file, 'wb') as f:
                 for chunk in response.iter_content():
                     f.write(chunk)
+
+    def object_set(
+        self,
+        container,
+        object,
+        properties,
+    ):
+        """Set object properties
+
+        :param string container:
+            container name for object to modify
+        :param string object:
+            name of object to modify
+        :param dict properties:
+            properties to add or update for the container
+        """
+
+        headers = self._set_properties(properties, 'X-Object-Meta-%s')
+        if headers:
+            self.create("%s/%s" % (urllib.parse.quote(container),
+                                   urllib.parse.quote(object)),
+                        headers=headers)
+
+    def object_unset(
+        self,
+        container,
+        object,
+        properties,
+    ):
+        """Unset object properties
+
+        :param string container:
+            container name for object to modify
+        :param string object:
+            name of object to modify
+        :param dict properties:
+            properties to remove from the object
+        """
+
+        headers = self._unset_properties(properties, 'X-Remove-Object-Meta-%s')
+        if headers:
+            self.create("%s/%s" % (urllib.parse.quote(container),
+                                   urllib.parse.quote(object)),
+                        headers=headers)
 
     def object_show(
         self,
@@ -350,9 +445,12 @@ class APIv1(api.BaseAPI):
         if container is None or object is None:
             return {}
 
-        response = self._request('HEAD', "%s/%s" % (container, object))
+        response = self._request('HEAD', "%s/%s" %
+                                 (urllib.parse.quote(container),
+                                  urllib.parse.quote(object)))
+
         data = {
-            'account': response.headers.get('x-container-meta-owner', None),
+            'account': self._find_account_id(),
             'container': container,
             'object': object,
             'content-type': response.headers.get('content-type', None),
@@ -371,18 +469,107 @@ class APIv1(api.BaseAPI):
                 'x-object-manifest',
                 None,
             )
-        for key, value in six.iteritems(response.headers):
-            if key.startswith('x-object-meta-'):
-                data[key[len('x-object-meta-'):].lower()] = value
-            elif key not in (
-                    'content-type',
-                    'content-length',
-                    'last-modified',
-                    'etag',
-                    'date',
-                    'x-object-manifest',
-                    'x-container-meta-owner',
-            ):
-                data[key.lower()] = value
+
+        properties = self._get_properties(response.headers, 'x-object-meta-')
+        if properties:
+            data['properties'] = properties
 
         return data
+
+    def account_set(
+        self,
+        properties,
+    ):
+        """Set account properties
+
+        :param dict properties:
+            properties to add or update for the account
+        """
+
+        headers = self._set_properties(properties, 'X-Account-Meta-%s')
+        if headers:
+            # NOTE(stevemar): The URL (first argument) in this case is already
+            # set to the swift account endpoint, because that's how it's
+            # registered in the catalog
+            self.create("", headers=headers)
+
+    def account_show(self):
+        """Show account details"""
+
+        # NOTE(stevemar): Just a HEAD request to the endpoint already in the
+        # catalog should be enough.
+        response = self._request("HEAD", "")
+        data = {}
+
+        properties = self._get_properties(response.headers, 'x-account-meta-')
+        if properties:
+            data['properties'] = properties
+
+        # Map containers, bytes and objects a bit nicer
+        data['Containers'] = response.headers.get('x-account-container-count',
+                                                  None)
+        data['Objects'] = response.headers.get('x-account-object-count', None)
+        data['Bytes'] = response.headers.get('x-account-bytes-used', None)
+        # Add in Account info too
+        data['Account'] = self._find_account_id()
+        return data
+
+    def account_unset(
+        self,
+        properties,
+    ):
+        """Unset account properties
+
+        :param dict properties:
+            properties to remove from the account
+        """
+
+        headers = self._unset_properties(properties,
+                                         'X-Remove-Account-Meta-%s')
+        if headers:
+            self.create("", headers=headers)
+
+    def _find_account_id(self):
+        url_parts = urlparse(self.endpoint)
+        return url_parts.path.split('/')[-1]
+
+    def _unset_properties(self, properties, header_tag):
+        # NOTE(stevemar): As per the API, the headers have to be in the form
+        # of "X-Remove-Account-Meta-Book: x". In the case where metadata is
+        # removed, we can set the value of the header to anything, so it's
+        # set to 'x'. In the case of a Container property we use:
+        # "X-Remove-Container-Meta-Book: x", and the same logic applies for
+        # Object properties
+
+        headers = {}
+        for k in properties:
+            header_name = header_tag % k
+            headers[header_name] = 'x'
+        return headers
+
+    def _set_properties(self, properties, header_tag):
+        # NOTE(stevemar): As per the API, the headers have to be in the form
+        # of "X-Account-Meta-Book: MobyDick". In the case of a Container
+        # property we use: "X-Add-Container-Meta-Book: MobyDick", and the same
+        # logic applies for Object properties
+
+        log = logging.getLogger(__name__ + '._set_properties')
+
+        headers = {}
+        for k, v in properties.iteritems():
+            if not utils.is_ascii(k) or not utils.is_ascii(v):
+                log.error('Cannot set property %s to non-ascii value', k)
+                continue
+
+            header_name = header_tag % k
+            headers[header_name] = v
+        return headers
+
+    def _get_properties(self, headers, header_tag):
+        # Add in properties as a top level key, this is consistent with other
+        # OSC commands
+        properties = {}
+        for k, v in six.iteritems(headers):
+            if k.startswith(header_tag):
+                properties[k[len(header_tag):]] = v
+        return properties

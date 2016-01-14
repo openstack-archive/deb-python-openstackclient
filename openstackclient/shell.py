@@ -25,12 +25,13 @@ from cliff import app
 from cliff import command
 from cliff import complete
 from cliff import help
+from oslo_utils import strutils
 
 import openstackclient
 from openstackclient.common import clientmanager
 from openstackclient.common import commandmanager
-from openstackclient.common import context
 from openstackclient.common import exceptions as exc
+from openstackclient.common import logs
 from openstackclient.common import timing
 from openstackclient.common import utils
 
@@ -102,7 +103,7 @@ class OpenStackShell(app.App):
 
     def configure_logging(self):
         """Configure logging for the app."""
-        self.log_configurator = context.LogConfigurator(self.options)
+        self.log_configurator = logs.LogConfigurator(self.options)
         self.dump_stack_trace = self.log_configurator.dump_trace
 
     def run(self, argv):
@@ -201,8 +202,10 @@ class OpenStackShell(app.App):
 
         # Parent __init__ parses argv into self.options
         super(OpenStackShell, self).initialize_app(argv)
-        self.log.info("START with options: %s", self.command_options)
-        self.log.debug("options: %s", self.options)
+        self.log.info("START with options: %s",
+                      strutils.mask_password(self.command_options))
+        self.log.debug("options: %s",
+                       strutils.mask_password(self.options))
 
         # Set the default plugin to token_endpoint if url and token are given
         if (self.options.url and self.options.token):
@@ -238,6 +241,10 @@ class OpenStackShell(app.App):
                 },
             )
 
+        # TODO(thowe): Change cliff so the default value for debug
+        # can be set to None.
+        if not self.options.debug:
+            self.options.debug = None
         self.cloud = cc.get_one_cloud(
             cloud=self.options.cloud,
             argparse=self.options,
@@ -246,7 +253,8 @@ class OpenStackShell(app.App):
         self.log_configurator.configure(self.cloud)
         self.dump_stack_trace = self.log_configurator.dump_trace
         self.log.debug("defaults: %s", cc.defaults)
-        self.log.debug("cloud cfg: %s", self.cloud.config)
+        self.log.debug("cloud cfg: %s",
+                       strutils.mask_password(self.cloud.config))
 
         # Set up client TLS
         # NOTE(dtroyer): --insecure is the non-default condition that
@@ -272,7 +280,7 @@ class OpenStackShell(app.App):
         for mod in clientmanager.PLUGIN_MODULES:
             default_version = getattr(mod, 'DEFAULT_API_VERSION', None)
             option = mod.API_VERSION_OPTION.replace('os_', '')
-            version_opt = self.cloud.config.get(option, default_version)
+            version_opt = str(self.cloud.config.get(option, default_version))
             if version_opt:
                 api = mod.API_NAME
                 self.api_version[api] = version_opt

@@ -2,7 +2,7 @@
 object
 ======
 
-Object Store v1
+Object Storage v1
 
 object create
 -------------
@@ -119,6 +119,31 @@ Save object locally
 
     Object to save
 
+object set
+----------
+
+Set object properties
+
+.. program:: object set
+.. code:: bash
+
+    os object set
+        [--property <key=value> [...] ]
+        <container>
+        [<object>]
+
+.. option:: --property <key=value>
+
+    Set a property on this object (repeat option to set multiple properties)
+
+.. describe:: <container>
+
+    Modify <object> from <container>
+
+.. describe:: <object>
+
+    Object to modify
+
 object show
 -----------
 
@@ -138,3 +163,28 @@ Display object details
 .. describe:: <object>
 
     Object to display
+
+object unset
+------------
+
+Unset object properties
+
+.. program:: object unset
+.. code:: bash
+
+    os object unset
+        [--property <key>]
+        <container>
+        [<object>]
+
+.. option:: --property <key>
+
+    Property to remove from object (repeat option to remove multiple properties)
+
+.. describe:: <container>
+
+    Modify <object> from <container>
+
+.. describe:: <object>
+
+    Object to modify

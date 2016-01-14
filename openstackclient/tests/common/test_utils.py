@@ -20,11 +20,24 @@ import mock
 
 from openstackclient.common import exceptions
 from openstackclient.common import utils
+from openstackclient.tests import fakes
 from openstackclient.tests import utils as test_utils
 
 PASSWORD = "Pa$$w0rd"
 WASSPORD = "Wa$$p0rd"
 DROWSSAP = "dr0w$$aP"
+
+
+class FakeOddballResource(fakes.FakeResource):
+
+    def get(self, attr):
+        """get() is needed for utils.find_resource()"""
+        if attr == 'id':
+            return self.id
+        elif attr == 'name':
+            return self.name
+        else:
+            return None
 
 
 class TestUtils(test_utils.TestCase):
@@ -122,6 +135,46 @@ class TestUtils(test_utils.TestCase):
         self.assertRaises(exceptions.CommandError,
                           utils.sort_items,
                           items, sort_str)
+
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_status_ok(self, mock_sleep):
+        # Tests the normal flow that the resource is status=active
+        resource = mock.MagicMock(status='ACTIVE')
+        status_f = mock.Mock(return_value=resource)
+        res_id = str(uuid.uuid4())
+        self.assertTrue(utils.wait_for_status(status_f, res_id,))
+        self.assertFalse(mock_sleep.called)
+
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_status_ok__with_overrides(self, mock_sleep):
+        # Tests the normal flow that the resource is status=complete
+        resource = mock.MagicMock(my_status='COMPLETE')
+        status_f = mock.Mock(return_value=resource)
+        res_id = str(uuid.uuid4())
+        self.assertTrue(utils.wait_for_status(status_f, res_id,
+                                              status_field='my_status',
+                                              success_status=['complete']))
+        self.assertFalse(mock_sleep.called)
+
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_status_error(self, mock_sleep):
+        # Tests that we fail if the resource is status=error
+        resource = mock.MagicMock(status='ERROR')
+        status_f = mock.Mock(return_value=resource)
+        res_id = str(uuid.uuid4())
+        self.assertFalse(utils.wait_for_status(status_f, res_id))
+        self.assertFalse(mock_sleep.called)
+
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_status_error_with_overrides(self, mock_sleep):
+        # Tests that we fail if the resource is my_status=failed
+        resource = mock.MagicMock(my_status='FAILED')
+        status_f = mock.Mock(return_value=resource)
+        res_id = str(uuid.uuid4())
+        self.assertFalse(utils.wait_for_status(status_f, res_id,
+                                               status_field='my_status',
+                                               error_status=['failed']))
+        self.assertFalse(mock_sleep.called)
 
     @mock.patch.object(time, 'sleep')
     def test_wait_for_delete_ok(self, mock_sleep):
@@ -238,6 +291,47 @@ class TestFindResource(test_utils.TestCase):
                                    self.manager,
                                    self.name)
         self.assertEqual("More than one lego exists with the name 'legos'.",
+                         str(result))
+        self.manager.get.assert_called_with(self.name)
+        self.manager.find.assert_called_with(name=self.name)
+
+    def test_find_resource_silly_resource(self):
+        # We need a resource with no resource_class for this test, start fresh
+        self.manager = mock.Mock()
+        self.manager.get = mock.Mock(side_effect=Exception('Boom!'))
+        self.manager.find = mock.Mock(
+            side_effect=AttributeError(
+                "'Controller' object has no attribute 'find'",
+            )
+        )
+        silly_resource = FakeOddballResource(
+            None,
+            {'id': '12345', 'name': self.name},
+            loaded=True,
+        )
+        self.manager.list = mock.Mock(
+            return_value=[silly_resource, ],
+        )
+        result = utils.find_resource(self.manager, self.name)
+        self.assertEqual(silly_resource, result)
+        self.manager.get.assert_called_with(self.name)
+        self.manager.find.assert_called_with(name=self.name)
+
+    def test_find_resource_silly_resource_not_found(self):
+        # We need a resource with no resource_class for this test, start fresh
+        self.manager = mock.Mock()
+        self.manager.get = mock.Mock(side_effect=Exception('Boom!'))
+        self.manager.find = mock.Mock(
+            side_effect=AttributeError(
+                "'Controller' object has no attribute 'find'",
+            )
+        )
+        self.manager.list = mock.Mock(return_value=[])
+        result = self.assertRaises(exceptions.CommandError,
+                                   utils.find_resource,
+                                   self.manager,
+                                   self.name)
+        self.assertEqual("Could not find resource legos",
                          str(result))
         self.manager.get.assert_called_with(self.name)
         self.manager.find.assert_called_with(name=self.name)

@@ -286,7 +286,6 @@ class TestContainerShow(TestContainerAll):
 
     def test_object_show_container(self):
         headers = {
-            'x-container-meta-owner': object_fakes.ACCOUNT_ID,
             'x-container-object-count': '42',
             'x-container-bytes-used': '123',
             'x-container-read': 'qaz',

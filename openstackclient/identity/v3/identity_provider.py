@@ -88,6 +88,8 @@ class CreateIdentityProvider(show.ShowOne):
             enabled=parsed_args.enabled)
 
         idp._info.pop('links', None)
+        remote_ids = utils.format_list(idp._info.pop('remote_ids', []))
+        idp._info['remote_ids'] = remote_ids
         return zip(*sorted(six.iteritems(idp._info)))
 
 
@@ -142,6 +144,11 @@ class SetIdentityProvider(command.Command):
             metavar='<identity-provider>',
             help='Identity provider to modify',
         )
+        parser.add_argument(
+            '--description',
+            metavar='<description>',
+            help='Set identity provider description',
+        )
         identity_remote_id_provider = parser.add_mutually_exclusive_group()
         identity_remote_id_provider.add_argument(
             '--remote-id',
@@ -174,8 +181,10 @@ class SetIdentityProvider(command.Command):
         federation_client = self.app.client_manager.identity.federation
 
         # Basic argument checking
-        if (not parsed_args.enable and not parsed_args.disable and not
-                parsed_args.remote_id and not parsed_args.remote_id_file):
+        if (not parsed_args.enable and not parsed_args.disable and
+                not parsed_args.remote_id and
+                not parsed_args.remote_id_file and
+                not parsed_args.description):
             self.log.error('No changes requested')
             return (None, None)
 
@@ -190,6 +199,8 @@ class SetIdentityProvider(command.Command):
 
         # Setup keyword args for the client
         kwargs = {}
+        if parsed_args.description:
+            kwargs['description'] = parsed_args.description
         if parsed_args.enable:
             kwargs['enabled'] = True
         if parsed_args.disable:
@@ -221,9 +232,11 @@ class ShowIdentityProvider(show.ShowOne):
     @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
-        identity_provider = utils.find_resource(
+        idp = utils.find_resource(
             identity_client.federation.identity_providers,
             parsed_args.identity_provider)
 
-        identity_provider._info.pop('links', None)
-        return zip(*sorted(six.iteritems(identity_provider._info)))
+        idp._info.pop('links', None)
+        remote_ids = utils.format_list(idp._info.pop('remote_ids', []))
+        idp._info['remote_ids'] = remote_ids
+        return zip(*sorted(six.iteritems(idp._info)))

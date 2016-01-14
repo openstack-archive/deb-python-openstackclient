@@ -17,7 +17,7 @@ import mock
 
 from requests_mock.contrib import fixture
 
-from keystoneclient import session
+from keystoneauth1 import session
 from openstackclient.api import object_store_v1 as object_store
 from openstackclient.tests import utils
 
@@ -157,10 +157,6 @@ class TestContainer(TestObjectAPIv1):
             'container': 'qaz',
             'object_count': '1',
             'bytes_used': '577',
-            'read_acl': None,
-            'write_acl': None,
-            'sync_to': None,
-            'sync_key': None,
         }
         self.requests_mock.register_uri(
             'HEAD',
@@ -323,8 +319,7 @@ class TestObject(TestObjectAPIv1):
             'content-length': '577',
             'last-modified': '20130101',
             'etag': 'qaz',
-            'wife': 'Wilma',
-            'x-tra-header': 'yabba-dabba-do',
+            'properties': {'wife': 'Wilma'},
         }
         self.requests_mock.register_uri(
             'HEAD',

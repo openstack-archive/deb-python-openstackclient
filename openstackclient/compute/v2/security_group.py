@@ -23,7 +23,7 @@ from cliff import command
 from cliff import lister
 from cliff import show
 
-from keystoneclient import exceptions as ksc_exc
+from keystoneauth1 import exceptions as ks_exc
 
 try:
     from novaclient.v2 import security_group_rules
@@ -93,178 +93,6 @@ class CreateSecurityGroup(show.ShowOne):
         return zip(*sorted(six.iteritems(info)))
 
 
-class DeleteSecurityGroup(command.Command):
-    """Delete a security group"""
-
-    log = logging.getLogger(__name__ + '.DeleteSecurityGroup')
-
-    def get_parser(self, prog_name):
-        parser = super(DeleteSecurityGroup, self).get_parser(prog_name)
-        parser.add_argument(
-            'group',
-            metavar='<group>',
-            help='Name or ID of security group to delete',
-        )
-        return parser
-
-    @utils.log_method(log)
-    def take_action(self, parsed_args):
-
-        compute_client = self.app.client_manager.compute
-        data = utils.find_resource(
-            compute_client.security_groups,
-            parsed_args.group,
-        )
-        compute_client.security_groups.delete(data.id)
-        return
-
-
-class ListSecurityGroup(lister.Lister):
-    """List all security groups"""
-
-    log = logging.getLogger(__name__ + ".ListSecurityGroup")
-
-    def get_parser(self, prog_name):
-        parser = super(ListSecurityGroup, self).get_parser(prog_name)
-        parser.add_argument(
-            '--all-projects',
-            action='store_true',
-            default=False,
-            help='Display information from all projects (admin only)',
-        )
-        return parser
-
-    def take_action(self, parsed_args):
-
-        def _get_project(project_id):
-            try:
-                return getattr(project_hash[project_id], 'name', project_id)
-            except KeyError:
-                return project_id
-
-        self.log.debug("take_action(%s)", parsed_args)
-
-        compute_client = self.app.client_manager.compute
-        columns = (
-            "ID",
-            "Name",
-            "Description",
-        )
-        column_headers = columns
-        if parsed_args.all_projects:
-            # TODO(dtroyer): Translate Project_ID to Project (name)
-            columns = columns + ('Tenant ID',)
-            column_headers = column_headers + ('Project',)
-        search = {'all_tenants': parsed_args.all_projects}
-        data = compute_client.security_groups.list(search_opts=search)
-
-        project_hash = {}
-        try:
-            projects = self.app.client_manager.identity.projects.list()
-        except ksc_exc.ClientException:
-            # This fails when the user is not an admin, just move along
-            pass
-        else:
-            for project in projects:
-                project_hash[project.id] = project
-
-        return (column_headers,
-                (utils.get_item_properties(
-                    s, columns,
-                    formatters={'Tenant ID': _get_project},
-                ) for s in data))
-
-
-class SetSecurityGroup(show.ShowOne):
-    """Set security group properties"""
-
-    log = logging.getLogger(__name__ + '.SetSecurityGroup')
-
-    def get_parser(self, prog_name):
-        parser = super(SetSecurityGroup, self).get_parser(prog_name)
-        parser.add_argument(
-            'group',
-            metavar='<group>',
-            help='Name or ID of security group to change',
-        )
-        parser.add_argument(
-            '--name',
-            metavar='<new-name>',
-            help='New security group name',
-        )
-        parser.add_argument(
-            "--description",
-            metavar="<description>",
-            help="New security group name",
-        )
-        return parser
-
-    @utils.log_method(log)
-    def take_action(self, parsed_args):
-
-        compute_client = self.app.client_manager.compute
-        data = utils.find_resource(
-            compute_client.security_groups,
-            parsed_args.group,
-        )
-
-        if parsed_args.name:
-            data.name = parsed_args.name
-        if parsed_args.description:
-            data.description = parsed_args.description
-
-        info = {}
-        info.update(compute_client.security_groups.update(
-            data,
-            data.name,
-            data.description,
-        )._info)
-
-        if info:
-            return zip(*sorted(six.iteritems(info)))
-        else:
-            return ({}, {})
-
-
-class ShowSecurityGroup(show.ShowOne):
-    """Show a specific security group"""
-
-    log = logging.getLogger(__name__ + '.ShowSecurityGroup')
-
-    def get_parser(self, prog_name):
-        parser = super(ShowSecurityGroup, self).get_parser(prog_name)
-        parser.add_argument(
-            'group',
-            metavar='<group>',
-            help='Name or ID of security group to change',
-        )
-        return parser
-
-    @utils.log_method(log)
-    def take_action(self, parsed_args):
-
-        compute_client = self.app.client_manager.compute
-        info = {}
-        info.update(utils.find_resource(
-            compute_client.security_groups,
-            parsed_args.group,
-        )._info)
-        rules = []
-        for r in info['rules']:
-            rules.append(utils.format_dict(_xform_security_group_rule(r)))
-
-        # Format rules into a list of strings
-        info.update(
-            {'rules': rules}
-        )
-        # Map 'tenant_id' column to 'project_id'
-        info.update(
-            {'project_id': info.pop('tenant_id')}
-        )
-
-        return zip(*sorted(six.iteritems(info)))
-
-
 class CreateSecurityGroupRule(show.ShowOne):
     """Create a new security group rule"""
 
@@ -275,7 +103,7 @@ class CreateSecurityGroupRule(show.ShowOne):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='Create rule in this security group',
+            help='Create rule in this security group (name or ID)',
         )
         parser.add_argument(
             "--proto",
@@ -323,6 +151,32 @@ class CreateSecurityGroupRule(show.ShowOne):
         return zip(*sorted(six.iteritems(info)))
 
 
+class DeleteSecurityGroup(command.Command):
+    """Delete a security group"""
+
+    log = logging.getLogger(__name__ + '.DeleteSecurityGroup')
+
+    def get_parser(self, prog_name):
+        parser = super(DeleteSecurityGroup, self).get_parser(prog_name)
+        parser.add_argument(
+            'group',
+            metavar='<group>',
+            help='Security group to delete (name or ID)',
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+
+        compute_client = self.app.client_manager.compute
+        data = utils.find_resource(
+            compute_client.security_groups,
+            parsed_args.group,
+        )
+        compute_client.security_groups.delete(data.id)
+        return
+
+
 class DeleteSecurityGroupRule(command.Command):
     """Delete a security group rule"""
 
@@ -333,7 +187,7 @@ class DeleteSecurityGroupRule(command.Command):
         parser.add_argument(
             'rule',
             metavar='<rule>',
-            help='Security group rule ID to delete',
+            help='Security group rule to delete (ID only)',
         )
         return parser
 
@@ -345,8 +199,64 @@ class DeleteSecurityGroupRule(command.Command):
         return
 
 
+class ListSecurityGroup(lister.Lister):
+    """List security groups"""
+
+    log = logging.getLogger(__name__ + ".ListSecurityGroup")
+
+    def get_parser(self, prog_name):
+        parser = super(ListSecurityGroup, self).get_parser(prog_name)
+        parser.add_argument(
+            '--all-projects',
+            action='store_true',
+            default=False,
+            help='Display information from all projects (admin only)',
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+
+        def _get_project(project_id):
+            try:
+                return getattr(project_hash[project_id], 'name', project_id)
+            except KeyError:
+                return project_id
+
+        self.log.debug("take_action(%s)", parsed_args)
+
+        compute_client = self.app.client_manager.compute
+        columns = (
+            "ID",
+            "Name",
+            "Description",
+        )
+        column_headers = columns
+        if parsed_args.all_projects:
+            # TODO(dtroyer): Translate Project_ID to Project (name)
+            columns = columns + ('Tenant ID',)
+            column_headers = column_headers + ('Project',)
+        search = {'all_tenants': parsed_args.all_projects}
+        data = compute_client.security_groups.list(search_opts=search)
+
+        project_hash = {}
+        try:
+            projects = self.app.client_manager.identity.projects.list()
+        except ks_exc.ClientException:
+            # This fails when the user is not an admin, just move along
+            pass
+        else:
+            for project in projects:
+                project_hash[project.id] = project
+
+        return (column_headers,
+                (utils.get_item_properties(
+                    s, columns,
+                    formatters={'Tenant ID': _get_project},
+                ) for s in data))
+
+
 class ListSecurityGroupRule(lister.Lister):
-    """List all security group rules"""
+    """List security group rules"""
 
     log = logging.getLogger(__name__ + ".ListSecurityGroupRule")
 
@@ -355,7 +265,7 @@ class ListSecurityGroupRule(lister.Lister):
         parser.add_argument(
             'group',
             metavar='<group>',
-            help='List all rules in this security group',
+            help='List all rules in this security group (name or ID)',
         )
         return parser
 
@@ -386,3 +296,93 @@ class ListSecurityGroupRule(lister.Lister):
                 (utils.get_item_properties(
                     s, columns,
                 ) for s in rules))
+
+
+class SetSecurityGroup(show.ShowOne):
+    """Set security group properties"""
+
+    log = logging.getLogger(__name__ + '.SetSecurityGroup')
+
+    def get_parser(self, prog_name):
+        parser = super(SetSecurityGroup, self).get_parser(prog_name)
+        parser.add_argument(
+            'group',
+            metavar='<group>',
+            help='Security group to modify (name or ID)',
+        )
+        parser.add_argument(
+            '--name',
+            metavar='<new-name>',
+            help='New security group name',
+        )
+        parser.add_argument(
+            "--description",
+            metavar="<description>",
+            help="New security group description",
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+
+        compute_client = self.app.client_manager.compute
+        data = utils.find_resource(
+            compute_client.security_groups,
+            parsed_args.group,
+        )
+
+        if parsed_args.name:
+            data.name = parsed_args.name
+        if parsed_args.description:
+            data.description = parsed_args.description
+
+        info = {}
+        info.update(compute_client.security_groups.update(
+            data,
+            data.name,
+            data.description,
+        )._info)
+
+        if info:
+            return zip(*sorted(six.iteritems(info)))
+        else:
+            return ({}, {})
+
+
+class ShowSecurityGroup(show.ShowOne):
+    """Display security group details"""
+
+    log = logging.getLogger(__name__ + '.ShowSecurityGroup')
+
+    def get_parser(self, prog_name):
+        parser = super(ShowSecurityGroup, self).get_parser(prog_name)
+        parser.add_argument(
+            'group',
+            metavar='<group>',
+            help='Security group to display (name or ID)',
+        )
+        return parser
+
+    @utils.log_method(log)
+    def take_action(self, parsed_args):
+
+        compute_client = self.app.client_manager.compute
+        info = {}
+        info.update(utils.find_resource(
+            compute_client.security_groups,
+            parsed_args.group,
+        )._info)
+        rules = []
+        for r in info['rules']:
+            rules.append(utils.format_dict(_xform_security_group_rule(r)))
+
+        # Format rules into a list of strings
+        info.update(
+            {'rules': rules}
+        )
+        # Map 'tenant_id' column to 'project_id'
+        info.update(
+            {'project_id': info.pop('tenant_id')}
+        )
+
+        return zip(*sorted(six.iteritems(info)))

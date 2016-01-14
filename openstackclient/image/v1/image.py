@@ -213,6 +213,8 @@ class CreateImage(show.ShowOne):
         if parsed_args.private:
             kwargs['is_public'] = False
 
+        info = {}
+
         if not parsed_args.location and not parsed_args.copy_from:
             if parsed_args.volume:
                 volume_client = self.app.client_manager.volume
@@ -241,18 +243,18 @@ class CreateImage(show.ShowOne):
                     # do a chunked transfer
                     kwargs["data"] = sys.stdin
 
-        # Wrap the call to catch exceptions in order to close files
-        try:
-            image = image_client.images.create(**kwargs)
-        finally:
-            # Clean up open files - make sure data isn't a string
-            if ('data' in kwargs and hasattr(kwargs['data'], 'close') and
-               kwargs['data'] != sys.stdin):
-                    kwargs['data'].close()
+        if not parsed_args.volume:
+            # Wrap the call to catch exceptions in order to close files
+            try:
+                image = image_client.images.create(**kwargs)
+            finally:
+                # Clean up open files - make sure data isn't a string
+                if ('data' in kwargs and hasattr(kwargs['data'], 'close') and
+                   kwargs['data'] != sys.stdin):
+                        kwargs['data'].close()
 
-        info = {}
-        info.update(image._info)
-        info['properties'] = utils.format_dict(info.get('properties', {}))
+            info.update(image._info)
+            info['properties'] = utils.format_dict(info.get('properties', {}))
         return zip(*sorted(six.iteritems(info)))
 
 
@@ -352,7 +354,12 @@ class ListImage(lister.Lister):
             kwargs['public'] = True
         if parsed_args.private:
             kwargs['private'] = True
-        kwargs['detailed'] = bool(parsed_args.property or parsed_args.long)
+        # Note: We specifically need to do that below to get the 'status'
+        #       column.
+        #
+        # Always set kwargs['detailed'] to True, and then filter the columns
+        # according to whether the --long option is specified or not.
+        kwargs['detailed'] = True
 
         if parsed_args.long:
             columns = (
@@ -380,7 +387,7 @@ class ListImage(lister.Lister):
                 'Properties',
             )
         else:
-            columns = ("ID", "Name")
+            columns = ("ID", "Name", "Status")
             column_headers = columns
 
         # List of image data received
@@ -452,7 +459,7 @@ class SaveImage(command.Command):
         gc_utils.save_image(data, parsed_args.file)
 
 
-class SetImage(show.ShowOne):
+class SetImage(command.Command):
     """Set image properties"""
 
     log = logging.getLogger(__name__ + ".SetImage")
@@ -629,7 +636,7 @@ class SetImage(show.ShowOne):
                         volume_client.volumes,
                         parsed_args.volume,
                     )
-                    response, body = volume_client.volumes.upload_to_image(
+                    volume_client.volumes.upload_to_image(
                         source_volume.id,
                         parsed_args.force,
                         parsed_args.image,
@@ -640,7 +647,6 @@ class SetImage(show.ShowOne):
                          if parsed_args.disk_format
                          else image.disk_format),
                     )
-                    info = body['os-volume_upload_image']
                 elif parsed_args.file:
                     # Send an open file handle to glanceclient so it will
                     # do a chunked transfer
@@ -673,10 +679,7 @@ class SetImage(show.ShowOne):
                kwargs['data'] != sys.stdin):
                     kwargs['data'].close()
 
-        info = {}
-        info.update(image._info)
-        info['properties'] = utils.format_dict(info.get('properties', {}))
-        return zip(*sorted(six.iteritems(info)))
+        return
 
 
 class ShowImage(show.ShowOne):

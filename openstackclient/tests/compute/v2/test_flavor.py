@@ -13,26 +13,9 @@
 #   under the License.
 #
 
-import copy
-
+from openstackclient.common import exceptions
 from openstackclient.compute.v2 import flavor
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
-from openstackclient.tests import fakes
-
-
-class FakeFlavorResource(fakes.FakeResource):
-
-    _keys = {'property': 'value'}
-
-    def set_keys(self, args):
-        self._keys.update(args)
-
-    def unset_keys(self, keys):
-        for key in keys:
-            self._keys.pop(key, None)
-
-    def get_keys(self):
-        return self._keys
 
 
 class TestFlavor(compute_fakes.TestComputev2):
@@ -45,18 +28,90 @@ class TestFlavor(compute_fakes.TestComputev2):
         self.flavors_mock.reset_mock()
 
 
+class TestFlavorDelete(TestFlavor):
+
+    flavor = compute_fakes.FakeFlavor.create_one_flavor()
+
+    def setUp(self):
+        super(TestFlavorDelete, self).setUp()
+
+        self.flavors_mock.get.return_value = self.flavor
+        self.flavors_mock.delete.return_value = None
+
+        self.cmd = flavor.DeleteFlavor(self.app, None)
+
+    def test_flavor_delete(self):
+        arglist = [
+            self.flavor.id
+        ]
+        verifylist = [
+            ('flavor', self.flavor.id),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.cmd.take_action(parsed_args)
+
+        self.flavors_mock.delete.assert_called_with(self.flavor.id)
+
+    def test_flavor_delete_with_unexist_flavor(self):
+        self.flavors_mock.get.side_effect = exceptions.NotFound(None)
+        self.flavors_mock.find.side_effect = exceptions.NotFound(None)
+
+        arglist = [
+            'unexist_flavor'
+        ]
+        verifylist = [
+            ('flavor', 'unexist_flavor'),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(
+            exceptions.CommandError,
+            self.cmd.take_action,
+            parsed_args)
+
+
 class TestFlavorList(TestFlavor):
+
+    # Return value of self.flavors_mock.list().
+    flavors = compute_fakes.FakeFlavor.create_flavors(count=1)
+
+    columns = (
+        'ID',
+        'Name',
+        'RAM',
+        'Disk',
+        'Ephemeral',
+        'VCPUs',
+        'Is Public',
+    )
+    columns_long = columns + (
+        'Swap',
+        'RXTX Factor',
+        'Properties'
+    )
+
+    data = ((
+        flavors[0].id,
+        flavors[0].name,
+        flavors[0].ram,
+        '',
+        '',
+        flavors[0].vcpus,
+        ''
+    ), )
+    data_long = (data[0] + (
+        '',
+        '',
+        'property=\'value\''
+    ), )
 
     def setUp(self):
         super(TestFlavorList, self).setUp()
 
-        self.flavors_mock.list.return_value = [
-            FakeFlavorResource(
-                None,
-                copy.deepcopy(compute_fakes.FLAVOR),
-                loaded=True,
-            ),
-        ]
+        self.flavors_mock.list.return_value = self.flavors
 
         # Get the command object to test
         self.cmd = flavor.ListFlavor(self.app, None)
@@ -76,33 +131,17 @@ class TestFlavorList(TestFlavor):
 
         # Set expected values
         kwargs = {
-            'is_public': True
+            'is_public': True,
+            'limit': None,
+            'marker': None
         }
 
         self.flavors_mock.list.assert_called_with(
             **kwargs
         )
 
-        collist = (
-            'ID',
-            'Name',
-            'RAM',
-            'Disk',
-            'Ephemeral',
-            'VCPUs',
-            'Is Public',
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            compute_fakes.flavor_id,
-            compute_fakes.flavor_name,
-            compute_fakes.flavor_ram,
-            '',
-            '',
-            compute_fakes.flavor_vcpus,
-            ''
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
 
     def test_flavor_list_all_flavors(self):
         arglist = [
@@ -119,33 +158,17 @@ class TestFlavorList(TestFlavor):
 
         # Set expected values
         kwargs = {
-            'is_public': None
+            'is_public': None,
+            'limit': None,
+            'marker': None
         }
 
         self.flavors_mock.list.assert_called_with(
             **kwargs
         )
 
-        collist = (
-            'ID',
-            'Name',
-            'RAM',
-            'Disk',
-            'Ephemeral',
-            'VCPUs',
-            'Is Public',
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            compute_fakes.flavor_id,
-            compute_fakes.flavor_name,
-            compute_fakes.flavor_ram,
-            '',
-            '',
-            compute_fakes.flavor_vcpus,
-            ''
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
 
     def test_flavor_list_private_flavors(self):
         arglist = [
@@ -162,33 +185,17 @@ class TestFlavorList(TestFlavor):
 
         # Set expected values
         kwargs = {
-            'is_public': False
+            'is_public': False,
+            'limit': None,
+            'marker': None
         }
 
         self.flavors_mock.list.assert_called_with(
             **kwargs
         )
 
-        collist = (
-            'ID',
-            'Name',
-            'RAM',
-            'Disk',
-            'Ephemeral',
-            'VCPUs',
-            'Is Public',
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            compute_fakes.flavor_id,
-            compute_fakes.flavor_name,
-            compute_fakes.flavor_ram,
-            '',
-            '',
-            compute_fakes.flavor_vcpus,
-            ''
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
 
     def test_flavor_list_public_flavors(self):
         arglist = [
@@ -205,33 +212,17 @@ class TestFlavorList(TestFlavor):
 
         # Set expected values
         kwargs = {
-            'is_public': True
+            'is_public': True,
+            'limit': None,
+            'marker': None
         }
 
         self.flavors_mock.list.assert_called_with(
             **kwargs
         )
 
-        collist = (
-            'ID',
-            'Name',
-            'RAM',
-            'Disk',
-            'Ephemeral',
-            'VCPUs',
-            'Is Public',
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            compute_fakes.flavor_id,
-            compute_fakes.flavor_name,
-            compute_fakes.flavor_ram,
-            '',
-            '',
-            compute_fakes.flavor_vcpus,
-            ''
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
 
     def test_flavor_list_long(self):
         arglist = [
@@ -248,51 +239,28 @@ class TestFlavorList(TestFlavor):
 
         # Set expected values
         kwargs = {
-            'is_public': True
+            'is_public': True,
+            'limit': None,
+            'marker': None
         }
 
         self.flavors_mock.list.assert_called_with(
             **kwargs
         )
 
-        collist = (
-            'ID',
-            'Name',
-            'RAM',
-            'Disk',
-            'Ephemeral',
-            'VCPUs',
-            'Is Public',
-            'Swap',
-            'RXTX Factor',
-            'Properties'
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            compute_fakes.flavor_id,
-            compute_fakes.flavor_name,
-            compute_fakes.flavor_ram,
-            '',
-            '',
-            compute_fakes.flavor_vcpus,
-            '',
-            '',
-            '',
-            'property=\'value\''
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns_long, columns)
+        self.assertEqual(tuple(self.data_long), tuple(data))
 
 
 class TestFlavorSet(TestFlavor):
 
+    # Return value of self.flavors_mock.find().
+    flavor = compute_fakes.FakeFlavor.create_one_flavor()
+
     def setUp(self):
         super(TestFlavorSet, self).setUp()
 
-        self.flavors_mock.find.return_value = FakeFlavorResource(
-            None,
-            copy.deepcopy(compute_fakes.FLAVOR),
-            loaded=True,
-        )
+        self.flavors_mock.find.return_value = self.flavor
 
         self.cmd = flavor.SetFlavor(self.app, None)
 
@@ -318,14 +286,13 @@ class TestFlavorSet(TestFlavor):
 
 class TestFlavorUnset(TestFlavor):
 
+    # Return value of self.flavors_mock.find().
+    flavor = compute_fakes.FakeFlavor.create_one_flavor()
+
     def setUp(self):
         super(TestFlavorUnset, self).setUp()
 
-        self.flavors_mock.find.return_value = FakeFlavorResource(
-            None,
-            copy.deepcopy(compute_fakes.FLAVOR),
-            loaded=True,
-        )
+        self.flavors_mock.find.return_value = self.flavor
 
         self.cmd = flavor.UnsetFlavor(self.app, None)
 
