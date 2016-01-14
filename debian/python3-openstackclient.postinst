@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ] ; then
+	update-alternatives --install /usr/bin/openstack openstack /usr/bin/python3-openstack 200
+fi
+
+#DEBHELPER#
+
+exit 0

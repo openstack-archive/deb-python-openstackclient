@@ -1,3 +1,9 @@
+python-openstackclient (2.0.0-2) experimental; urgency=medium
+
+  * Added Python 3 support.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 14 Jan 2016 06:13:06 +0000
+
 python-openstackclient (2.0.0-1) experimental; urgency=medium
 
   * New upstream release.

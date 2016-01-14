@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "disappear" ] ; then
+	update-alternatives --remove openstack /usr/bin/python3-openstack
+fi
+
+#DEBHELPER#
+
+exit 0

@@ -5,5 +5,5 @@ Abstract: Sphinx documentation for OpenStackClient
 Section: Network/Remote Access
 
 Format: HTML
-Index: /usr/share/doc/python-openstackclient/html/index.html
-Files: /usr/share/doc/python-openstackclient/html/*
+Index: /usr/share/doc/python-openstackclient-doc/html/index.html
+Files: /usr/share/doc/python-openstackclient-doc/html/*
