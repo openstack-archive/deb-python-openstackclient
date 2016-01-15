@@ -1,6 +1,7 @@
 python-openstackclient (2.0.0-2) experimental; urgency=medium
 
   * Added Python 3 support.
+  * Fixed debian/copyright as per FTP masters recommendation.
 
  -- Thomas Goirand <zigo@debian.org>  Thu, 14 Jan 2016 06:13:06 +0000
 

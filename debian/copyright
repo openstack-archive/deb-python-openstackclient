@@ -2,12 +2,20 @@ Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: python-openstackclient
 Source: http://wiki.openstack.org/OpenStackClient
 
-Files: debian/*
-Copyright: (c) 2013-2014, gustavo panizzo <gfa@zumbi.com.ar>
+Files: *
+Copyright: (c) 2013-2014, OpenStack Foundation <openstack-dev@lists.openstack.org>
+           (c) 2013-2016, Hewlett-Packard Development Company, L.P.
+           (c) 2013-2015, Nebula Inc.
+           (c) 2012-2013, OpenStack, LLC.
+           (c) 2015, iWeb Technologies Inc.
+           (c) 2014, eBay Inc.
+           (c) 2014-2015, CERN.
+           (c) 2015, Symantec Corporation
 License: Apache-2
 
-Files: *
-Copyright: (c) 2013-2014, OpenStack
+Files: debian/*
+Copyright: (c) 2013-2015, gustavo panizzo <gfa@zumbi.com.ar>
+           (c) 2014-2016, Thomas Goirand <zigo@debian.org>
 License: Apache-2
 
 License: Apache-2
