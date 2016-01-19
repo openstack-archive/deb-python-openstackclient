@@ -1,3 +1,12 @@
+python-openstackclient (2.0.0-3) UNRELEASED; urgency=medium
+
+  * Blacklist 3 failed unit tests in Jessie (works in Sid):
+    - test_shell.TestShellCli.test_shell_args_precedence
+    - test_shell.TestShellCliEnv.test_shell_args_precedence_1
+    - test_shell.TestShellCliEnv.test_shell_args_precedence_2
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 19 Jan 2016 08:04:02 +0000
+
 python-openstackclient (2.0.0-2) experimental; urgency=medium
 
   * Added Python 3 support.
