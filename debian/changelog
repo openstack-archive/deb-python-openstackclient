@@ -1,12 +1,14 @@
-python-openstackclient (2.0.0-4) UNRELEASED; urgency=medium
+python-openstackclient (2.0.0-3) experimental; urgency=medium
 
   * Blacklist 3 failed unit tests in Jessie (works in Sid):
     - test_shell.TestShellCli.test_shell_args_precedence
     - test_shell.TestShellCliEnv.test_shell_args_precedence_1
     - test_shell.TestShellCliEnv.test_shell_args_precedence_2
   * Drop python-tuskarclient from build-depends (project is stopped).
+  * Add Breaks+Replaces: python-openstackclient (<< 2.0.0-2~) in
+    python-openstackclient-doc (Closes: #812452).
 
- -- Thomas Goirand <zigo@debian.org>  Wed, 27 Jan 2016 18:04:56 +0000
+ -- Thomas Goirand <zigo@debian.org>  Sat, 06 Feb 2016 08:46:49 +0000
 
 python-openstackclient (2.0.0-2) experimental; urgency=medium
 

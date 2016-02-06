@@ -164,6 +164,8 @@ Section: doc
 Architecture: all
 Depends: ${misc:Depends},
          ${sphinxdoc:Depends},
+Breaks: python-openstackclient (<< 2.0.0-2~),
+Replaces: python-openstackclient (<< 2.0.0-2~),
 Description: OpenStack Command-line Client - doc
  python-openstackclient is a unified command-line client for the OpenStack APIs.
  It is a thin wrapper to the stock python-*client modules that implement the
