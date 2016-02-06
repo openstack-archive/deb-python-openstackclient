@@ -7,6 +7,7 @@ python-openstackclient (2.0.0-3) experimental; urgency=medium
   * Drop python-tuskarclient from build-depends (project is stopped).
   * Add Breaks+Replaces: python-openstackclient (<< 2.0.0-2~) in
     python-openstackclient-doc (Closes: #812452).
+  * VCS URLs using HTTPS.
 
  -- Thomas Goirand <zigo@debian.org>  Sat, 06 Feb 2016 08:46:49 +0000
 
