@@ -1,6 +1,7 @@
 python-openstackclient (2.1.0-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Align (Build-)Depends with upstream.
 
  -- Corey Bryant <corey.bryant@canonical.com>  Tue, 01 Mar 2016 14:20:39 -0500
 
