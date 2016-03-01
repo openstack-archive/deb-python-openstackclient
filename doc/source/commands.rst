@@ -70,7 +70,7 @@ the API resources will be merged, as in the ``quota`` object that has options
 referring to both Compute and Volume quotas.
 
 * ``access token``: (**Identity**) long-lived OAuth-based token
-* ``availability zone``: (**Compute**) a logical partition of hosts or volume services
+* ``availability zone``: (**Compute**, **Network**, **Volume**) a logical partition of hosts or block storage or network services
 * ``aggregate``: (**Compute**) a grouping of servers
 * ``backup``: (**Volume**) a volume copy
 * ``catalog``: (**Identity**) service catalog
@@ -82,7 +82,7 @@ referring to both Compute and Volume quotas.
 * ``domain``: (**Identity**) a grouping of projects
 * ``ec2 credentials``: (**Identity**) AWS EC2-compatible credentials
 * ``endpoint``: (**Identity**) the base URL used to contact a specific service
-* ``extension``: (**Compute**, **Identity**, **Volume**) OpenStack server API extensions
+* ``extension``: (**Compute**, **Identity**, **Network**, **Volume**) OpenStack server API extensions
 * ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
 * ``flavor``: (**Compute**) predefined server configurations: ram, root disk, etc
 * ``group``: (**Identity**) a grouping of users
@@ -101,12 +101,14 @@ referring to both Compute and Volume quotas.
 * ``network``: (**Network**) - a virtual network for connecting servers and other resources
 * ``object``: (**Object Storage**) a single file in the Object Storage
 * ``policy``: (**Identity**) determines authorization
+* ``port``: (**Network**) - a virtual port for connecting servers and other resources to a network
 * ``project``: (**Identity**) owns a group of resources
 * ``quota``: (**Compute**, **Volume**) resource usage restrictions
 * ``region``: (**Identity**) a subset of an OpenStack deployment
 * ``request token``: (**Identity**) temporary OAuth-based token
 * ``role``: (**Identity**) a policy object used to determine authorization
 * ``role assignment``: (**Identity**) a relationship between roles, users or groups, and domains or projects
+* ``router``: (**Network**) - a virtual router
 * ``security group``: (**Compute**, **Network**) - groups of network access rules
 * ``security group rule``: (**Compute**, **Network**) - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
@@ -114,6 +116,7 @@ referring to both Compute and Volume quotas.
 * ``service``: (**Identity**) a cloud service
 * ``service provider``: (**Identity**) a resource that consumes assertions from an ``identity provider``
 * ``snapshot``: (**Volume**) a point-in-time copy of a volume
+* ``subnet``: (**Network**) - a contiguous range of IP addresses assigned to a network
 * ``token``: (**Identity**) a bearer token managed by Identity service
 * ``usage``: (**Compute**) display host resources being consumed
 * ``user``: (**Identity**) individual cloud resources users
@@ -129,17 +132,18 @@ The following are known `Objects` used by OpenStack :doc:`plugins`. These are
 listed here to avoid name conflicts when creating new plugins. For a complete
 list check out :doc:`plugin-commands`.
 
+* ``action definition``: (**Workflow Engine (Mistral)**)
+* ``action execution``: (**Workflow Engine (Mistral)**)
 * ``baremetal``: (**Baremetal (Ironic)**)
 * ``congress datasource``: (**Policy (Congress)**)
 * ``congress driver``: (**Policy (Congress)**)
 * ``congress policy``: (**Policy (Congress)**)
 * ``congress policy rule``: (**Policy (Congress)**)
+* ``cron trigger``: (**Workflow Engine (Mistral)**)
 * ``dataprocessing data source``: (**Data Processing (Sahara)**)
 * ``dataprocessing image``: (**Data Processing (Sahara)**)
 * ``dataprocessing image tags``: (**Data Processing (Sahara)**)
 * ``dataprocessing plugin``: (**Data Processing (Sahara)**)
-* ``management plan``: (**Management (Tuskar)**)
-* ``management role``: (**Management (Tuskar)**)
 * ``message-broker cluster``: (**Message Broker (Cue)**)
 * ``message flavor``: (**Messaging (Zaqar)**)
 * ``pool``: (**Messaging (Zaqar)**)
@@ -150,7 +154,11 @@ list check out :doc:`plugin-commands`.
 * ``secret container``: (**Key Manager (Barbican)**)
 * ``secret order``: (**Key Manager (Barbican)**)
 * ``stack``: (**Orchestration (Heat)**)
+* ``task exeuction``: (**Workflow Engine (Mistral)**)
 * ``tld``: (**DNS (Designate)**)
+* ``workbook``: (**Workflow Engine (Mistral)**)
+* ``workflow``: (**Workflow Engine (Mistral)**)
+* ``workflow execution``: (**Workflow Engine (Mistral)**)
 * ``zone``: (**DNS (Designate)**)
 * ``zone blacklist``: (**DNS (Designate)**)
 * ``zone transfer``: (**DNS (Designate)**)

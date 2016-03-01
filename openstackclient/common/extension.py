@@ -16,17 +16,13 @@
 """Extension action implementations"""
 
 import itertools
-import logging
 
-from cliff import lister
-
+from openstackclient.common import command
 from openstackclient.common import utils
 
 
-class ListExtension(lister.Lister):
+class ListExtension(command.Lister):
     """List API extensions"""
-
-    log = logging.getLogger(__name__ + '.ListExtension')
 
     def get_parser(self, prog_name):
         parser = super(ListExtension, self).get_parser(prog_name)
@@ -49,7 +45,7 @@ class ListExtension(lister.Lister):
             '--volume',
             action='store_true',
             default=False,
-            help='List extensions for the Volume API')
+            help='List extensions for the Block Storage API')
         parser.add_argument(
             '--long',
             action='store_true',
@@ -58,8 +54,6 @@ class ListExtension(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
-
         if parsed_args.long:
             columns = ('Name', 'Namespace', 'Description',
                        'Alias', 'Updated', 'Links')
@@ -95,7 +89,7 @@ class ListExtension(lister.Lister):
             try:
                 data += volume_client.list_extensions.show_all()
             except Exception:
-                message = "Extensions list not supported by Volume API"
+                message = "Extensions list not supported by Block Storage API"
                 self.log.warning(message)
 
         # Resource classes for the above
@@ -111,9 +105,9 @@ class ListExtension(lister.Lister):
         if parsed_args.network or show_all:
             network_client = self.app.client_manager.network
             try:
-                data = network_client.list_extensions()['extensions']
+                data = network_client.extensions()
                 dict_tuples = (
-                    utils.get_dict_properties(
+                    utils.get_item_properties(
                         s,
                         columns,
                         formatters={},

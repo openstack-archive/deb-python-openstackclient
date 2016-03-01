@@ -18,14 +18,11 @@
 import argparse
 import getpass
 import io
-import logging
 import os
 import six
 import sys
 
-from cliff import command
-from cliff import lister
-from cliff import show
+from openstackclient.common import command
 
 try:
     from novaclient.v2 import servers
@@ -37,7 +34,6 @@ from openstackclient.common import parseractions
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
 from openstackclient.identity import common as identity_common
-from openstackclient.network import common
 
 
 def _format_servers_list_networks(networks):
@@ -174,8 +170,6 @@ def _show_progress(progress):
 class AddServerSecurityGroup(command.Command):
     """Add security group to server"""
 
-    log = logging.getLogger(__name__ + '.AddServerSecurityGroup')
-
     def get_parser(self, prog_name):
         parser = super(AddServerSecurityGroup, self).get_parser(prog_name)
         parser.add_argument(
@@ -191,8 +185,6 @@ class AddServerSecurityGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
 
         server = utils.find_resource(
@@ -205,13 +197,10 @@ class AddServerSecurityGroup(command.Command):
         )
 
         server.add_security_group(security_group.name)
-        return
 
 
 class AddServerVolume(command.Command):
     """Add volume to server"""
-
-    log = logging.getLogger(__name__ + '.AddServerVolume')
 
     def get_parser(self, prog_name):
         parser = super(AddServerVolume, self).get_parser(prog_name)
@@ -233,8 +222,6 @@ class AddServerVolume(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume
 
@@ -254,14 +241,8 @@ class AddServerVolume(command.Command):
         )
 
 
-class CreateServer(show.ShowOne):
+class CreateServer(command.ShowOne):
     """Create a new server"""
-
-    log = logging.getLogger(__name__ + '.CreateServer')
-
-    def _is_neutron_enabled(self):
-        service_catalog = self.app.client_manager.auth_ref.service_catalog
-        return 'network' in service_catalog.get_endpoints()
 
     def get_parser(self, prog_name):
         parser = super(CreateServer, self).get_parser(prog_name)
@@ -276,25 +257,25 @@ class CreateServer(show.ShowOne):
         disk_group.add_argument(
             '--image',
             metavar='<image>',
-            help=_('Create server from this image'),
+            help=_('Create server from this image (name or ID)'),
         )
         disk_group.add_argument(
             '--volume',
             metavar='<volume>',
-            help=_('Create server from this volume'),
+            help=_('Create server from this volume (name or ID)'),
         )
         parser.add_argument(
             '--flavor',
             metavar='<flavor>',
             required=True,
-            help=_('Create server with this flavor'),
+            help=_('Create server with this flavor (name or ID)'),
         )
         parser.add_argument(
             '--security-group',
             metavar='<security-group-name>',
             action='append',
             default=[],
-            help=_('Security group to assign to this server '
+            help=_('Security group to assign to this server (name or ID) '
                    '(repeat for multiple groups)'),
         )
         parser.add_argument(
@@ -385,7 +366,6 @@ class CreateServer(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume
@@ -462,8 +442,6 @@ class CreateServer(show.ShowOne):
                 block_device_mapping.update({dev_key: block_volume})
 
         nics = []
-        if parsed_args.nic:
-            neutron_enabled = self._is_neutron_enabled()
         for nic_str in parsed_args.nic:
             nic_info = {"net-id": "", "v4-fixed-ip": "",
                         "v6-fixed-ip": "", "port-id": ""}
@@ -473,18 +451,16 @@ class CreateServer(show.ShowOne):
                 msg = _("either net-id or port-id should be specified "
                         "but not both")
                 raise exceptions.CommandError(msg)
-            if neutron_enabled:
+            if self.app.client_manager.is_network_endpoint_enabled():
                 network_client = self.app.client_manager.network
                 if nic_info["net-id"]:
-                    nic_info["net-id"] = common.find(network_client,
-                                                     'network',
-                                                     'networks',
-                                                     nic_info["net-id"])
+                    net = network_client.find_network(
+                        nic_info["net-id"], ignore_missing=False)
+                    nic_info["net-id"] = net.id
                 if nic_info["port-id"]:
-                    nic_info["port-id"] = common.find(network_client,
-                                                      'port',
-                                                      'ports',
-                                                      nic_info["port-id"])
+                    port = network_client.find_port(
+                        nic_info["port-id"], ignore_missing=False)
+                    nic_info["port-id"] = port.id
             else:
                 if nic_info["net-id"]:
                     nic_info["net-id"] = utils.find_resource(
@@ -493,7 +469,7 @@ class CreateServer(show.ShowOne):
                     ).id
                 if nic_info["port-id"]:
                     msg = _("can't create server with port specified "
-                            "since neutron not enabled")
+                            "since network endpoint not enabled")
                     raise exceptions.CommandError(msg)
             nics.append(nic_info)
 
@@ -566,10 +542,8 @@ class CreateServer(show.ShowOne):
         return zip(*sorted(six.iteritems(details)))
 
 
-class CreateServerImage(show.ShowOne):
+class CreateServerImage(command.ShowOne):
     """Create a new disk image from a running server"""
-
-    log = logging.getLogger(__name__ + '.CreateServerImage')
 
     def get_parser(self, prog_name):
         parser = super(CreateServerImage, self).get_parser(prog_name)
@@ -590,7 +564,6 @@ class CreateServerImage(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         image_client = self.app.client_manager.image
@@ -632,8 +605,6 @@ class CreateServerImage(show.ShowOne):
 class DeleteServer(command.Command):
     """Delete server(s)"""
 
-    log = logging.getLogger(__name__ + '.DeleteServer')
-
     def get_parser(self, prog_name):
         parser = super(DeleteServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -649,7 +620,6 @@ class DeleteServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:
@@ -668,13 +638,10 @@ class DeleteServer(command.Command):
                                    server_obj.id)
                     sys.stdout.write(_('\nError deleting server'))
                     raise SystemExit
-        return
 
 
-class ListServer(lister.Lister):
+class ListServer(command.Lister):
     """List servers"""
-
-    log = logging.getLogger(__name__ + '.ListServer')
 
     def get_parser(self, prog_name):
         parser = super(ListServer, self).get_parser(prog_name)
@@ -712,12 +679,12 @@ class ListServer(lister.Lister):
         parser.add_argument(
             '--flavor',
             metavar='<flavor>',
-            help=_('Search by flavor'),
+            help=_('Search by flavor (name or ID)'),
         )
         parser.add_argument(
             '--image',
             metavar='<image>',
-            help=_('Search by image'),
+            help=_('Search by image (name or ID)'),
         )
         parser.add_argument(
             '--host',
@@ -767,7 +734,6 @@ class ListServer(lister.Lister):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         identity_client = self.app.client_manager.identity
@@ -789,6 +755,20 @@ class ListServer(lister.Lister):
                 parsed_args.user_domain,
             ).id
 
+        # Nova only supports list servers searching by flavor ID. So if a
+        # flavor name is given, map it to ID.
+        flavor_id = None
+        if parsed_args.flavor:
+            flavor_id = utils.find_resource(compute_client.flavors,
+                                            parsed_args.flavor).id
+
+        # Nova only supports list servers searching by image ID. So if a
+        # image name is given, map it to ID.
+        image_id = None
+        if parsed_args.image:
+            image_id = utils.find_resource(compute_client.images,
+                                           parsed_args.image).id
+
         search_opts = {
             'reservation_id': parsed_args.reservation_id,
             'ip': parsed_args.ip,
@@ -796,8 +776,8 @@ class ListServer(lister.Lister):
             'name': parsed_args.name,
             'instance_name': parsed_args.instance_name,
             'status': parsed_args.status,
-            'flavor': parsed_args.flavor,
-            'image': parsed_args.image,
+            'flavor': flavor_id,
+            'image': image_id,
             'host': parsed_args.host,
             'tenant_id': project_id,
             'all_tenants': parsed_args.all_projects,
@@ -874,8 +854,6 @@ class LockServer(command.Command):
 
     """Lock server(s). A non-admin user will not be able to execute actions"""
 
-    log = logging.getLogger(__name__ + '.LockServer')
-
     def get_parser(self, prog_name):
         parser = super(LockServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -886,7 +864,6 @@ class LockServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -909,8 +886,6 @@ class LockServer(command.Command):
 
 class MigrateServer(command.Command):
     """Migrate server to different host"""
-
-    log = logging.getLogger(__name__ + '.MigrateServer')
 
     def get_parser(self, prog_name):
         parser = super(MigrateServer, self).get_parser(prog_name)
@@ -960,7 +935,6 @@ class MigrateServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -993,8 +967,6 @@ class MigrateServer(command.Command):
 class PauseServer(command.Command):
     """Pause server(s)"""
 
-    log = logging.getLogger(__name__ + '.PauseServer')
-
     def get_parser(self, prog_name):
         parser = super(PauseServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1005,7 +977,6 @@ class PauseServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:
@@ -1017,8 +988,6 @@ class PauseServer(command.Command):
 
 class RebootServer(command.Command):
     """Perform a hard or soft server reboot"""
-
-    log = logging.getLogger(__name__ + '.RebootServer')
 
     def get_parser(self, prog_name):
         parser = super(RebootServer, self).get_parser(prog_name)
@@ -1051,7 +1020,6 @@ class RebootServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
@@ -1070,10 +1038,8 @@ class RebootServer(command.Command):
                 raise SystemExit
 
 
-class RebuildServer(show.ShowOne):
+class RebuildServer(command.ShowOne):
     """Rebuild server"""
-
-    log = logging.getLogger(__name__ + '.RebuildServer')
 
     def get_parser(self, prog_name):
         parser = super(RebuildServer, self).get_parser(prog_name)
@@ -1085,8 +1051,8 @@ class RebuildServer(show.ShowOne):
         parser.add_argument(
             '--image',
             metavar='<image>',
-            required=True,
-            help=_('Recreate server from this image'),
+            help=_('Recreate server from the specified image (name or ID).'
+                   ' Defaults to the currently used one.'),
         )
         parser.add_argument(
             '--password',
@@ -1100,15 +1066,15 @@ class RebuildServer(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
 
-        # Lookup parsed_args.image
-        image = utils.find_resource(compute_client.images, parsed_args.image)
-
         server = utils.find_resource(
             compute_client.servers, parsed_args.server)
+
+        # If parsed_args.image is not set, default to the currently used one.
+        image_id = parsed_args.image or server._info.get('image', {}).get('id')
+        image = utils.find_resource(compute_client.images, image_id)
 
         server = server.rebuild(image, parsed_args.password)
         if parsed_args.wait:
@@ -1129,8 +1095,6 @@ class RebuildServer(show.ShowOne):
 class RemoveServerSecurityGroup(command.Command):
     """Remove security group from server"""
 
-    log = logging.getLogger(__name__ + '.RemoveServerSecurityGroup')
-
     def get_parser(self, prog_name):
         parser = super(RemoveServerSecurityGroup, self).get_parser(prog_name)
         parser.add_argument(
@@ -1146,8 +1110,6 @@ class RemoveServerSecurityGroup(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
 
         server = utils.find_resource(
@@ -1165,8 +1127,6 @@ class RemoveServerSecurityGroup(command.Command):
 class RemoveServerVolume(command.Command):
     """Remove volume from server"""
 
-    log = logging.getLogger(__name__ + '.RemoveServerVolume')
-
     def get_parser(self, prog_name):
         parser = super(RemoveServerVolume, self).get_parser(prog_name)
         parser.add_argument(
@@ -1182,8 +1142,6 @@ class RemoveServerVolume(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
         volume_client = self.app.client_manager.volume
 
@@ -1202,10 +1160,8 @@ class RemoveServerVolume(command.Command):
         )
 
 
-class RescueServer(show.ShowOne):
+class RescueServer(command.ShowOne):
     """Put server in rescue mode"""
-
-    log = logging.getLogger(__name__ + '.RescueServer')
 
     def get_parser(self, prog_name):
         parser = super(RescueServer, self).get_parser(prog_name)
@@ -1216,7 +1172,6 @@ class RescueServer(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1229,8 +1184,6 @@ class RescueServer(show.ShowOne):
 
 class ResizeServer(command.Command):
     """Scale server to a new flavor"""
-
-    log = logging.getLogger(__name__ + '.ResizeServer')
 
     def get_parser(self, prog_name):
         parser = super(ResizeServer, self).get_parser(prog_name)
@@ -1262,7 +1215,6 @@ class ResizeServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1296,8 +1248,6 @@ class ResizeServer(command.Command):
 class ResumeServer(command.Command):
     """Resume server(s)"""
 
-    log = logging.getLogger(__name__ + '.ResumeServer')
-
     def get_parser(self, prog_name):
         parser = super(ResumeServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1308,7 +1258,6 @@ class ResumeServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1321,8 +1270,6 @@ class ResumeServer(command.Command):
 
 class SetServer(command.Command):
     """Set server properties"""
-
-    log = logging.getLogger(__name__ + '.SetServer')
 
     def get_parser(self, prog_name):
         parser = super(SetServer, self).get_parser(prog_name)
@@ -1350,7 +1297,6 @@ class SetServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1381,8 +1327,6 @@ class SetServer(command.Command):
 class ShelveServer(command.Command):
     """Shelve server(s)"""
 
-    log = logging.getLogger(__name__ + '.ShelveServer')
-
     def get_parser(self, prog_name):
         parser = super(ShelveServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1393,7 +1337,6 @@ class ShelveServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:
@@ -1403,10 +1346,8 @@ class ShelveServer(command.Command):
             ).shelve()
 
 
-class ShowServer(show.ShowOne):
+class ShowServer(command.ShowOne):
     """Show server details"""
-
-    log = logging.getLogger(__name__ + '.ShowServer')
 
     def get_parser(self, prog_name):
         parser = super(ShowServer, self).get_parser(prog_name)
@@ -1423,7 +1364,6 @@ class ShowServer(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(compute_client.servers,
@@ -1442,8 +1382,6 @@ class ShowServer(show.ShowOne):
 
 class SshServer(command.Command):
     """Ssh to server"""
-
-    log = logging.getLogger(__name__ + '.SshServer')
 
     def get_parser(self, prog_name):
         parser = super(SshServer, self).get_parser(prog_name)
@@ -1546,7 +1484,6 @@ class SshServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1590,8 +1527,6 @@ class SshServer(command.Command):
 class StartServer(command.Command):
     """Start server(s)."""
 
-    log = logging.getLogger(__name__ + '.StartServer')
-
     def get_parser(self, prog_name):
         parser = super(StartServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1602,7 +1537,6 @@ class StartServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:
@@ -1615,8 +1549,6 @@ class StartServer(command.Command):
 class StopServer(command.Command):
     """Stop server(s)."""
 
-    log = logging.getLogger(__name__ + '.StopServer')
-
     def get_parser(self, prog_name):
         parser = super(StopServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1627,7 +1559,6 @@ class StopServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:
@@ -1640,8 +1571,6 @@ class StopServer(command.Command):
 class SuspendServer(command.Command):
     """Suspend server(s)"""
 
-    log = logging.getLogger(__name__ + '.SuspendServer')
-
     def get_parser(self, prog_name):
         parser = super(SuspendServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1652,7 +1581,6 @@ class SuspendServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1666,8 +1594,6 @@ class SuspendServer(command.Command):
 class UnlockServer(command.Command):
     """Unlock server(s)"""
 
-    log = logging.getLogger(__name__ + '.UnlockServer')
-
     def get_parser(self, prog_name):
         parser = super(UnlockServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1678,7 +1604,6 @@ class UnlockServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1692,8 +1617,6 @@ class UnlockServer(command.Command):
 class UnpauseServer(command.Command):
     """Unpause server(s)"""
 
-    log = logging.getLogger(__name__ + '.UnpauseServer')
-
     def get_parser(self, prog_name):
         parser = super(UnpauseServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1704,7 +1627,6 @@ class UnpauseServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1718,8 +1640,6 @@ class UnpauseServer(command.Command):
 class UnrescueServer(command.Command):
     """Restore server from rescue mode"""
 
-    log = logging.getLogger(__name__ + '.UnrescueServer')
-
     def get_parser(self, prog_name):
         parser = super(UnrescueServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1729,7 +1649,6 @@ class UnrescueServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -1741,8 +1660,6 @@ class UnrescueServer(command.Command):
 
 class UnsetServer(command.Command):
     """Unset server properties"""
-
-    log = logging.getLogger(__name__ + '.UnsetServer')
 
     def get_parser(self, prog_name):
         parser = super(UnsetServer, self).get_parser(prog_name)
@@ -1761,7 +1678,6 @@ class UnsetServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         server = utils.find_resource(
@@ -1779,8 +1695,6 @@ class UnsetServer(command.Command):
 class UnshelveServer(command.Command):
     """Unshelve server(s)"""
 
-    log = logging.getLogger(__name__ + '.UnshelveServer')
-
     def get_parser(self, prog_name):
         parser = super(UnshelveServer, self).get_parser(prog_name)
         parser.add_argument(
@@ -1791,7 +1705,6 @@ class UnshelveServer(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         for server in parsed_args.server:

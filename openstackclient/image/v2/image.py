@@ -16,18 +16,16 @@
 """Image V2 Action Implementations"""
 
 import argparse
-import logging
 import six
 
-from cliff import command
-from cliff import lister
-from cliff import show
 from glanceclient.common import utils as gc_utils
 
 from openstackclient.api import utils as api_utils
+from openstackclient.common import command
 from openstackclient.common import exceptions
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.i18n import _  # noqa
 from openstackclient.identity import common
 
 
@@ -66,10 +64,8 @@ def _format_image(image):
     return info
 
 
-class AddProjectToImage(show.ShowOne):
+class AddProjectToImage(command.ShowOne):
     """Associate project with image"""
-
-    log = logging.getLogger(__name__ + ".AddProjectToImage")
 
     def get_parser(self, prog_name):
         parser = super(AddProjectToImage, self).get_parser(prog_name)
@@ -87,8 +83,6 @@ class AddProjectToImage(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
         identity_client = self.app.client_manager.identity
 
@@ -108,15 +102,13 @@ class AddProjectToImage(show.ShowOne):
         return zip(*sorted(six.iteritems(image_member)))
 
 
-class CreateImage(show.ShowOne):
+class CreateImage(command.ShowOne):
     """Create/upload an image"""
 
-    log = logging.getLogger(__name__ + ".CreateImage")
     deadopts = ('size', 'location', 'copy-from', 'checksum', 'store')
 
     def get_parser(self, prog_name):
         parser = super(CreateImage, self).get_parser(prog_name)
-        # TODO(mordred): add --volume and --force parameters and support
         # TODO(bunting): There are additional arguments that v1 supported
         # that v2 either doesn't support or supports weirdly.
         # --checksum - could be faked clientside perhaps?
@@ -149,11 +141,6 @@ class CreateImage(show.ShowOne):
                  "(default: %s)" % DEFAULT_DISK_FORMAT,
         )
         parser.add_argument(
-            "--owner",
-            metavar="<owner>",
-            help="Image owner project name or ID",
-        )
-        parser.add_argument(
             "--min-disk",
             metavar="<disk-gb>",
             type=int,
@@ -169,6 +156,19 @@ class CreateImage(show.ShowOne):
             "--file",
             metavar="<file>",
             help="Upload image from local file",
+        )
+        parser.add_argument(
+            "--volume",
+            metavar="<volume>",
+            help="Create image from a volume",
+        )
+        parser.add_argument(
+            "--force",
+            dest='force',
+            action='store_true',
+            default=False,
+            help="Force image creation if volume is in use "
+            "(only meaningful with --volume)",
         )
         protected_group = parser.add_mutually_exclusive_group()
         protected_group.add_argument(
@@ -208,6 +208,21 @@ class CreateImage(show.ShowOne):
             help="Set a tag on this image "
                  "(repeat option to set multiple tags)",
         )
+        # NOTE(dtroyer): --owner is deprecated in Jan 2016 in an early
+        #                2.x release.  Do not remove before Jan 2017
+        #                and a 3.x release.
+        project_group = parser.add_mutually_exclusive_group()
+        project_group.add_argument(
+            "--project",
+            metavar="<project>",
+            help="Set an alternate project on this image (name or ID)",
+        )
+        project_group.add_argument(
+            "--owner",
+            metavar="<project>",
+            help=argparse.SUPPRESS,
+        )
+        common.add_project_domain_option_to_parser(parser)
         for deadopt in self.deadopts:
             parser.add_argument(
                 "--%s" % deadopt,
@@ -218,7 +233,7 @@ class CreateImage(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
+        identity_client = self.app.client_manager.identity
         image_client = self.app.client_manager.image
 
         for deadopt in self.deadopts:
@@ -232,8 +247,7 @@ class CreateImage(show.ShowOne):
         kwargs = {}
         copy_attrs = ('name', 'id',
                       'container_format', 'disk_format',
-                      'min_disk', 'min_ram',
-                      'tags', 'owner')
+                      'min_disk', 'min_ram', 'tags')
         for attr in copy_attrs:
             if attr in parsed_args:
                 val = getattr(parsed_args, attr, None)
@@ -241,10 +255,12 @@ class CreateImage(show.ShowOne):
                     # Only include a value in kwargs for attributes that
                     # are actually present on the command line
                     kwargs[attr] = val
+
         # properties should get flattened into the general kwargs
         if getattr(parsed_args, 'properties', None):
             for k, v in six.iteritems(parsed_args.properties):
                 kwargs[k] = str(v)
+
         # Handle exclusive booleans with care
         # Avoid including attributes in kwargs if an option is not
         # present on the command line.  These exclusive booleans are not
@@ -260,15 +276,58 @@ class CreateImage(show.ShowOne):
         if parsed_args.private:
             kwargs['visibility'] = 'private'
 
+        # Handle deprecated --owner option
+        project_arg = parsed_args.project
+        if parsed_args.owner:
+            project_arg = parsed_args.owner
+            self.log.warning(_(
+                'The --owner option is deprecated, '
+                'please use --project instead.'
+            ))
+        if project_arg:
+            kwargs['owner'] = common.find_project(
+                identity_client,
+                project_arg,
+                parsed_args.project_domain,
+            ).id
+
         # open the file first to ensure any failures are handled before the
         # image is created
         fp = gc_utils.get_data_file(parsed_args)
+        info = {}
+        if fp is not None and parsed_args.volume:
+            raise exceptions.CommandError("Uploading data and using container "
+                                          "are not allowed at the same time")
 
         if fp is None and parsed_args.file:
             self.log.warning("Failed to get an image file.")
             return {}, {}
 
-        image = image_client.images.create(**kwargs)
+        if parsed_args.owner:
+            kwargs['owner'] = common.find_project(
+                identity_client,
+                parsed_args.owner,
+                parsed_args.project_domain,
+            ).id
+
+        # If a volume is specified.
+        if parsed_args.volume:
+            volume_client = self.app.client_manager.volume
+            source_volume = utils.find_resource(
+                volume_client.volumes,
+                parsed_args.volume,
+            )
+            response, body = volume_client.volumes.upload_to_image(
+                source_volume.id,
+                parsed_args.force,
+                parsed_args.name,
+                parsed_args.container_format,
+                parsed_args.disk_format,
+            )
+            info = body['os-volume_upload_image']
+            info['volume_type'] = info['volume_type']['name']
+        else:
+            image = image_client.images.create(**kwargs)
 
         if fp is not None:
             with fp:
@@ -289,14 +348,14 @@ class CreateImage(show.ShowOne):
                 # update the image after the data has been uploaded
                 image = image_client.images.get(image.id)
 
-        info = _format_image(image)
+        if not info:
+            info = _format_image(image)
+
         return zip(*sorted(six.iteritems(info)))
 
 
 class DeleteImage(command.Command):
     """Delete image(s)"""
-
-    log = logging.getLogger(__name__ + ".DeleteImage")
 
     def get_parser(self, prog_name):
         parser = super(DeleteImage, self).get_parser(prog_name)
@@ -309,8 +368,6 @@ class DeleteImage(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
         for image in parsed_args.images:
             image_obj = utils.find_resource(
@@ -320,10 +377,8 @@ class DeleteImage(command.Command):
             image_client.images.delete(image_obj.id)
 
 
-class ListImage(lister.Lister):
+class ListImage(command.Lister):
     """List available images"""
-
-    log = logging.getLogger(__name__ + ".ListImage")
 
     def get_parser(self, prog_name):
         parser = super(ListImage, self).get_parser(prog_name)
@@ -376,11 +431,23 @@ class ListImage(lister.Lister):
                  "(default: asc), multiple keys and directions can be "
                  "specified separated by comma",
         )
+        parser.add_argument(
+            "--limit",
+            metavar="<limit>",
+            type=int,
+            help="Maximum number of images to display.",
+        )
+        parser.add_argument(
+            '--marker',
+            metavar='<marker>',
+            default=None,
+            help="The last image (name or ID) of the previous page. Display "
+                 "list of images after marker. Display all images if not "
+                 "specified."
+        )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
 
         kwargs = {}
@@ -390,6 +457,11 @@ class ListImage(lister.Lister):
             kwargs['private'] = True
         if parsed_args.shared:
             kwargs['shared'] = True
+        if parsed_args.limit:
+            kwargs['limit'] = parsed_args.limit
+        if parsed_args.marker:
+            kwargs['marker'] = utils.find_resource(image_client.images,
+                                                   parsed_args.marker).id
 
         if parsed_args.long:
             columns = (
@@ -413,7 +485,7 @@ class ListImage(lister.Lister):
                 'Status',
                 'Visibility',
                 'Protected',
-                'Owner',
+                'Project',
                 'Tags',
             )
         else:
@@ -421,16 +493,7 @@ class ListImage(lister.Lister):
             column_headers = columns
 
         # List of image data received
-        data = []
-        # No pages received yet, so start the page marker at None.
-        marker = None
-        while True:
-            page = image_client.api.image_list(marker=marker, **kwargs)
-            if not page:
-                break
-            data.extend(page)
-            # Set the marker to the id of the last item we received
-            marker = page[-1]['id']
+        data = image_client.api.image_list(**kwargs)
 
         if parsed_args.property:
             # NOTE(dtroyer): coerce to a list to subscript it in py3
@@ -459,8 +522,6 @@ class ListImage(lister.Lister):
 class RemoveProjectImage(command.Command):
     """Disassociate project with image"""
 
-    log = logging.getLogger(__name__ + ".RemoveProjectImage")
-
     def get_parser(self, prog_name):
         parser = super(RemoveProjectImage, self).get_parser(prog_name)
         parser.add_argument(
@@ -477,8 +538,6 @@ class RemoveProjectImage(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
         identity_client = self.app.client_manager.identity
 
@@ -496,8 +555,6 @@ class RemoveProjectImage(command.Command):
 class SaveImage(command.Command):
     """Save an image locally"""
 
-    log = logging.getLogger(__name__ + ".SaveImage")
-
     def get_parser(self, prog_name):
         parser = super(SaveImage, self).get_parser(prog_name)
         parser.add_argument(
@@ -513,8 +570,6 @@ class SaveImage(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
         image = utils.find_resource(
             image_client.images,
@@ -528,7 +583,6 @@ class SaveImage(command.Command):
 class SetImage(command.Command):
     """Set image properties"""
 
-    log = logging.getLogger(__name__ + ".SetImage")
     deadopts = ('visibility',)
 
     def get_parser(self, prog_name):
@@ -539,8 +593,8 @@ class SetImage(command.Command):
         # --location - maybe location add?
         # --copy-from - does not exist in v2
         # --file - should be able to upload file
-        # --volume - needs adding
-        # --force - needs adding
+        # --volume - not possible with v2 as can't change id
+        # --force - see `--volume`
         # --checksum - maybe could be done client side
         # --stdin - could be implemented
         parser.add_argument(
@@ -552,11 +606,6 @@ class SetImage(command.Command):
             "--name",
             metavar="<name>",
             help="New image name"
-        )
-        parser.add_argument(
-            "--owner",
-            metavar="<project>",
-            help="New image owner project (name or ID)",
         )
         parser.add_argument(
             "--min-disk",
@@ -657,6 +706,32 @@ class SetImage(command.Command):
             metavar="<ramdisk-id>",
             help="ID of ramdisk image used to boot this disk image",
         )
+        deactivate_group = parser.add_mutually_exclusive_group()
+        deactivate_group.add_argument(
+            "--deactivate",
+            action="store_true",
+            help="Deactivate the image",
+        )
+        deactivate_group.add_argument(
+            "--activate",
+            action="store_true",
+            help="Activate the image",
+        )
+        # NOTE(dtroyer): --owner is deprecated in Jan 2016 in an early
+        #                2.x release.  Do not remove before Jan 2017
+        #                and a 3.x release.
+        project_group = parser.add_mutually_exclusive_group()
+        project_group.add_argument(
+            "--project",
+            metavar="<project>",
+            help="Set an alternate project on this image (name or ID)",
+        )
+        project_group.add_argument(
+            "--owner",
+            metavar="<project>",
+            help=argparse.SUPPRESS,
+        )
+        common.add_project_domain_option_to_parser(parser)
         for deadopt in self.deadopts:
             parser.add_argument(
                 "--%s" % deadopt,
@@ -667,7 +742,7 @@ class SetImage(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
+        identity_client = self.app.client_manager.identity
         image_client = self.app.client_manager.image
 
         for deadopt in self.deadopts:
@@ -680,7 +755,7 @@ class SetImage(command.Command):
         copy_attrs = ('architecture', 'container_format', 'disk_format',
                       'file', 'instance_id', 'kernel_id', 'locations',
                       'min_disk', 'min_ram', 'name', 'os_distro', 'os_version',
-                      'owner', 'prefix', 'progress', 'ramdisk_id', 'tags')
+                      'prefix', 'progress', 'ramdisk_id', 'tags')
         for attr in copy_attrs:
             if attr in parsed_args:
                 val = getattr(parsed_args, attr, None)
@@ -709,24 +784,55 @@ class SetImage(command.Command):
         if parsed_args.private:
             kwargs['visibility'] = 'private'
 
-        if not kwargs:
+        # Handle deprecated --owner option
+        project_arg = parsed_args.project
+        if parsed_args.owner:
+            project_arg = parsed_args.owner
+            self.log.warning(_(
+                'The --owner option is deprecated, '
+                'please use --project instead.'
+            ))
+        if project_arg:
+            kwargs['owner'] = common.find_project(
+                identity_client,
+                project_arg,
+                parsed_args.project_domain,
+            ).id
+
+        # Checks if anything that requires getting the image
+        if not (kwargs or parsed_args.deactivate or parsed_args.activate):
             self.log.warning("No arguments specified")
             return {}, {}
 
         image = utils.find_resource(
             image_client.images, parsed_args.image)
 
+        activation_status = None
+        if parsed_args.deactivate:
+            image_client.images.deactivate(image.id)
+            activation_status = "deactivated"
+        if parsed_args.activate:
+            image_client.images.reactivate(image.id)
+            activation_status = "activated"
+
+        # Check if need to do the actual update
+        if not kwargs:
+            return {}, {}
+
         if parsed_args.tags:
             # Tags should be extended, but duplicates removed
             kwargs['tags'] = list(set(image.tags).union(set(parsed_args.tags)))
 
-        image = image_client.images.update(image.id, **kwargs)
+        try:
+            image = image_client.images.update(image.id, **kwargs)
+        except Exception as e:
+            if activation_status is not None:
+                print("Image %s was %s." % (image.id, activation_status))
+            raise e
 
 
-class ShowImage(show.ShowOne):
+class ShowImage(command.ShowOne):
     """Display image details"""
-
-    log = logging.getLogger(__name__ + ".ShowImage")
 
     def get_parser(self, prog_name):
         parser = super(ShowImage, self).get_parser(prog_name)
@@ -738,8 +844,6 @@ class ShowImage(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         image_client = self.app.client_manager.image
         image = utils.find_resource(
             image_client.images,

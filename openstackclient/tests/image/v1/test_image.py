@@ -103,6 +103,7 @@ class TestImageCreate(TestImage):
             '--min-ram', '4',
             '--protected',
             '--private',
+            '--project', 'q',
             image_fakes.image_name,
         ]
         verifylist = [
@@ -114,6 +115,7 @@ class TestImageCreate(TestImage):
             ('unprotected', False),
             ('public', False),
             ('private', True),
+            ('project', 'q'),
             ('name', image_fakes.image_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -130,6 +132,7 @@ class TestImageCreate(TestImage):
             min_ram=4,
             protected=True,
             is_public=False,
+            owner='q',
             data=mock.ANY,
         )
 
@@ -237,6 +240,19 @@ class TestImageDelete(TestImage):
 
 class TestImageList(TestImage):
 
+    columns = (
+        'ID',
+        'Name',
+        'Status',
+    )
+    datalist = (
+        (
+            image_fakes.image_id,
+            image_fakes.image_name,
+            '',
+        ),
+    )
+
     def setUp(self):
         super(TestImageList, self).setUp()
 
@@ -265,15 +281,8 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name', 'Status')
-
-        self.assertEqual(collist, columns)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, tuple(data))
 
     def test_image_list_public_option(self):
         arglist = [
@@ -294,15 +303,8 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name', 'Status')
-
-        self.assertEqual(collist, columns)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, tuple(data))
 
     def test_image_list_private_option(self):
         arglist = [
@@ -323,15 +325,8 @@ class TestImageList(TestImage):
             marker=image_fakes.image_id,
         )
 
-        collist = ('ID', 'Name', 'Status')
-
-        self.assertEqual(collist, columns)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, tuple(data))
 
     def test_image_list_long_option(self):
         arglist = [
@@ -358,7 +353,7 @@ class TestImageList(TestImage):
             'Status',
             'Visibility',
             'Protected',
-            'Owner',
+            'Project',
             'Properties',
         )
 
@@ -404,15 +399,8 @@ class TestImageList(TestImage):
             property_field='properties',
         )
 
-        collist = ('ID', 'Name', 'Status')
-
-        self.assertEqual(columns, collist)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, tuple(data))
 
     @mock.patch('openstackclient.common.utils.sort_items')
     def test_image_list_sort_option(self, si_mock):
@@ -435,15 +423,8 @@ class TestImageList(TestImage):
             'name:asc'
         )
 
-        collist = ('ID', 'Name', 'Status')
-
-        self.assertEqual(collist, columns)
-        datalist = ((
-            image_fakes.image_id,
-            image_fakes.image_name,
-            '',
-        ), )
-        self.assertEqual(datalist, tuple(data))
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, tuple(data))
 
 
 class TestImageSet(TestImage):
@@ -484,22 +465,22 @@ class TestImageSet(TestImage):
     def test_image_set_options(self):
         arglist = [
             '--name', 'new-name',
-            '--owner', 'new-owner',
             '--min-disk', '2',
             '--min-ram', '4',
             '--container-format', 'ovf',
             '--disk-format', 'vmdk',
             '--size', '35165824',
+            '--project', 'new-owner',
             image_fakes.image_name,
         ]
         verifylist = [
             ('name', 'new-name'),
-            ('owner', 'new-owner'),
             ('min_disk', 2),
             ('min_ram', 4),
             ('container_format', 'ovf'),
             ('disk_format', 'vmdk'),
             ('size', 35165824),
+            ('project', 'new-owner'),
             ('image', image_fakes.image_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)

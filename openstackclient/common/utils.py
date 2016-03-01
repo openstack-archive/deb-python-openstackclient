@@ -26,29 +26,6 @@ from oslo_utils import importutils
 from openstackclient.common import exceptions
 
 
-def log_method(log, level=logging.DEBUG):
-    """Logs a method and its arguments when entered."""
-
-    def decorator(func):
-        func_name = func.__name__
-
-        @six.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            if log.isEnabledFor(level):
-                pretty_args = []
-                if args:
-                    pretty_args.extend(str(a) for a in args)
-                if kwargs:
-                    pretty_args.extend(
-                        "%s=%s" % (k, v) for k, v in six.iteritems(kwargs))
-                log.log(level, "%s(%s)", func_name, ", ".join(pretty_args))
-            return func(self, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
 def find_resource(manager, name_or_id, **kwargs):
     """Helper for the _find_* methods.
 
@@ -154,14 +131,25 @@ def format_dict(data):
     return output[:-2]
 
 
-def format_list(data):
+def format_list(data, separator=', '):
     """Return a formatted strings
 
     :param data: a list of strings
-    :rtype: a string formatted to a,b,c
+    :param separator: the separator to use between strings (default: ', ')
+    :rtype: a string formatted based on separator
     """
 
-    return ', '.join(sorted(data))
+    return separator.join(sorted(data))
+
+
+def format_list_of_dicts(data):
+    """Return a formatted string of key value pairs for each dict
+
+    :param data: a list of dicts
+    :rtype: a string formatted to key='value' with dicts separated by new line
+    """
+
+    return '\n'.join(format_dict(i) for i in data)
 
 
 def get_field(item, field):
@@ -258,10 +246,6 @@ def sort_items(items, sort_str):
     return items
 
 
-def string_to_bool(arg):
-    return arg.strip().lower() in ('t', 'true', 'yes', '1')
-
-
 def env(*vars, **kwargs):
     """Search for the first defined of possibly many env vars
 
@@ -330,6 +314,8 @@ def wait_for_status(status_f,
 def wait_for_delete(manager,
                     res_id,
                     status_field='status',
+                    error_status=['error'],
+                    exception_name=['NotFound'],
                     sleep_time=5,
                     timeout=300,
                     callback=None):
@@ -340,6 +326,8 @@ def wait_for_delete(manager,
     :param status_field: the status attribute in the returned resource object,
         this is used to check for error states while the resource is being
         deleted
+    :param error_status: a list of status strings for error
+    :param exception_name: a list of exception strings for deleted case
     :param sleep_time: wait this long between checks (seconds)
     :param timeout: check until this long (seconds)
     :param callback: called per sleep cycle, useful to display progress; this
@@ -356,12 +344,12 @@ def wait_for_delete(manager,
             # handle a NotFound exception here without parsing the message
             res = manager.get(res_id)
         except Exception as ex:
-            if type(ex).__name__ == 'NotFound':
+            if type(ex).__name__ in exception_name:
                 return True
             raise
 
         status = getattr(res, status_field, '').lower()
-        if status == 'error':
+        if status in error_status:
             return False
 
         if callback:

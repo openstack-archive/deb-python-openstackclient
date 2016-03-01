@@ -19,7 +19,6 @@ Create/upload an image
         [--store <store>]
         [--container-format <container-format>]
         [--disk-format <disk-format>]
-        [--owner <project>]
         [--size <size>]
         [--min-disk <disk-gb>]
         [--min-ram <ram-mb>]
@@ -33,6 +32,7 @@ Create/upload an image
         [--public | --private]
         [--property <key=value> [...] ]
         [--tag <tag> [...] ]
+        [--project <project> [--project-domain <project-domain>]]
         <image-name>
 
 .. option:: --id <id>
@@ -52,10 +52,6 @@ Create/upload an image
 .. option:: --disk-format <disk-format>
 
     Image disk format (default: raw)
-
-.. option:: --owner <project>
-
-    Image owner project name or ID
 
 .. option:: --size <size>
 
@@ -127,6 +123,18 @@ Create/upload an image
 
     .. versionadded:: 2
 
+.. option:: --project <project>
+
+    Set an alternate project on this image (name or ID).
+    Previously known as `--owner`.
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
+    .. versionadded:: 2
+
 .. describe:: <image-name>
 
     New image name
@@ -159,6 +167,8 @@ List available images
         [--property <key=value>]
         [--long]
         [--sort <key>[:<direction>]]
+        [--limit <limit>]
+        [--marker <marker>]
 
 .. option:: --public
 
@@ -186,6 +196,15 @@ List available images
 
     Sort output by selected keys and directions(asc or desc) (default: asc),
     multiple keys and directions can be specified separated by comma
+
+.. option:: --limit <limit>
+
+    Maximum number of images to display.
+
+.. option:: --marker <marker>
+
+    The last image (name or ID) of the previous page. Display list of images
+    after marker. Display all images if not specified.
 
 image save
 ----------
@@ -219,7 +238,6 @@ Set image properties
 
     os image set
         [--name <name>]
-        [--owner <project>]
         [--min-disk <disk-gb>]
         [--min-ram <disk-ram>]
         [--container-format <container-format>]
@@ -243,15 +261,13 @@ Set image properties
         [--os-distro <os-distro>]
         [--os-version <os-version>]
         [--ramdisk-id <ramdisk-id>]
+        [--activate|--deactivate]
+        [--project <project> [--project-domain <project-domain>]]
         <image>
 
 .. option:: --name <name>
 
     New image name
-
-.. option:: --owner <project>
-
-    New image owner project (name or ID)
 
 .. option:: --min-disk <disk-gb>
 
@@ -384,6 +400,30 @@ Set image properties
 .. option:: --ramdisk-id <ramdisk-id>
 
     ID of ramdisk image used to boot this disk image
+
+    .. versionadded:: 2
+
+.. option:: --activate
+
+    Activate the image.
+
+    .. versionadded:: 2
+
+.. option:: --deactivate
+
+    Deactivate the image.
+
+    .. versionadded:: 2
+
+.. option:: --project <project>
+
+    Set an alternate project on this image (name or ID).
+    Previously known as `--owner`.
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
 
     .. versionadded:: 2
 

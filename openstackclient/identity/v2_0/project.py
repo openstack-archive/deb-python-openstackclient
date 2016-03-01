@@ -15,23 +15,18 @@
 
 """Identity v2 Project action implementations"""
 
-import logging
 import six
 
-from cliff import command
-from cliff import lister
-from cliff import show
 from keystoneauth1 import exceptions as ks_exc
 
+from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
 
 
-class CreateProject(show.ShowOne):
+class CreateProject(command.ShowOne):
     """Create new project"""
-
-    log = logging.getLogger(__name__ + '.CreateProject')
 
     def get_parser(self, prog_name):
         parser = super(CreateProject, self).get_parser(prog_name)
@@ -70,7 +65,6 @@ class CreateProject(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -106,8 +100,6 @@ class CreateProject(show.ShowOne):
 class DeleteProject(command.Command):
     """Delete project(s)"""
 
-    log = logging.getLogger(__name__ + '.DeleteProject')
-
     def get_parser(self, prog_name):
         parser = super(DeleteProject, self).get_parser(prog_name)
         parser.add_argument(
@@ -118,7 +110,6 @@ class DeleteProject(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -131,10 +122,8 @@ class DeleteProject(command.Command):
         return
 
 
-class ListProject(lister.Lister):
+class ListProject(command.Lister):
     """List projects"""
-
-    log = logging.getLogger(__name__ + '.ListProject')
 
     def get_parser(self, prog_name):
         parser = super(ListProject, self).get_parser(prog_name)
@@ -146,7 +135,6 @@ class ListProject(lister.Lister):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         if parsed_args.long:
             columns = ('ID', 'Name', 'Description', 'Enabled')
@@ -162,8 +150,6 @@ class ListProject(lister.Lister):
 
 class SetProject(command.Command):
     """Set project properties"""
-
-    log = logging.getLogger(__name__ + '.SetProject')
 
     def get_parser(self, prog_name):
         parser = super(SetProject, self).get_parser(prog_name)
@@ -202,7 +188,6 @@ class SetProject(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -240,10 +225,8 @@ class SetProject(command.Command):
         return
 
 
-class ShowProject(show.ShowOne):
+class ShowProject(command.ShowOne):
     """Display project details"""
-
-    log = logging.getLogger(__name__ + '.ShowProject')
 
     def get_parser(self, prog_name):
         parser = super(ShowProject, self).get_parser(prog_name)
@@ -253,7 +236,6 @@ class ShowProject(show.ShowOne):
             help=_('Project to display (name or ID)'))
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -282,4 +264,57 @@ class ShowProject(show.ShowOne):
 
         # TODO(stevemar): Remove the line below when we support multitenancy
         info.pop('parent_id', None)
+
+        # NOTE(stevemar): Property handling isn't really supported in Keystone
+        # and needs a lot of extra handling. Let's reserve the properties that
+        # the API has and handle the extra top level properties.
+        reserved = ('name', 'id', 'enabled', 'description')
+        properties = {}
+        for k, v in info.items():
+            if k not in reserved:
+                # If a key is not in `reserved` it's a property, pop it
+                info.pop(k)
+                # If a property has been "unset" it's `None`, so don't show it
+                if v is not None:
+                    properties[k] = v
+
+        info['properties'] = utils.format_dict(properties)
         return zip(*sorted(six.iteritems(info)))
+
+
+class UnsetProject(command.Command):
+    """Unset project properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetProject, self).get_parser(prog_name)
+        parser.add_argument(
+            'project',
+            metavar='<project>',
+            help=_('Project to modify (name or ID)'),
+        )
+        parser.add_argument(
+            '--property',
+            metavar='<key>',
+            action='append',
+            default=[],
+            help=_('Unset a project property '
+                   '(repeat option to unset multiple properties)'),
+            required=True,
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        identity_client = self.app.client_manager.identity
+        project = utils.find_resource(
+            identity_client.tenants,
+            parsed_args.project,
+        )
+        if not parsed_args.property:
+            self.app.log.error("No changes requested\n")
+        else:
+            kwargs = project._info
+            for key in parsed_args.property:
+                if key in kwargs:
+                    kwargs[key] = None
+            identity_client.tenants.update(project.id, **kwargs)
+        return

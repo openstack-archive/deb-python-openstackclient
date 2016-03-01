@@ -15,75 +15,120 @@ import copy
 import mock
 
 from openstackclient.common import exceptions
+from openstackclient.common import utils
 from openstackclient.network.v2 import network
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v2_0 import fakes as identity_fakes_v2
 from openstackclient.tests.identity.v3 import fakes as identity_fakes_v3
-from openstackclient.tests.network import common
+from openstackclient.tests.network.v2 import fakes as network_fakes
+from openstackclient.tests import utils as tests_utils
 
-RESOURCE = 'network'
-RESOURCES = 'networks'
-FAKE_ID = 'iditty'
-FAKE_NAME = 'noo'
-FAKE_PROJECT = 'yaa'
-RECORD = {
-    'id': FAKE_ID,
-    'name': FAKE_NAME,
-    'admin_state_up': True,
-    'router:external': True,
-    'status': 'ACTIVE',
-    'subnets': ['a', 'b'],
-    'tenant_id': FAKE_PROJECT,
-}
-COLUMNS = ['ID', 'Name', 'Subnets']
-RESPONSE = {RESOURCE: copy.deepcopy(RECORD)}
-FILTERED = [
-    (
+
+class TestNetwork(network_fakes.TestNetworkV2):
+
+    def setUp(self):
+        super(TestNetwork, self).setUp()
+
+        # Get a shortcut to the network client
+        self.network = self.app.client_manager.network
+
+
+class TestCreateNetworkIdentityV3(TestNetwork):
+
+    # The new network created.
+    _network = network_fakes.FakeNetwork.create_one_network(
+        attrs={
+            'tenant_id': identity_fakes_v3.project_id,
+            'availability_zone_hints': ["nova"],
+        }
+    )
+
+    columns = (
+        'admin_state_up',
+        'availability_zone_hints',
+        'availability_zones',
         'id',
         'name',
         'project_id',
-        'router_type',
-        'state',
+        'router_external',
         'status',
         'subnets',
-    ),
-    (
-        FAKE_ID,
-        FAKE_NAME,
-        FAKE_PROJECT,
-        'External',
-        'UP',
-        'ACTIVE',
-        'a, b',
-    ),
-]
+    )
 
+    data = (
+        network._format_admin_state(_network.admin_state_up),
+        utils.format_list(_network.availability_zone_hints),
+        utils.format_list(_network.availability_zones),
+        _network.id,
+        _network.name,
+        _network.project_id,
+        network._format_router_external(_network.router_external),
+        _network.status,
+        utils.format_list(_network.subnets),
+    )
 
-class TestCreateNetwork(common.TestNetworkBase):
+    def setUp(self):
+        super(TestCreateNetworkIdentityV3, self).setUp()
+
+        self.network.create_network = mock.Mock(return_value=self._network)
+
+        # Get the command object to test
+        self.cmd = network.CreateNetwork(self.app, self.namespace)
+
+        # Set identity client v3. And get a shortcut to Identity client.
+        identity_client = identity_fakes_v3.FakeIdentityv3Client(
+            endpoint=fakes.AUTH_URL,
+            token=fakes.AUTH_TOKEN,
+        )
+        self.app.client_manager.identity = identity_client
+        self.identity = self.app.client_manager.identity
+
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.identity.projects
+        self.projects_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes_v3.PROJECT),
+            loaded=True,
+        )
+
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.identity.domains
+        self.domains_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes_v3.DOMAIN),
+            loaded=True,
+        )
+
     def test_create_no_options(self):
+        arglist = []
+        verifylist = []
+
+        try:
+            # Missing required args should bail here
+            self.check_parser(self.cmd, arglist, verifylist)
+        except tests_utils.ParserException:
+            pass
+
+    def test_create_default_options(self):
         arglist = [
-            FAKE_NAME,
+            self._network.name,
         ]
         verifylist = [
-            ('name', FAKE_NAME),
+            ('name', self._network.name),
             ('admin_state', True),
             ('shared', None),
             ('project', None),
         ]
-        mocker = mock.Mock(return_value=copy.deepcopy(RESPONSE))
-        self.app.client_manager.network.create_network = mocker
-        cmd = network.CreateNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = list(cmd.take_action(parsed_args))
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
 
-        mocker.assert_called_with({
-            RESOURCE: {
-                'admin_state_up': True,
-                'name': FAKE_NAME,
-            }
+        self.network.create_network.assert_called_with(**{
+            'admin_state_up': True,
+            'name': self._network.name,
         })
-        self.assertEqual(FILTERED, result)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
 
     def test_create_all_options(self):
         arglist = [
@@ -91,175 +136,233 @@ class TestCreateNetwork(common.TestNetworkBase):
             "--share",
             "--project", identity_fakes_v3.project_name,
             "--project-domain", identity_fakes_v3.domain_name,
-            FAKE_NAME,
+            "--availability-zone-hint", "nova",
+            self._network.name,
         ]
         verifylist = [
             ('admin_state', False),
             ('shared', True),
             ('project', identity_fakes_v3.project_name),
             ('project_domain', identity_fakes_v3.domain_name),
-            ('name', FAKE_NAME),
+            ('availability_zone_hints', ["nova"]),
+            ('name', self._network.name),
         ]
-        mocker = mock.Mock(return_value=copy.deepcopy(RESPONSE))
-        self.app.client_manager.network.create_network = mocker
-        identity_client = identity_fakes_v3.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.projects_mock = self.app.client_manager.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.PROJECT),
-            loaded=True,
-        )
-        self.domains_mock = self.app.client_manager.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.DOMAIN),
-            loaded=True,
-        )
-        cmd = network.CreateNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = list(cmd.take_action(parsed_args))
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = (self.cmd.take_action(parsed_args))
 
-        mocker.assert_called_with({
-            RESOURCE: {
-                'admin_state_up': False,
-                'name': FAKE_NAME,
-                'shared': True,
-                'tenant_id': identity_fakes_v3.project_id,
-            }
+        self.network.create_network.assert_called_with(**{
+            'admin_state_up': False,
+            'availability_zone_hints': ["nova"],
+            'name': self._network.name,
+            'shared': True,
+            'tenant_id': identity_fakes_v3.project_id,
         })
-        self.assertEqual(FILTERED, result)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
 
     def test_create_other_options(self):
         arglist = [
             "--enable",
             "--no-share",
-            FAKE_NAME,
+            self._network.name,
         ]
         verifylist = [
             ('admin_state', True),
             ('shared', False),
-            ('name', FAKE_NAME),
+            ('name', self._network.name),
         ]
-        mocker = mock.Mock(return_value=copy.deepcopy(RESPONSE))
-        self.app.client_manager.network.create_network = mocker
-        cmd = network.CreateNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = list(cmd.take_action(parsed_args))
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
 
-        mocker.assert_called_with({
-            RESOURCE: {
-                'admin_state_up': True,
-                'name': FAKE_NAME,
-                'shared': False,
-            }
+        self.network.create_network.assert_called_with(**{
+            'admin_state_up': True,
+            'name': self._network.name,
+            'shared': False,
         })
-        self.assertEqual(FILTERED, result)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
 
-    def test_create_with_project_identityv2(self):
-        arglist = [
-            "--project", identity_fakes_v2.project_name,
-            FAKE_NAME,
-        ]
-        verifylist = [
-            ('admin_state', True),
-            ('shared', None),
-            ('name', FAKE_NAME),
-            ('project', identity_fakes_v2.project_name),
-        ]
-        mocker = mock.Mock(return_value=copy.deepcopy(RESPONSE))
-        self.app.client_manager.network.create_network = mocker
+
+class TestCreateNetworkIdentityV2(TestNetwork):
+
+    # The new network created.
+    _network = network_fakes.FakeNetwork.create_one_network(
+        attrs={'tenant_id': identity_fakes_v2.project_id}
+    )
+
+    columns = (
+        'admin_state_up',
+        'availability_zone_hints',
+        'availability_zones',
+        'id',
+        'name',
+        'project_id',
+        'router_external',
+        'status',
+        'subnets',
+    )
+
+    data = (
+        network._format_admin_state(_network.admin_state_up),
+        utils.format_list(_network.availability_zone_hints),
+        utils.format_list(_network.availability_zones),
+        _network.id,
+        _network.name,
+        _network.project_id,
+        network._format_router_external(_network.router_external),
+        _network.status,
+        utils.format_list(_network.subnets),
+    )
+
+    def setUp(self):
+        super(TestCreateNetworkIdentityV2, self).setUp()
+
+        self.network.create_network = mock.Mock(return_value=self._network)
+
+        # Get the command object to test
+        self.cmd = network.CreateNetwork(self.app, self.namespace)
+
+        # Set identity client v2. And get a shortcut to Identity client.
         identity_client = identity_fakes_v2.FakeIdentityv2Client(
             endpoint=fakes.AUTH_URL,
             token=fakes.AUTH_TOKEN,
         )
         self.app.client_manager.identity = identity_client
-        self.projects_mock = self.app.client_manager.identity.tenants
+        self.identity = self.app.client_manager.identity
+
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.identity.tenants
         self.projects_mock.get.return_value = fakes.FakeResource(
             None,
             copy.deepcopy(identity_fakes_v2.PROJECT),
             loaded=True,
         )
-        cmd = network.CreateNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = list(cmd.take_action(parsed_args))
+        # There is no DomainManager Mock in fake identity v2.
 
-        mocker.assert_called_with({
-            RESOURCE: {
-                'admin_state_up': True,
-                'name': FAKE_NAME,
-                'tenant_id': identity_fakes_v2.project_id,
-            }
+    def test_create_with_project_identityv2(self):
+        arglist = [
+            "--project", identity_fakes_v2.project_name,
+            self._network.name,
+        ]
+        verifylist = [
+            ('admin_state', True),
+            ('shared', None),
+            ('name', self._network.name),
+            ('project', identity_fakes_v2.project_name),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.network.create_network.assert_called_with(**{
+            'admin_state_up': True,
+            'name': self._network.name,
+            'tenant_id': identity_fakes_v2.project_id,
         })
-        self.assertEqual(FILTERED, result)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
 
     def test_create_with_domain_identityv2(self):
         arglist = [
             "--project", identity_fakes_v3.project_name,
             "--project-domain", identity_fakes_v3.domain_name,
-            FAKE_NAME,
+            self._network.name,
         ]
         verifylist = [
             ('admin_state', True),
             ('shared', None),
             ('project', identity_fakes_v3.project_name),
             ('project_domain', identity_fakes_v3.domain_name),
-            ('name', FAKE_NAME),
+            ('name', self._network.name),
         ]
-        mocker = mock.Mock(return_value=copy.deepcopy(RESPONSE))
-        self.app.client_manager.network.create_network = mocker
-        identity_client = identity_fakes_v2.FakeIdentityv2Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.projects_mock = self.app.client_manager.identity.tenants
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v2.PROJECT),
-            loaded=True,
-        )
-        cmd = network.CreateNetwork(self.app, self.namespace)
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         self.assertRaises(
             AttributeError,
-            cmd.take_action,
+            self.cmd.take_action,
             parsed_args,
         )
 
 
-class TestDeleteNetwork(common.TestNetworkBase):
+class TestDeleteNetwork(TestNetwork):
+
+    # The network to delete.
+    _network = network_fakes.FakeNetwork.create_one_network()
+
+    def setUp(self):
+        super(TestDeleteNetwork, self).setUp()
+
+        self.network.delete_network = mock.Mock(return_value=None)
+
+        self.network.find_network = mock.Mock(return_value=self._network)
+
+        # Get the command object to test
+        self.cmd = network.DeleteNetwork(self.app, self.namespace)
+
     def test_delete(self):
         arglist = [
-            FAKE_NAME,
+            self._network.name,
         ]
         verifylist = [
-            ('networks', [FAKE_NAME]),
+            ('network', [self._network.name]),
         ]
-        lister = mock.Mock(return_value={RESOURCES: [copy.deepcopy(RECORD)]})
-        self.app.client_manager.network.list_networks = lister
-        mocker = mock.Mock(return_value=None)
-        self.app.client_manager.network.delete_network = mocker
-        cmd = network.DeleteNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = cmd.take_action(parsed_args)
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
 
-        mocker.assert_called_with(FAKE_ID)
-        self.assertEqual(None, result)
+        self.network.delete_network.assert_called_with(self._network)
+        self.assertIsNone(result)
 
 
-@mock.patch(
-    'openstackclient.api.network_v2.APIv2.network_list'
-)
-class TestListNetwork(common.TestNetworkBase):
+class TestListNetwork(TestNetwork):
+
+    # The networks going to be listed up.
+    _network = network_fakes.FakeNetwork.create_networks(count=3)
+
+    columns = (
+        'ID',
+        'Name',
+        'Subnets',
+    )
+    columns_long = (
+        'ID',
+        'Name',
+        'Status',
+        'Project',
+        'State',
+        'Shared',
+        'Subnets',
+        'Network Type',
+        'Router Type',
+        'Availability Zones',
+    )
+
+    data = []
+    for net in _network:
+        data.append((
+            net.id,
+            net.name,
+            utils.format_list(net.subnets),
+        ))
+
+    data_long = []
+    for net in _network:
+        data_long.append((
+            net.id,
+            net.name,
+            net.status,
+            net.project_id,
+            network._format_admin_state(net.admin_state_up),
+            net.shared,
+            utils.format_list(net.subnets),
+            net.provider_network_type,
+            network._format_router_external(net.router_external),
+            utils.format_list(net.availability_zones),
+        ))
 
     def setUp(self):
         super(TestListNetwork, self).setUp()
@@ -267,14 +370,9 @@ class TestListNetwork(common.TestNetworkBase):
         # Get the command object to test
         self.cmd = network.ListNetwork(self.app, self.namespace)
 
-        self.NETWORK_LIST = [
-            copy.deepcopy(RECORD),
-            copy.deepcopy(RECORD),
-        ]
+        self.network.networks = mock.Mock(return_value=self._network)
 
-    def test_network_list_no_options(self, n_mock):
-        n_mock.return_value = self.NETWORK_LIST
-
+    def test_network_list_no_options(self):
         arglist = []
         verifylist = [
             ('external', False),
@@ -285,21 +383,11 @@ class TestListNetwork(common.TestNetworkBase):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        # Set expected values
-        n_mock.assert_called_with(
-            external=False,
-        )
+        self.network.networks.assert_called_with()
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
 
-        self.assertEqual(tuple(COLUMNS), columns)
-        datalist = [
-            (FAKE_ID, FAKE_NAME, 'a, b'),
-            (FAKE_ID, FAKE_NAME, 'a, b'),
-        ]
-        self.assertEqual(datalist, list(data))
-
-    def test_list_external(self, n_mock):
-        n_mock.return_value = self.NETWORK_LIST
-
+    def test_list_external(self):
         arglist = [
             '--external',
         ]
@@ -312,21 +400,13 @@ class TestListNetwork(common.TestNetworkBase):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        # Set expected values
-        n_mock.assert_called_with(
-            external=True,
+        self.network.networks.assert_called_with(
+            **{'router:external': True}
         )
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
 
-        self.assertEqual(tuple(COLUMNS), columns)
-        datalist = [
-            (FAKE_ID, FAKE_NAME, 'a, b'),
-            (FAKE_ID, FAKE_NAME, 'a, b'),
-        ]
-        self.assertEqual(datalist, list(data))
-
-    def test_network_list_long(self, n_mock):
-        n_mock.return_value = self.NETWORK_LIST
-
+    def test_network_list_long(self):
         arglist = [
             '--long',
         ]
@@ -339,145 +419,142 @@ class TestListNetwork(common.TestNetworkBase):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        # Set expected values
-        n_mock.assert_called_with(
-            external=False,
-        )
-
-        collist = (
-            'ID',
-            'Name',
-            'Status',
-            'Project',
-            'State',
-            'Shared',
-            'Subnets',
-            'Network Type',
-            'Router Type',
-        )
-        self.assertEqual(columns, collist)
-        dataitem = (
-            FAKE_ID,
-            FAKE_NAME,
-            'ACTIVE',
-            FAKE_PROJECT,
-            'UP',
-            '',
-            'a, b',
-            '',
-            'External',
-        )
-        datalist = [
-            dataitem,
-            dataitem,
-        ]
-        self.assertEqual(list(data), datalist)
+        self.network.networks.assert_called_with()
+        self.assertEqual(self.columns_long, columns)
+        self.assertEqual(self.data_long, list(data))
 
 
-class TestSetNetwork(common.TestNetworkBase):
+class TestSetNetwork(TestNetwork):
+
+    # The network to set.
+    _network = network_fakes.FakeNetwork.create_one_network()
+
+    def setUp(self):
+        super(TestSetNetwork, self).setUp()
+
+        self.network.update_network = mock.Mock(return_value=None)
+
+        self.network.find_network = mock.Mock(return_value=self._network)
+
+        # Get the command object to test
+        self.cmd = network.SetNetwork(self.app, self.namespace)
+
     def test_set_this(self):
         arglist = [
-            FAKE_NAME,
+            self._network.name,
             '--enable',
             '--name', 'noob',
             '--share',
         ]
         verifylist = [
-            ('identifier', FAKE_NAME),
+            ('identifier', self._network.name),
             ('admin_state', True),
             ('name', 'noob'),
             ('shared', True),
         ]
-        lister = mock.Mock(return_value={RESOURCES: [copy.deepcopy(RECORD)]})
-        self.app.client_manager.network.list_networks = lister
-        mocker = mock.Mock(return_value=None)
-        self.app.client_manager.network.update_network = mocker
-        cmd = network.SetNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = cmd.take_action(parsed_args)
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
 
-        exp = {'admin_state_up': True, 'name': 'noob', 'shared': True}
-        exp_record = {RESOURCE: exp}
-        mocker.assert_called_with(FAKE_ID, exp_record)
-        self.assertEqual(None, result)
+        attrs = {
+            'name': 'noob',
+            'admin_state_up': True,
+            'shared': True,
+        }
+        self.network.update_network.assert_called_with(self._network, **attrs)
+        self.assertIsNone(result)
 
     def test_set_that(self):
         arglist = [
-            FAKE_NAME,
+            self._network.name,
             '--disable',
             '--no-share',
         ]
         verifylist = [
-            ('identifier', FAKE_NAME),
+            ('identifier', self._network.name),
             ('admin_state', False),
             ('shared', False),
         ]
-        lister = mock.Mock(return_value={RESOURCES: [copy.deepcopy(RECORD)]})
-        self.app.client_manager.network.list_networks = lister
-        mocker = mock.Mock(return_value=None)
-        self.app.client_manager.network.update_network = mocker
-        cmd = network.SetNetwork(self.app, self.namespace)
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        result = cmd.take_action(parsed_args)
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
 
-        exp = {'admin_state_up': False, 'shared': False}
-        exp_record = {RESOURCE: exp}
-        mocker.assert_called_with(FAKE_ID, exp_record)
-        self.assertEqual(None, result)
+        attrs = {
+            'admin_state_up': False,
+            'shared': False,
+        }
+        self.network.update_network.assert_called_with(self._network, **attrs)
+        self.assertIsNone(result)
 
     def test_set_nothing(self):
-        arglist = [FAKE_NAME, ]
-        verifylist = [('identifier', FAKE_NAME), ]
-        lister = mock.Mock(return_value={RESOURCES: [copy.deepcopy(RECORD)]})
-        self.app.client_manager.network.list_networks = lister
-        mocker = mock.Mock(return_value=None)
-        self.app.client_manager.network.update_network = mocker
-        cmd = network.SetNetwork(self.app, self.namespace)
+        arglist = [self._network.name, ]
+        verifylist = [('identifier', self._network.name), ]
 
-        parsed_args = self.check_parser(cmd, arglist, verifylist)
-        self.assertRaises(exceptions.CommandError, cmd.take_action,
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
                           parsed_args)
 
 
-@mock.patch(
-    'openstackclient.api.network_v2.APIv2.find_attr'
-)
-class TestShowNetwork(common.TestNetworkBase):
+class TestShowNetwork(TestNetwork):
+
+    # The network to set.
+    _network = network_fakes.FakeNetwork.create_one_network()
+
+    columns = (
+        'admin_state_up',
+        'availability_zone_hints',
+        'availability_zones',
+        'id',
+        'name',
+        'project_id',
+        'router_external',
+        'status',
+        'subnets',
+    )
+
+    data = (
+        network._format_admin_state(_network.admin_state_up),
+        utils.format_list(_network.availability_zone_hints),
+        utils.format_list(_network.availability_zones),
+        _network.id,
+        _network.name,
+        _network.project_id,
+        network._format_router_external(_network.router_external),
+        _network.status,
+        utils.format_list(_network.subnets),
+    )
 
     def setUp(self):
         super(TestShowNetwork, self).setUp()
 
+        self.network.find_network = mock.Mock(return_value=self._network)
+
         # Get the command object to test
         self.cmd = network.ShowNetwork(self.app, self.namespace)
 
-        self.NETWORK_ITEM = copy.deepcopy(RECORD)
+    def test_show_no_options(self):
+        arglist = []
+        verifylist = []
 
-    def test_show_no_options(self, n_mock):
+        try:
+            # Missing required args should bail here
+            self.check_parser(self.cmd, arglist, verifylist)
+        except tests_utils.ParserException:
+            pass
+
+    def test_show_all_options(self):
         arglist = [
-            FAKE_NAME,
+            self._network.name,
         ]
         verifylist = [
-            ('identifier', FAKE_NAME),
+            ('identifier', self._network.name),
         ]
-        n_mock.return_value = copy.deepcopy(RECORD)
-        self.cmd = network.ShowNetwork(self.app, self.namespace)
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        result = list(self.cmd.take_action(parsed_args))
+        columns, data = self.cmd.take_action(parsed_args)
 
-        n_mock.assert_called_with('networks', FAKE_NAME)
-        self.assertEqual(FILTERED, result)
+        self.network.find_network.assert_called_with(self._network.name,
+                                                     ignore_missing=False)
 
-    def test_show_all_options(self, n_mock):
-        arglist = [FAKE_NAME]
-        verifylist = [('identifier', FAKE_NAME)]
-        n_mock.return_value = copy.deepcopy(RECORD)
-        self.cmd = network.ShowNetwork(self.app, self.namespace)
-
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        result = list(self.cmd.take_action(parsed_args))
-
-        n_mock.assert_called_with('networks', FAKE_NAME)
-        self.assertEqual(FILTERED, result)
+        self.assertEqual(tuple(self.columns), columns)
+        self.assertEqual(list(self.data), list(data))

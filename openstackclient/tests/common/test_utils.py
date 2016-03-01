@@ -212,6 +212,28 @@ class TestUtils(test_utils.TestCase):
         self.assertFalse(utils.wait_for_delete(manager, res_id))
         self.assertFalse(mock_sleep.called)
 
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_delete_error_with_overrides(self, mock_sleep):
+        # Tests that we fail if the resource is my_status=failed
+        resource = mock.MagicMock(my_status='FAILED')
+        mock_get = mock.Mock(return_value=resource)
+        manager = mock.MagicMock(get=mock_get)
+        res_id = str(uuid.uuid4())
+        self.assertFalse(utils.wait_for_delete(manager, res_id,
+                                               status_field='my_status',
+                                               error_status=['failed']))
+        self.assertFalse(mock_sleep.called)
+
+    @mock.patch.object(time, 'sleep')
+    def test_wait_for_delete_error_with_overrides_exception(self, mock_sleep):
+        # Tests that we succeed if the resource is specific exception
+        mock_get = mock.Mock(side_effect=Exception)
+        manager = mock.MagicMock(get=mock_get)
+        res_id = str(uuid.uuid4())
+        self.assertTrue(utils.wait_for_delete(manager, res_id,
+                                              exception_name=['Exception']))
+        self.assertFalse(mock_sleep.called)
+
     def test_build_kwargs_dict_value_set(self):
         self.assertEqual({'arg_bla': 'bla'},
                          utils.build_kwargs_dict('arg_bla', 'bla'))
@@ -347,3 +369,19 @@ class TestFindResource(test_utils.TestCase):
         expected = 'a, b, c'
         self.assertEqual(expected, utils.format_list(['a', 'b', 'c']))
         self.assertEqual(expected, utils.format_list(['c', 'b', 'a']))
+
+    def test_format_list_of_dicts(self):
+        expected = "a='b', c='d'\ne='f'"
+        sorted_data = [{'a': 'b', 'c': 'd'}, {'e': 'f'}]
+        unsorted_data = [{'c': 'd', 'a': 'b'}, {'e': 'f'}]
+        self.assertEqual(expected, utils.format_list_of_dicts(sorted_data))
+        self.assertEqual(expected, utils.format_list_of_dicts(unsorted_data))
+        self.assertEqual('', utils.format_list_of_dicts([]))
+        self.assertEqual('', utils.format_list_of_dicts([{}]))
+
+    def test_format_list_separator(self):
+        expected = 'a\nb\nc'
+        actual_pre_sorted = utils.format_list(['a', 'b', 'c'], separator='\n')
+        actual_unsorted = utils.format_list(['c', 'b', 'a'], separator='\n')
+        self.assertEqual(expected, actual_pre_sorted)
+        self.assertEqual(expected, actual_unsorted)

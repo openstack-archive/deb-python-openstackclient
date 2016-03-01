@@ -13,40 +13,69 @@
 
 """Network action implementations"""
 
-import logging
-import six
-
-from cliff import command
-from cliff import lister
-from cliff import show
-
+from openstackclient.common import command
 from openstackclient.common import exceptions
 from openstackclient.common import utils
 from openstackclient.identity import common as identity_common
-from openstackclient.network import common
 
 
-def _prep_network_detail(net):
-    """Prepare network object for output"""
-
-    if 'subnets' in net:
-        net['subnets'] = utils.format_list(net['subnets'])
-    if 'admin_state_up' in net:
-        net['state'] = 'UP' if net['admin_state_up'] else 'DOWN'
-        net.pop('admin_state_up')
-    if 'router:external' in net:
-        net['router_type'] = 'External' if net['router:external'] \
-            else 'Internal'
-        net.pop('router:external')
-    if 'tenant_id' in net:
-        net['project_id'] = net.pop('tenant_id')
-    return net
+def _format_admin_state(item):
+    return 'UP' if item else 'DOWN'
 
 
-class CreateNetwork(show.ShowOne):
+def _format_router_external(item):
+    return 'External' if item else 'Internal'
+
+
+_formatters = {
+    'subnets': utils.format_list,
+    'admin_state_up': _format_admin_state,
+    'router_external': _format_router_external,
+    'availability_zones': utils.format_list,
+    'availability_zone_hints': utils.format_list,
+}
+
+
+def _get_columns(item):
+    columns = item.keys()
+    if 'tenant_id' in columns:
+        columns.remove('tenant_id')
+        columns.append('project_id')
+    if 'router:external' in columns:
+        columns.remove('router:external')
+        columns.append('router_external')
+    return tuple(sorted(columns))
+
+
+def _get_attrs(client_manager, parsed_args):
+    attrs = {}
+    if parsed_args.name is not None:
+        attrs['name'] = str(parsed_args.name)
+    if parsed_args.admin_state is not None:
+        attrs['admin_state_up'] = parsed_args.admin_state
+    if parsed_args.shared is not None:
+        attrs['shared'] = parsed_args.shared
+
+    # "network set" command doesn't support setting project.
+    if 'project' in parsed_args and parsed_args.project is not None:
+        identity_client = client_manager.identity
+        project_id = identity_common.find_project(
+            identity_client,
+            parsed_args.project,
+            parsed_args.project_domain,
+        ).id
+        attrs['tenant_id'] = project_id
+
+    # "network set" command doesn't support setting availability zone hints.
+    if 'availability_zone_hints' in parsed_args and \
+       parsed_args.availability_zone_hints is not None:
+        attrs['availability_zone_hints'] = parsed_args.availability_zone_hints
+
+    return attrs
+
+
+class CreateNetwork(command.ShowOne):
     """Create new network"""
-
-    log = logging.getLogger(__name__ + '.CreateNetwork')
 
     def get_parser(self, prog_name):
         parser = super(CreateNetwork, self).get_parser(prog_name)
@@ -86,67 +115,54 @@ class CreateNetwork(show.ShowOne):
         parser.add_argument(
             '--project',
             metavar='<project>',
-            help="Owner's project (name or ID)")
+            help="Owner's project (name or ID)"
+        )
         identity_common.add_project_domain_option_to_parser(parser)
+
+        parser.add_argument(
+            '--availability-zone-hint',
+            action='append',
+            dest='availability_zone_hints',
+            metavar='<availability-zone>',
+            help='Availability Zone in which to create this network '
+                 '(requires the Network Availability Zone extension, '
+                 'this option can be repeated).',
+        )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-        body = self.get_body(parsed_args)
-        create_method = getattr(client, "create_network")
-        data = create_method(body)['network']
-        if data:
-            data = _prep_network_detail(data)
-        else:
-            data = {'': ''}
-        return zip(*sorted(six.iteritems(data)))
 
-    def get_body(self, parsed_args):
-        body = {'name': str(parsed_args.name),
-                'admin_state_up': parsed_args.admin_state}
-        if parsed_args.shared is not None:
-            body['shared'] = parsed_args.shared
-        if parsed_args.project is not None:
-            identity_client = self.app.client_manager.identity
-            project_id = identity_common.find_project(
-                identity_client,
-                parsed_args.project,
-                parsed_args.project_domain,
-            ).id
-            body['tenant_id'] = project_id
-        return {'network': body}
+        attrs = _get_attrs(self.app.client_manager, parsed_args)
+        obj = client.create_network(**attrs)
+        columns = _get_columns(obj)
+
+        data = utils.get_item_properties(obj, columns, formatters=_formatters)
+        return (columns, data)
 
 
 class DeleteNetwork(command.Command):
     """Delete network(s)"""
 
-    log = logging.getLogger(__name__ + '.DeleteNetwork')
-
     def get_parser(self, prog_name):
         parser = super(DeleteNetwork, self).get_parser(prog_name)
         parser.add_argument(
-            'networks',
+            'network',
             metavar="<network>",
             nargs="+",
-            help=("Network to delete (name or ID)")
+            help=("Network(s) to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-        delete_method = getattr(client, "delete_network")
-        for network in parsed_args.networks:
-            _id = common.find(client, 'network', 'networks', network)
-            delete_method(_id)
-        return
+        for network in parsed_args.network:
+            obj = client.find_network(network)
+            client.delete_network(obj)
 
 
-class ListNetwork(lister.Lister):
+class ListNetwork(command.Lister):
     """List networks"""
-
-    log = logging.getLogger(__name__ + '.ListNetwork')
 
     def get_parser(self, prog_name):
         parser = super(ListNetwork, self).get_parser(prog_name)
@@ -165,22 +181,20 @@ class ListNetwork(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-
-        data = client.api.network_list(external=parsed_args.external)
 
         if parsed_args.long:
             columns = (
-                'ID',
-                'Name',
-                'Status',
-                'project_id',
-                'state',
-                'Shared',
-                'Subnets',
-                'provider:network_type',
-                'router_type',
+                'id',
+                'name',
+                'status',
+                'tenant_id',
+                'admin_state_up',
+                'shared',
+                'subnets',
+                'provider_network_type',
+                'router_external',
+                'availability_zones',
             )
             column_headers = (
                 'ID',
@@ -192,25 +206,34 @@ class ListNetwork(lister.Lister):
                 'Subnets',
                 'Network Type',
                 'Router Type',
+                'Availability Zones',
             )
         else:
-            columns = ('ID', 'Name', 'Subnets')
-            column_headers = columns
+            columns = (
+                'id',
+                'name',
+                'subnets'
+            )
+            column_headers = (
+                'ID',
+                'Name',
+                'Subnets',
+            )
 
-        for d in data:
-            d = _prep_network_detail(d)
-
+        if parsed_args.external:
+            args = {'router:external': True}
+        else:
+            args = {}
+        data = client.networks(**args)
         return (column_headers,
-                (utils.get_dict_properties(
+                (utils.get_item_properties(
                     s, columns,
-                    formatters={'subnets': utils.format_list},
+                    formatters=_formatters,
                 ) for s in data))
 
 
 class SetNetwork(command.Command):
     """Set network properties"""
-
-    log = logging.getLogger(__name__ + '.SetNetwork')
 
     def get_parser(self, prog_name):
         parser = super(SetNetwork, self).get_parser(prog_name)
@@ -255,29 +278,20 @@ class SetNetwork(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-        _id = common.find(client, 'network', 'networks',
-                          parsed_args.identifier)
-        body = {}
-        if parsed_args.name is not None:
-            body['name'] = str(parsed_args.name)
-        if parsed_args.admin_state is not None:
-            body['admin_state_up'] = parsed_args.admin_state
-        if parsed_args.shared is not None:
-            body['shared'] = parsed_args.shared
-        if body == {}:
+        obj = client.find_network(parsed_args.identifier, ignore_missing=False)
+
+        attrs = _get_attrs(self.app.client_manager, parsed_args)
+        if attrs == {}:
             msg = "Nothing specified to be set"
             raise exceptions.CommandError(msg)
-        update_method = getattr(client, "update_network")
-        update_method(_id, {'network': body})
+
+        client.update_network(obj, **attrs)
         return
 
 
-class ShowNetwork(show.ShowOne):
+class ShowNetwork(command.ShowOne):
     """Show network details"""
-
-    log = logging.getLogger(__name__ + '.ShowNetwork')
 
     def get_parser(self, prog_name):
         parser = super(ShowNetwork, self).get_parser(prog_name)
@@ -289,11 +303,8 @@ class ShowNetwork(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug('take_action(%s)' % parsed_args)
         client = self.app.client_manager.network
-        net = client.api.find_attr(
-            'networks',
-            parsed_args.identifier,
-        )
-        data = _prep_network_detail(net)
-        return zip(*sorted(six.iteritems(data)))
+        obj = client.find_network(parsed_args.identifier, ignore_missing=False)
+        columns = _get_columns(obj)
+        data = utils.get_item_properties(obj, columns, formatters=_formatters)
+        return (columns, data)

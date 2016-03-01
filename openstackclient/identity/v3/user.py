@@ -16,23 +16,18 @@
 """Identity v3 User action implementations"""
 
 import copy
-import logging
 import six
 
-from cliff import command
-from cliff import lister
-from cliff import show
 from keystoneauth1 import exceptions as ks_exc
 
+from openstackclient.common import command
 from openstackclient.common import utils
 from openstackclient.i18n import _  # noqa
 from openstackclient.identity import common
 
 
-class CreateUser(show.ShowOne):
+class CreateUser(command.ShowOne):
     """Create new user"""
-
-    log = logging.getLogger(__name__ + '.CreateUser')
 
     def get_parser(self, prog_name):
         parser = super(CreateUser, self).get_parser(prog_name)
@@ -91,7 +86,6 @@ class CreateUser(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -138,8 +132,6 @@ class CreateUser(show.ShowOne):
 class DeleteUser(command.Command):
     """Delete user(s)"""
 
-    log = logging.getLogger(__name__ + '.DeleteUser')
-
     def get_parser(self, prog_name):
         parser = super(DeleteUser, self).get_parser(prog_name)
         parser.add_argument(
@@ -155,7 +147,6 @@ class DeleteUser(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -174,10 +165,8 @@ class DeleteUser(command.Command):
         return
 
 
-class ListUser(lister.Lister):
+class ListUser(command.Lister):
     """List users"""
-
-    log = logging.getLogger(__name__ + '.ListUser')
 
     def get_parser(self, prog_name):
         parser = super(ListUser, self).get_parser(prog_name)
@@ -205,7 +194,6 @@ class ListUser(lister.Lister):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -280,8 +268,6 @@ class ListUser(lister.Lister):
 class SetUser(command.Command):
     """Set user properties"""
 
-    log = logging.getLogger(__name__ + '.SetUser')
-
     def get_parser(self, prog_name):
         parser = super(SetUser, self).get_parser(prog_name)
         parser.add_argument(
@@ -334,7 +320,6 @@ class SetUser(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
@@ -383,8 +368,6 @@ class SetUser(command.Command):
 class SetPasswordUser(command.Command):
     """Change current user password"""
 
-    log = logging.getLogger(__name__ + '.SetPasswordUser')
-
     def get_parser(self, prog_name):
         parser = super(SetPasswordUser, self).get_parser(prog_name)
         parser.add_argument(
@@ -392,14 +375,40 @@ class SetPasswordUser(command.Command):
             metavar='<new-password>',
             help='New user password'
         )
+        parser.add_argument(
+            '--original-password',
+            metavar='<original-password>',
+            help='Original user password'
+        )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
-        current_password = utils.get_password(
-            self.app.stdin, prompt="Current Password:", confirm=False)
+        # FIXME(gyee): there are two scenarios:
+        #
+        # 1. user update password for himself
+        # 2. admin update password on behalf of the user. This is an unlikely
+        #    scenario because that will require admin knowing the user's
+        #    original password which is forbidden under most security
+        #    policies.
+        #
+        # Of the two scenarios above, user either authenticate using its
+        # original password or an authentication token. For scenario #1,
+        # if user is authenticating with its original password (i.e. passing
+        # --os-password argument), we can just make use of it instead of using
+        # --original-password or prompting. For scenario #2, admin will need
+        # to specify --original-password option or this won't work because
+        # --os-password is the admin's own password. In the future if we stop
+        # supporting scenario #2 then we can just do this.
+        #
+        # current_password = (parsed_args.original_password or
+        #                     self.app.cloud.password)
+        #
+        current_password = parsed_args.original_password
+        if current_password is None:
+            current_password = utils.get_password(
+                self.app.stdin, prompt="Current Password:", confirm=False)
 
         password = parsed_args.password
         if password is None:
@@ -409,10 +418,8 @@ class SetPasswordUser(command.Command):
         identity_client.users.update_password(current_password, password)
 
 
-class ShowUser(show.ShowOne):
+class ShowUser(command.ShowOne):
     """Display user details"""
-
-    log = logging.getLogger(__name__ + '.ShowUser')
 
     def get_parser(self, prog_name):
         parser = super(ShowUser, self).get_parser(prog_name)
@@ -428,7 +435,6 @@ class ShowUser(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 

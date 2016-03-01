@@ -77,19 +77,20 @@ Create a new server
 
 .. option:: --image <image>
 
-    Create server from this image
+    Create server from this image (name or ID)
 
 .. option:: --volume <volume>
 
-    Create server from this volume
+    Create server from this volume (name or ID)
 
 .. option:: --flavor <flavor>
 
-    Create server with this flavor
+    Create server with this flavor (name or ID)
 
 .. option:: --security-group <security-group-name>
 
-    Security group to assign to this server (repeat for multiple groups)
+    Security group to assign to this server (name or ID)
+    (repeat for multiple groups)
 
 .. option:: --key-name <key-name>
 
@@ -216,11 +217,11 @@ List servers
 
 .. option:: --flavor <flavor>
 
-    Search by flavor ID
+    Search by flavor (name or ID)
 
 .. option:: --image <image>
 
-    Search by image ID
+    Search by image (name or ID)
 
 .. option:: --host <hostname>
 
@@ -374,14 +375,15 @@ Rebuild server
 .. code:: bash
 
     os server rebuild
-        --image <image>
+        [--image <image>]
         [--password <password>]
         [--wait]
         <server>
 
 .. option:: --image <image>
 
-    Recreate server from this image
+    Recreate server from the specified image (name or ID). Defaults to the
+    currently used one.
 
 .. option:: --password <password>
 

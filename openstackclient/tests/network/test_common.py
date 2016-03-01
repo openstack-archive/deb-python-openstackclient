@@ -11,62 +11,93 @@
 #   under the License.
 #
 
+import argparse
 import mock
 
-from openstackclient.common import exceptions
 from openstackclient.network import common
 from openstackclient.tests import utils
 
-RESOURCE = 'resource'
-RESOURCES = 'resources'
-NAME = 'matrix'
-ID = 'Fishburne'
+
+class FakeNetworkAndComputeCommand(common.NetworkAndComputeCommand):
+    def update_parser_common(self, parser):
+        parser.add_argument(
+            'common',
+            metavar='<common>',
+            help='Common argument',
+        )
+        return parser
+
+    def update_parser_network(self, parser):
+        parser.add_argument(
+            'network',
+            metavar='<network>',
+            help='Network argument',
+        )
+        return parser
+
+    def update_parser_compute(self, parser):
+        parser.add_argument(
+            'compute',
+            metavar='<compute>',
+            help='Compute argument',
+        )
+        return parser
+
+    def take_action_network(self, client, parsed_args):
+        client.network_action(parsed_args)
+        return 'take_action_network'
+
+    def take_action_compute(self, client, parsed_args):
+        client.compute_action(parsed_args)
+        return 'take_action_compute'
 
 
-class TestFind(utils.TestCase):
+class TestNetworkAndComputeCommand(utils.TestCommand):
     def setUp(self):
-        super(TestFind, self).setUp()
-        self.mock_client = mock.Mock()
-        self.list_resources = mock.Mock()
-        self.mock_client.list_resources = self.list_resources
-        self.matrix = {'id': ID}
+        super(TestNetworkAndComputeCommand, self).setUp()
 
-    def test_name(self):
-        self.list_resources.return_value = {RESOURCES: [self.matrix]}
+        self.namespace = argparse.Namespace()
 
-        result = common.find(self.mock_client, RESOURCE, RESOURCES, NAME)
+        # Create network client mocks.
+        self.app.client_manager.network = mock.Mock()
+        self.network = self.app.client_manager.network
+        self.network.network_action = mock.Mock(return_value=None)
 
-        self.assertEqual(ID, result)
-        self.list_resources.assert_called_with(fields='id', name=NAME)
+        # Create compute client mocks.
+        self.app.client_manager.compute = mock.Mock()
+        self.compute = self.app.client_manager.compute
+        self.compute.compute_action = mock.Mock(return_value=None)
 
-    def test_id(self):
-        self.list_resources.side_effect = [{RESOURCES: []},
-                                           {RESOURCES: [self.matrix]}]
+        # Get the command object to test
+        self.cmd = FakeNetworkAndComputeCommand(self.app, self.namespace)
 
-        result = common.find(self.mock_client, RESOURCE, RESOURCES, NAME)
+    def test_take_action_network(self):
+        arglist = [
+            'common',
+            'network'
+        ]
+        verifylist = [
+            ('common', 'common'),
+            ('network', 'network')
+        ]
 
-        self.assertEqual(ID, result)
-        self.list_resources.assert_called_with(fields='id', id=NAME)
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+        self.network.network_action.assert_called_with(parsed_args)
+        self.assertEqual('take_action_network', result)
 
-    def test_nameo(self):
-        self.list_resources.return_value = {RESOURCES: [self.matrix]}
+    def test_take_action_compute(self):
+        arglist = [
+            'common',
+            'compute'
+        ]
+        verifylist = [
+            ('common', 'common'),
+            ('compute', 'compute')
+        ]
 
-        result = common.find(self.mock_client, RESOURCE, RESOURCES, NAME,
-                             name_attr='nameo')
-
-        self.assertEqual(ID, result)
-        self.list_resources.assert_called_with(fields='id', nameo=NAME)
-
-    def test_dups(self):
-        dup = {'id': 'Larry'}
-        self.list_resources.return_value = {RESOURCES: [self.matrix, dup]}
-
-        self.assertRaises(exceptions.CommandError, common.find,
-                          self.mock_client, RESOURCE, RESOURCES, NAME)
-
-    def test_nada(self):
-        self.list_resources.side_effect = [{RESOURCES: []},
-                                           {RESOURCES: []}]
-
-        self.assertRaises(exceptions.CommandError, common.find,
-                          self.mock_client, RESOURCE, RESOURCES, NAME)
+        self.app.client_manager.network_endpoint_enabled = False
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+        self.compute.compute_action.assert_called_with(parsed_args)
+        self.assertEqual('take_action_compute', result)

@@ -15,21 +15,16 @@
 """Volume v2 snapshot action implementations"""
 
 import copy
-import logging
 
-from cliff import command
-from cliff import lister
-from cliff import show
 import six
 
+from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 
 
-class CreateSnapshot(show.ShowOne):
+class CreateSnapshot(command.ShowOne):
     """Create new snapshot"""
-
-    log = logging.getLogger(__name__ + ".CreateSnapshot")
 
     def get_parser(self, prog_name):
         parser = super(CreateSnapshot, self).get_parser(prog_name)
@@ -59,7 +54,6 @@ class CreateSnapshot(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action: (%s)", parsed_args)
         volume_client = self.app.client_manager.volume
         volume_id = utils.find_resource(
             volume_client.volumes, parsed_args.volume).id
@@ -78,8 +72,6 @@ class CreateSnapshot(show.ShowOne):
 class DeleteSnapshot(command.Command):
     """Delete volume snapshot(s)"""
 
-    log = logging.getLogger(__name__ + ".DeleteSnapshot")
-
     def get_parser(self, prog_name):
         parser = super(DeleteSnapshot, self).get_parser(prog_name)
         parser.add_argument(
@@ -91,19 +83,15 @@ class DeleteSnapshot(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action: (%s)", parsed_args)
         volume_client = self.app.client_manager.volume
         for snapshot in parsed_args.snapshots:
             snapshot_id = utils.find_resource(
                 volume_client.volume_snapshots, snapshot).id
             volume_client.volume_snapshots.delete(snapshot_id)
-        return
 
 
-class ListSnapshot(lister.Lister):
+class ListSnapshot(command.Lister):
     """List snapshots"""
-
-    log = logging.getLogger(__name__ + ".ListSnapshot")
 
     def get_parser(self, prog_name):
         parser = super(ListSnapshot, self).get_parser(prog_name)
@@ -122,7 +110,6 @@ class ListSnapshot(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action: (%s)", parsed_args)
 
         def _format_volume_id(volume_id):
             """Return a volume name if available
@@ -172,8 +159,6 @@ class ListSnapshot(lister.Lister):
 class SetSnapshot(command.Command):
     """Set snapshot properties"""
 
-    log = logging.getLogger(__name__ + '.SetSnapshot')
-
     def get_parser(self, prog_name):
         parser = super(SetSnapshot, self).get_parser(prog_name)
         parser.add_argument(
@@ -197,7 +182,6 @@ class SetSnapshot(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
         snapshot = utils.find_resource(volume_client.volume_snapshots,
@@ -217,13 +201,10 @@ class SetSnapshot(command.Command):
             volume_client.volume_snapshots.set_metadata(snapshot.id,
                                                         parsed_args.property)
         volume_client.volume_snapshots.update(snapshot.id, **kwargs)
-        return
 
 
-class ShowSnapshot(show.ShowOne):
+class ShowSnapshot(command.ShowOne):
     """Display snapshot details"""
-
-    log = logging.getLogger(__name__ + ".ShowSnapshot")
 
     def get_parser(self, prog_name):
         parser = super(ShowSnapshot, self).get_parser(prog_name)
@@ -235,7 +216,6 @@ class ShowSnapshot(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action: (%s)", parsed_args)
         volume_client = self.app.client_manager.volume
         snapshot = utils.find_resource(
             volume_client.volume_snapshots, parsed_args.snapshot)
@@ -247,8 +227,6 @@ class ShowSnapshot(show.ShowOne):
 
 class UnsetSnapshot(command.Command):
     """Unset snapshot properties"""
-
-    log = logging.getLogger(__name__ + '.UnsetSnapshot')
 
     def get_parser(self, prog_name):
         parser = super(UnsetSnapshot, self).get_parser(prog_name)
@@ -267,7 +245,6 @@ class UnsetSnapshot(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
         snapshot = utils.find_resource(
@@ -280,4 +257,3 @@ class UnsetSnapshot(command.Command):
             )
         else:
             self.app.log.error("No changes requested\n")
-        return

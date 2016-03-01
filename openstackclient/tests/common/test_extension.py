@@ -34,13 +34,15 @@ class TestExtension(utils.TestCommand):
             self.app.client_manager.identity.extensions)
         self.identity_extensions_mock.reset_mock()
 
-        network = network_fakes.FakeNetworkV2Client()
-        self.app.client_manager.network = network
-        self.network_extensions_mock = network.list_extensions
+        network_client = network_fakes.FakeNetworkV2Client()
+        self.app.client_manager.network = network_client
+        self.network_extensions_mock = network_client.extensions
         self.network_extensions_mock.reset_mock()
 
 
 class TestExtensionList(TestExtension):
+
+    columns = ('Name', 'Alias', 'Description')
 
     def setUp(self):
         super(TestExtensionList, self).setUp()
@@ -67,8 +69,7 @@ class TestExtensionList(TestExtension):
         # no args should output from all services
         self.identity_extensions_mock.list.assert_called_with()
 
-        collist = ('Name', 'Alias', 'Description')
-        self.assertEqual(collist, columns)
+        self.assertEqual(self.columns, columns)
         datalist = (
             (
                 identity_fakes.extension_name,
@@ -135,8 +136,7 @@ class TestExtensionList(TestExtension):
 
         self.identity_extensions_mock.list.assert_called_with()
 
-        collist = ('Name', 'Alias', 'Description')
-        self.assertEqual(collist, columns)
+        self.assertEqual(self.columns, columns)
         datalist = ((
             identity_fakes.extension_name,
             identity_fakes.extension_alias,
@@ -157,8 +157,7 @@ class TestExtensionList(TestExtension):
 
         self.network_extensions_mock.assert_called_with()
 
-        collist = ('Name', 'Alias', 'Description')
-        self.assertEqual(collist, columns)
+        self.assertEqual(self.columns, columns)
         datalist = (
             (
                 network_fakes.extension_name,

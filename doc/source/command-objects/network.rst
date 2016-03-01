@@ -16,6 +16,7 @@ Create new network
         [--project <project> [--project-domain <project-domain>]]
         [--enable | --disable]
         [--share | --no-share]
+        [--availability-zone-hint <availability-zone>]
         <name>
 
 .. option:: --project <project>
@@ -43,6 +44,11 @@ Create new network
 
     Do not share the network between projects
 
+.. option:: --availability-zone-hint <availability-zone>
+
+     Availability Zone in which to create this network (requires the Network
+     Availability Zone extension, this option can be repeated).
+
 .. _network_create-name:
 .. describe:: <name>
 
@@ -59,10 +65,10 @@ Delete network(s)
     os network delete
         <network> [<network> ...]
 
-.. _network_delete-project:
+.. _network_delete-network:
 .. describe:: <network>
 
-    Network to delete (name or ID)
+    Network(s) to delete (name or ID)
 
 network list
 ------------
@@ -74,16 +80,11 @@ List networks
 
     os network list
         [--external]
-        [--dhcp <dhcp-id>]
         [--long]
 
 .. option:: --external
 
     List external networks
-
-.. option:: --dhcp <dhcp-id>
-
-    DHCP agent ID
 
 .. option:: --long
 
@@ -123,7 +124,7 @@ Set network properties
 
     Do not share the network between projects
 
-.. _network_set-name:
+.. _network_set-network:
 .. describe:: <network>
 
     Network to modify (name or ID)
@@ -139,7 +140,7 @@ Display network details
     os network show
         <network>
 
-.. _network_show-name:
+.. _network_show-network:
 .. describe:: <network>
 
     Network to display (name or ID)

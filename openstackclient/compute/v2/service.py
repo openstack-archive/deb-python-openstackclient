@@ -15,18 +15,12 @@
 
 """Service action implementations"""
 
-import logging
-
-from cliff import command
-from cliff import lister
-
+from openstackclient.common import command
 from openstackclient.common import utils
 
 
 class DeleteService(command.Command):
     """Delete service command"""
-
-    log = logging.getLogger(__name__ + ".DeleteService")
 
     def get_parser(self, prog_name):
         parser = super(DeleteService, self).get_parser(prog_name)
@@ -37,17 +31,13 @@ class DeleteService(command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
 
         compute_client.services.delete(parsed_args.service)
-        return
 
 
-class ListService(lister.Lister):
+class ListService(command.Lister):
     """List service command"""
-
-    log = logging.getLogger(__name__ + ".ListService")
 
     def get_parser(self, prog_name):
         parser = super(ListService, self).get_parser(prog_name)
@@ -62,7 +52,6 @@ class ListService(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
         columns = (
             "Id",
@@ -81,10 +70,8 @@ class ListService(lister.Lister):
                 ) for s in data))
 
 
-class SetService(lister.Lister):
+class SetService(command.Command):
     """Set service command"""
-
-    log = logging.getLogger(__name__ + ".SetService")
 
     def get_parser(self, prog_name):
         parser = super(SetService, self).get_parser(prog_name)
@@ -101,7 +88,7 @@ class SetService(lister.Lister):
             "--enable",
             dest="enabled",
             default=True,
-            help="Enable a service",
+            help="Enable a service (default)",
             action="store_true")
         enabled_group.add_argument(
             "--disable",
@@ -111,21 +98,11 @@ class SetService(lister.Lister):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
         compute_client = self.app.client_manager.compute
-        columns = (
-            "Host",
-            "Service",
-            "Disabled"
-        )
 
         if parsed_args.enabled:
             action = compute_client.services.enable
         else:
             action = compute_client.services.disable
 
-        data = action(parsed_args.host, parsed_args.service)
-        return (columns,
-                (utils.get_item_properties(
-                    s, columns,
-                ) for s in data))
+        action(parsed_args.host, parsed_args.service)

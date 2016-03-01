@@ -2,7 +2,7 @@
 security group rule
 ===================
 
-Compute v2
+Compute v2, Network v2
 
 security group rule create
 --------------------------
@@ -14,7 +14,7 @@ Create a new security group rule
 
     os security group rule create
         [--proto <proto>]
-        [--src-ip <ip-address>]
+        [--src-ip <ip-address> | --src-group <group>]
         [--dst-port <port-range>]
         <group>
 
@@ -24,7 +24,11 @@ Create a new security group rule
 
 .. option:: --src-ip <ip-address>
 
-    Source IP (may use CIDR notation; default: 0.0.0.0/0)
+    Source IP address block (may use CIDR notation; default: 0.0.0.0/0)
+
+.. option:: --src-group <group>
+
+    Source security group (ID only)
 
 .. option:: --dst-port <port-range>
 
@@ -58,7 +62,7 @@ List security group rules
 .. code:: bash
 
     os security group rule list
-        <group>
+        [<group>]
 
 .. describe:: <group>
 

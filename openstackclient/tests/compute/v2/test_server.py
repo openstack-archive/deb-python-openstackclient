@@ -13,16 +13,13 @@
 #   under the License.
 #
 
-import copy
 import mock
-import testtools
 
 from mock import call
 from openstackclient.common import exceptions
 from openstackclient.common import utils as common_utils
 from openstackclient.compute.v2 import server
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
-from openstackclient.tests import fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
 from openstackclient.tests import utils
 from openstackclient.tests.volume.v2 import fakes as volume_fakes
@@ -33,23 +30,23 @@ class TestServer(compute_fakes.TestComputev2):
     def setUp(self):
         super(TestServer, self).setUp()
 
-        # Get a shortcut to the ServerManager Mock
+        # Get a shortcut to the compute client ServerManager Mock
         self.servers_mock = self.app.client_manager.compute.servers
         self.servers_mock.reset_mock()
 
-        # Get a shortcut to the ImageManager Mock
+        # Get a shortcut to the compute client ImageManager Mock
         self.cimages_mock = self.app.client_manager.compute.images
         self.cimages_mock.reset_mock()
 
-        # Get a shortcut to the FlavorManager Mock
+        # Get a shortcut to the compute client FlavorManager Mock
         self.flavors_mock = self.app.client_manager.compute.flavors
         self.flavors_mock.reset_mock()
 
-        # Get a shortcut to the ImageManager Mock
+        # Get a shortcut to the image client ImageManager Mock
         self.images_mock = self.app.client_manager.image.images
         self.images_mock.reset_mock()
 
-        # Get a shortcut to the VolumeManager Mock
+        # Get a shortcut to the volume client VolumeManager Mock
         self.volumes_mock = self.app.client_manager.volume.volumes
         self.volumes_mock.reset_mock()
 
@@ -92,6 +89,26 @@ class TestServer(compute_fakes.TestComputev2):
 
 class TestServerCreate(TestServer):
 
+    columns = (
+        'addresses',
+        'flavor',
+        'id',
+        'name',
+        'networks',
+        'properties',
+    )
+
+    def datalist(self):
+        datalist = (
+            '',
+            self.flavor.name + ' ()',
+            self.new_server.id,
+            self.new_server.name,
+            self.new_server.networks,
+            '',
+        )
+        return datalist
+
     def setUp(self):
         super(TestServerCreate, self).setUp()
 
@@ -107,22 +124,15 @@ class TestServerCreate(TestServer):
 
         self.servers_mock.create.return_value = self.new_server
 
-        self.image = fakes.FakeResource(
-            None,
-            copy.deepcopy(image_fakes.IMAGE),
-            loaded=True,
-        )
+        self.image = image_fakes.FakeImage.create_one_image()
         self.cimages_mock.get.return_value = self.image
 
         self.flavor = compute_fakes.FakeFlavor.create_one_flavor()
         self.flavors_mock.get.return_value = self.flavor
 
-        self.volume = fakes.FakeResource(
-            None,
-            copy.deepcopy(volume_fakes.VOLUME),
-            loaded=True,
-        )
+        self.volume = volume_fakes.FakeVolume.create_one_volume()
         self.volumes_mock.get.return_value = self.volume
+        self.block_device_mapping = 'vda=' + self.volume.name + ':::0'
 
         # Get the command object to test
         self.cmd = server.CreateServer(self.app, None)
@@ -181,24 +191,8 @@ class TestServerCreate(TestServer):
             **kwargs
         )
 
-        collist = (
-            'addresses',
-            'flavor',
-            'id',
-            'name',
-            'networks',
-            'properties',
-        )
-        self.assertEqual(collist, columns)
-        datalist = (
-            '',
-            self.flavor.name + ' ()',
-            self.new_server.id,
-            self.new_server.name,
-            self.new_server.networks,
-            '',
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
     def test_server_create_with_network(self):
         arglist = [
@@ -224,12 +218,29 @@ class TestServerCreate(TestServer):
         self.app.client_manager.auth_ref.service_catalog.get_endpoints = (
             get_endpoints)
 
-        list_networks = mock.Mock()
-        list_ports = mock.Mock()
-        self.app.client_manager.network.list_networks = list_networks
-        self.app.client_manager.network.list_ports = list_ports
-        list_networks.return_value = {'networks': [{'id': 'net1_uuid'}]}
-        list_ports.return_value = {'ports': [{'id': 'port1_uuid'}]}
+        find_network = mock.Mock()
+        find_port = mock.Mock()
+        network_client = self.app.client_manager.network
+        network_client.find_network = find_network
+        network_client.find_port = find_port
+        network_resource = mock.Mock()
+        network_resource.id = 'net1_uuid'
+        port_resource = mock.Mock()
+        port_resource.id = 'port1_uuid'
+        find_network.return_value = network_resource
+        find_port.return_value = port_resource
+
+        # Mock sdk APIs.
+        _network = mock.Mock()
+        _network.id = 'net1_uuid'
+        _port = mock.Mock()
+        _port.id = 'port1_uuid'
+        find_network = mock.Mock()
+        find_port = mock.Mock()
+        find_network.return_value = _network
+        find_port.return_value = _port
+        self.app.client_manager.network.find_network = find_network
+        self.app.client_manager.network.find_port = find_port
 
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
@@ -265,24 +276,8 @@ class TestServerCreate(TestServer):
             **kwargs
         )
 
-        collist = (
-            'addresses',
-            'flavor',
-            'id',
-            'name',
-            'networks',
-            'properties',
-        )
-        self.assertEqual(collist, columns)
-        datalist = (
-            '',
-            self.flavor.name + ' ()',
-            self.new_server.id,
-            self.new_server.name,
-            self.new_server.networks,
-            '',
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
     @mock.patch('openstackclient.compute.v2.server.io.open')
     def test_server_create_userdata(self, mock_open):
@@ -338,36 +333,20 @@ class TestServerCreate(TestServer):
             **kwargs
         )
 
-        collist = (
-            'addresses',
-            'flavor',
-            'id',
-            'name',
-            'networks',
-            'properties',
-        )
-        self.assertEqual(collist, columns)
-        datalist = (
-            '',
-            self.flavor.name + ' ()',
-            self.new_server.id,
-            self.new_server.name,
-            self.new_server.networks,
-            '',
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
     def test_server_create_with_block_device_mapping(self):
         arglist = [
             '--image', 'image1',
             '--flavor', self.flavor.id,
-            '--block-device-mapping', compute_fakes.block_device_mapping,
+            '--block-device-mapping', self.block_device_mapping,
             self.new_server.name,
         ]
         verifylist = [
             ('image', 'image1'),
             ('flavor', self.flavor.id),
-            ('block_device_mapping', [compute_fakes.block_device_mapping]),
+            ('block_device_mapping', [self.block_device_mapping]),
             ('config_drive', False),
             ('server_name', self.new_server.name),
         ]
@@ -377,9 +356,9 @@ class TestServerCreate(TestServer):
         columns, data = self.cmd.take_action(parsed_args)
 
         real_volume_mapping = (
-            (compute_fakes.block_device_mapping.split('=', 1)[1]).replace(
-                volume_fakes.volume_name,
-                volume_fakes.volume_id))
+            (self.block_device_mapping.split('=', 1)[1]).replace(
+                self.volume.name,
+                self.volume.id))
 
         # Set expected values
         kwargs = dict(
@@ -407,24 +386,8 @@ class TestServerCreate(TestServer):
             **kwargs
         )
 
-        collist = (
-            'addresses',
-            'flavor',
-            'id',
-            'name',
-            'networks',
-            'properties',
-        )
-        self.assertEqual(collist, columns)
-        datalist = (
-            '',
-            self.flavor.name + ' ()',
-            self.new_server.id,
-            self.new_server.name,
-            self.new_server.networks,
-            '',
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
 
 class TestServerDelete(TestServer):
@@ -529,6 +492,26 @@ class TestServerDelete(TestServer):
 
 class TestServerImageCreate(TestServer):
 
+    columns = (
+        'id',
+        'name',
+        'owner',
+        'protected',
+        'tags',
+        'visibility',
+    )
+
+    def datalist(self):
+        datalist = (
+            self.image.id,
+            self.image.name,
+            self.image.owner,
+            self.image.protected,
+            self.image.tags,
+            self.image.visibility,
+        )
+        return datalist
+
     def setUp(self):
         super(TestServerImageCreate, self).setUp()
 
@@ -537,13 +520,9 @@ class TestServerImageCreate(TestServer):
         # This is the return value for utils.find_resource()
         self.servers_mock.get.return_value = self.server
 
-        self.servers_mock.create_image.return_value = image_fakes.image_id
-
-        self.images_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(image_fakes.IMAGE),
-            loaded=True,
-        )
+        self.image = image_fakes.FakeImage.create_one_image()
+        self.images_mock.get.return_value = self.image
+        self.servers_mock.create_image.return_value = self.image.id
 
         # Get the command object to test
         self.cmd = server.CreateServerImage(self.app, None)
@@ -566,17 +545,8 @@ class TestServerImageCreate(TestServer):
             self.server.name,
         )
 
-        collist = ('id', 'name', 'owner', 'protected', 'tags', 'visibility')
-        self.assertEqual(collist, columns)
-        datalist = (
-            image_fakes.image_id,
-            image_fakes.image_name,
-            image_fakes.image_owner,
-            image_fakes.image_protected,
-            image_fakes.image_tags,
-            image_fakes.image_visibility,
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
     def test_server_image_create_name(self):
         arglist = [
@@ -598,17 +568,8 @@ class TestServerImageCreate(TestServer):
             'img-nam',
         )
 
-        collist = ('id', 'name', 'owner', 'protected', 'tags', 'visibility')
-        self.assertEqual(collist, columns)
-        datalist = (
-            image_fakes.image_id,
-            image_fakes.image_name,
-            image_fakes.image_owner,
-            image_fakes.image_protected,
-            image_fakes.image_tags,
-            image_fakes.image_visibility,
-        )
-        self.assertEqual(datalist, data)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
 
 
 class TestServerList(TestServer):
@@ -620,10 +581,17 @@ class TestServerList(TestServer):
         'Status',
         'Networks',
     )
-
-    # Data returned by corresponding Nova API. The elements in this list are
-    # tuples filled with server attributes.
-    data = []
+    columns_long = (
+        'ID',
+        'Name',
+        'Status',
+        'Task State',
+        'Power State',
+        'Networks',
+        'Availability Zone',
+        'Host',
+        'Properties',
+    )
 
     # Default search options, in the case of no commandline option specified.
     search_opts = {
@@ -652,12 +620,18 @@ class TestServerList(TestServer):
     def setUp(self):
         super(TestServerList, self).setUp()
 
-        # The fake servers' attributes.
+        # The fake servers' attributes. Use the original attributes names in
+        # nova, not the ones printed by "server list" command.
         self.attrs = {
             'status': 'ACTIVE',
+            'OS-EXT-STS:task_state': 'None',
+            'OS-EXT-STS:power_state': 0x01,   # Running
             'networks': {
                 u'public': [u'10.20.30.40', u'2001:db8::5']
             },
+            'OS-EXT-AZ:availability_zone': 'availability-zone-xxx',
+            'OS-EXT-SRV-ATTR:host': 'host-name-xxx',
+            'Metadata': '',
         }
 
         # The servers to be listed.
@@ -669,12 +643,28 @@ class TestServerList(TestServer):
         self.cmd = server.ListServer(self.app, None)
 
         # Prepare data returned by fake Nova API.
+        self.data = []
+        self.data_long = []
+
         for s in self.servers:
             self.data.append((
                 s.id,
                 s.name,
                 s.status,
-                u'public=10.20.30.40, 2001:db8::5',
+                server._format_servers_list_networks(s.networks),
+            ))
+            self.data_long.append((
+                s.id,
+                s.name,
+                s.status,
+                getattr(s, 'OS-EXT-STS:task_state'),
+                server._format_servers_list_power_state(
+                    getattr(s, 'OS-EXT-STS:power_state')
+                ),
+                server._format_servers_list_networks(s.networks),
+                getattr(s, 'OS-EXT-AZ:availability_zone'),
+                getattr(s, 'OS-EXT-SRV-ATTR:host'),
+                s.Metadata,
             ))
 
     def test_server_list_no_option(self):
@@ -690,6 +680,22 @@ class TestServerList(TestServer):
         self.servers_mock.list.assert_called_with(**self.kwargs)
         self.assertEqual(self.columns, columns)
         self.assertEqual(tuple(self.data), tuple(data))
+
+    def test_server_list_long_option(self):
+        arglist = [
+            '--long',
+        ]
+        verifylist = [
+            ('all_projects', False),
+            ('long', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.servers_mock.list.assert_called_with(**self.kwargs)
+        self.assertEqual(self.columns_long, columns)
+        self.assertEqual(tuple(self.data_long), tuple(data))
 
 
 class TestServerLock(TestServer):
@@ -730,6 +736,76 @@ class TestServerPause(TestServer):
 
     def test_server_pause_multi_servers(self):
         self.run_method_with_servers('pause', 3)
+
+
+class TestServerRebuild(TestServer):
+
+    def setUp(self):
+        super(TestServerRebuild, self).setUp()
+
+        # Return value for utils.find_resource for image
+        self.image = image_fakes.FakeImage.create_one_image()
+        self.cimages_mock.get.return_value = self.image
+
+        # Fake the rebuilt new server.
+        new_server = compute_fakes.FakeServer.create_one_server()
+
+        # Fake the server to be rebuilt. The IDs of them should be the same.
+        attrs = {
+            'id': new_server.id,
+            'image': {
+                'id': self.image.id
+            },
+            'networks': {},
+            'adminPass': 'passw0rd',
+        }
+        methods = {
+            'rebuild': new_server,
+        }
+        self.server = compute_fakes.FakeServer.create_one_server(
+            attrs=attrs,
+            methods=methods
+        )
+
+        # Return value for utils.find_resource for server.
+        self.servers_mock.get.return_value = self.server
+
+        self.cmd = server.RebuildServer(self.app, None)
+
+    def test_rebuild_with_current_image(self):
+        arglist = [
+            self.server.id,
+        ]
+        verifylist = [
+            ('server', self.server.id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # Get the command object to test.
+        self.cmd.take_action(parsed_args)
+
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.cimages_mock.get.assert_called_with(self.image.id)
+        self.server.rebuild.assert_called_with(self.image, None)
+
+    def test_rebuild_with_current_image_and_password(self):
+        password = 'password-xxx'
+        arglist = [
+            self.server.id,
+            '--password', password
+        ]
+        verifylist = [
+            ('server', self.server.id),
+            ('password', password)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # Get the command object to test
+        self.cmd.take_action(parsed_args)
+
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.cimages_mock.get.assert_called_with(self.image.id)
+        self.server.rebuild.assert_called_with(self.image, password)
 
 
 class TestServerResize(TestServer):
@@ -1017,7 +1093,7 @@ class TestServerUnshelve(TestServer):
         self.run_method_with_servers('unshelve', 3)
 
 
-class TestServerGeneral(testtools.TestCase):
+class TestServerGeneral(TestServer):
     OLD = {
         'private': [
             {
@@ -1067,3 +1143,90 @@ class TestServerGeneral(testtools.TestCase):
                           server._get_ip_address, self.OLD, 'public', [4, 6])
         self.assertRaises(exceptions.CommandError,
                           server._get_ip_address, self.OLD, 'private', [6])
+
+    def test_format_servers_list_power_state(self):
+        self.assertEqual("NOSTATE",
+                         server._format_servers_list_power_state(0x00))
+        self.assertEqual("Running",
+                         server._format_servers_list_power_state(0x01))
+        self.assertEqual("",
+                         server._format_servers_list_power_state(0x02))
+        self.assertEqual("Paused",
+                         server._format_servers_list_power_state(0x03))
+        self.assertEqual("Shutdown",
+                         server._format_servers_list_power_state(0x04))
+        self.assertEqual("",
+                         server._format_servers_list_power_state(0x05))
+        self.assertEqual("Crashed",
+                         server._format_servers_list_power_state(0x06))
+        self.assertEqual("Suspended",
+                         server._format_servers_list_power_state(0x07))
+        self.assertEqual("N/A",
+                         server._format_servers_list_power_state(0x08))
+
+    def test_format_servers_list_networks(self):
+        # Setup network info to test.
+        networks = {
+            u'public': [u'10.20.30.40', u'2001:db8::f'],
+            u'private': [u'2001:db8::f', u'10.20.30.40'],
+        }
+
+        # Prepare expected data.
+        # Since networks is a dict, whose items are in random order, there
+        # could be two results after formatted.
+        data_1 = (u'private=2001:db8::f, 10.20.30.40; '
+                  u'public=10.20.30.40, 2001:db8::f')
+        data_2 = (u'public=10.20.30.40, 2001:db8::f; '
+                  u'private=2001:db8::f, 10.20.30.40')
+
+        # Call _format_servers_list_networks().
+        networks_format = server._format_servers_list_networks(networks)
+
+        msg = ('Network string is not formatted correctly.\n'
+               'reference = %s or %s\n'
+               'actual    = %s\n' %
+               (data_1, data_2, networks_format))
+        self.assertIn(networks_format, (data_1, data_2), msg)
+
+    @mock.patch('openstackclient.common.utils.find_resource')
+    def test_prep_server_detail(self, find_resource):
+        # Setup mock method return value. utils.find_resource() will be called
+        # twice in _prep_server_detail():
+        # - The first time, return image info.
+        # - The second time, return flavor info.
+        _image = image_fakes.FakeImage.create_one_image()
+        _flavor = compute_fakes.FakeFlavor.create_one_flavor()
+        find_resource.side_effect = [_image, _flavor]
+
+        # compute_client.servers.get() will be called once, return server info.
+        server_info = {
+            'image': {u'id': _image.id},
+            'flavor': {u'id': _flavor.id},
+            'tenant_id': u'tenant-id-xxx',
+            'networks': {u'public': [u'10.20.30.40', u'2001:db8::f']},
+            'links': u'http://xxx.yyy.com',
+        }
+        _server = compute_fakes.FakeServer.create_one_server(attrs=server_info)
+        self.servers_mock.get.return_value = _server
+
+        # Prepare result data.
+        info = {
+            'id': _server.id,
+            'name': _server.name,
+            'addresses': u'public=10.20.30.40, 2001:db8::f',
+            'flavor': u'%s (%s)' % (_flavor.name, _flavor.id),
+            'image': u'%s (%s)' % (_image.name, _image.id),
+            'project_id': u'tenant-id-xxx',
+            'properties': '',
+        }
+
+        # Call _prep_server_detail().
+        server_detail = server._prep_server_detail(
+            self.app.client_manager.compute,
+            _server
+        )
+        # 'networks' is used to create _server. Remove it.
+        server_detail.pop('networks')
+
+        # Check the results.
+        self.assertDictEqual(info, server_detail)

@@ -11,8 +11,9 @@ Adoption
 ========
 
 OpenStackClient promises to provide first class support for the following
-OpenStack services: Compute, Identity, Image, Storage, Volume and Network.
-These services are considered essential to any OpenStack deployment.
+OpenStack services: Compute, Identity, Image, Object Storage, Block Storage
+and Network. These services are considered essential to any OpenStack
+deployment.
 
 Other OpenStack services, such as Orchestration or Telemetry may create an
 OpenStackClient plugin. The source code will not be hosted by
@@ -33,11 +34,10 @@ python-heatclient              patch in progress (https://review.openstack.org/#
 python-ironicclient            Using OpenStackClient
 python-magnumclient            using argparse
 python-manilaclient            using argparse
-python-mistralclient           using cliff
+python-mistralclient           using OpenStackClient
 python-muranoclient            using argparse
 python-saharaclient            using OpenStackClient
 python-troveclient             using argparse
-python-tuskarclient            using OpenStackClient
 python-zaqarclient             using OpenStackClient
 =============================  ======================================
 

@@ -11,37 +11,52 @@
 #   under the License.
 #
 
-from openstackclient.common import exceptions
+import abc
+import six
+
+from openstackclient.common import command
 
 
-def find(client, resource, resources, name_or_id, name_attr='name'):
-    """Find a network resource
+@six.add_metaclass(abc.ABCMeta)
+class NetworkAndComputeCommand(command.Command):
+    """Network and Compute Command"""
 
-    :param client: network client
-    :param resource: name of the resource
-    :param resources: plural name of resource
-    :param name_or_id: name or id of resource user is looking for
-    :param name_attr: key to the name attribute for the resource
+    def take_action(self, parsed_args):
+        if self.app.client_manager.is_network_endpoint_enabled():
+            return self.take_action_network(self.app.client_manager.network,
+                                            parsed_args)
+        else:
+            return self.take_action_compute(self.app.client_manager.compute,
+                                            parsed_args)
 
-    For example:
-        n = find(netclient, 'network', 'networks', 'matrix')
-    """
-    list_method = getattr(client, "list_%s" % resources)
+    def get_parser(self, prog_name):
+        self.log.debug('get_parser(%s)', prog_name)
+        parser = super(NetworkAndComputeCommand, self).get_parser(prog_name)
+        parser = self.update_parser_common(parser)
+        self.log.debug('common parser: %s', parser)
+        if self.app.client_manager.is_network_endpoint_enabled():
+            return self.update_parser_network(parser)
+        else:
+            return self.update_parser_compute(parser)
 
-    # Search by name
-    kwargs = {name_attr: name_or_id, 'fields': 'id'}
-    data = list_method(**kwargs)
-    info = data[resources]
-    if len(info) == 1:
-        return info[0]['id']
-    if len(info) > 1:
-        msg = "More than one %s exists with the name '%s'."
-        raise exceptions.CommandError(msg % (resource, name_or_id))
+    def update_parser_common(self, parser):
+        """Default is no updates to parser."""
+        return parser
 
-    # Search by id
-    data = list_method(id=name_or_id, fields='id')
-    info = data[resources]
-    if len(info) == 1:
-        return info[0]['id']
-    msg = "No %s with a name or ID of '%s' exists." % (resource, name_or_id)
-    raise exceptions.CommandError(msg)
+    def update_parser_network(self, parser):
+        """Default is no updates to parser."""
+        return parser
+
+    def update_parser_compute(self, parser):
+        """Default is no updates to parser."""
+        return parser
+
+    @abc.abstractmethod
+    def take_action_network(self, client, parsed_args):
+        """Override to do something useful."""
+        pass
+
+    @abc.abstractmethod
+    def take_action_compute(self, client, parsed_args):
+        """Override to do something useful."""
+        pass

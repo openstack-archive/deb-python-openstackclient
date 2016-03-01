@@ -16,12 +16,7 @@
 
 """Compute v2 Security Group action implementations"""
 
-import logging
 import six
-
-from cliff import command
-from cliff import lister
-from cliff import show
 
 from keystoneauth1 import exceptions as ks_exc
 
@@ -30,6 +25,7 @@ try:
 except ImportError:
     from novaclient.v1_1 import security_group_rules
 
+from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
 
@@ -54,13 +50,33 @@ def _xform_security_group_rule(sgroup):
         info['ip_protocol'] = ''
     elif info['ip_protocol'].lower() == 'icmp':
         info['port_range'] = ''
+    group = info.pop('group')
+    if 'name' in group:
+        info['remote_security_group'] = group['name']
+    else:
+        info['remote_security_group'] = ''
     return info
 
 
-class CreateSecurityGroup(show.ShowOne):
-    """Create a new security group"""
+def _xform_and_trim_security_group_rule(sgroup):
+    info = _xform_security_group_rule(sgroup)
+    # Trim parent security group ID since caller has this information.
+    info.pop('parent_group_id', None)
+    # Trim keys with empty string values.
+    keys_to_trim = [
+        'ip_protocol',
+        'ip_range',
+        'port_range',
+        'remote_security_group',
+    ]
+    for key in keys_to_trim:
+        if key in info and not info[key]:
+            info.pop(key)
+    return info
 
-    log = logging.getLogger(__name__ + ".CreateSecurityGroup")
+
+class CreateSecurityGroup(command.ShowOne):
+    """Create a new security group"""
 
     def get_parser(self, prog_name):
         parser = super(CreateSecurityGroup, self).get_parser(prog_name)
@@ -77,8 +93,6 @@ class CreateSecurityGroup(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
 
         description = parsed_args.description or parsed_args.name
@@ -93,10 +107,8 @@ class CreateSecurityGroup(show.ShowOne):
         return zip(*sorted(six.iteritems(info)))
 
 
-class CreateSecurityGroupRule(show.ShowOne):
+class CreateSecurityGroupRule(command.ShowOne):
     """Create a new security group rule"""
-
-    log = logging.getLogger(__name__ + ".CreateSecurityGroupRule")
 
     def get_parser(self, prog_name):
         parser = super(CreateSecurityGroupRule, self).get_parser(prog_name)
@@ -111,11 +123,18 @@ class CreateSecurityGroupRule(show.ShowOne):
             default="tcp",
             help="IP protocol (icmp, tcp, udp; default: tcp)",
         )
-        parser.add_argument(
+        source_group = parser.add_mutually_exclusive_group()
+        source_group.add_argument(
             "--src-ip",
             metavar="<ip-address>",
             default="0.0.0.0/0",
-            help="Source IP (may use CIDR notation; default: 0.0.0.0/0)",
+            help="Source IP address block (may use CIDR notation; default: "
+                 "0.0.0.0/0)",
+        )
+        source_group.add_argument(
+            "--src-group",
+            metavar="<group>",
+            help="Source security group (ID only)",
         )
         parser.add_argument(
             "--dst-port",
@@ -128,8 +147,6 @@ class CreateSecurityGroupRule(show.ShowOne):
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
         group = utils.find_resource(
             compute_client.security_groups,
@@ -145,42 +162,15 @@ class CreateSecurityGroupRule(show.ShowOne):
             from_port,
             to_port,
             parsed_args.src_ip,
+            parsed_args.src_group,
         )
 
         info = _xform_security_group_rule(data._info)
         return zip(*sorted(six.iteritems(info)))
 
 
-class DeleteSecurityGroup(command.Command):
-    """Delete a security group"""
-
-    log = logging.getLogger(__name__ + '.DeleteSecurityGroup')
-
-    def get_parser(self, prog_name):
-        parser = super(DeleteSecurityGroup, self).get_parser(prog_name)
-        parser.add_argument(
-            'group',
-            metavar='<group>',
-            help='Security group to delete (name or ID)',
-        )
-        return parser
-
-    @utils.log_method(log)
-    def take_action(self, parsed_args):
-
-        compute_client = self.app.client_manager.compute
-        data = utils.find_resource(
-            compute_client.security_groups,
-            parsed_args.group,
-        )
-        compute_client.security_groups.delete(data.id)
-        return
-
-
 class DeleteSecurityGroupRule(command.Command):
     """Delete a security group rule"""
-
-    log = logging.getLogger(__name__ + '.DeleteSecurityGroupRule')
 
     def get_parser(self, prog_name):
         parser = super(DeleteSecurityGroupRule, self).get_parser(prog_name)
@@ -191,18 +181,14 @@ class DeleteSecurityGroupRule(command.Command):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
         compute_client.security_group_rules.delete(parsed_args.rule)
-        return
 
 
-class ListSecurityGroup(lister.Lister):
+class ListSecurityGroup(command.Lister):
     """List security groups"""
-
-    log = logging.getLogger(__name__ + ".ListSecurityGroup")
 
     def get_parser(self, prog_name):
         parser = super(ListSecurityGroup, self).get_parser(prog_name)
@@ -221,8 +207,6 @@ class ListSecurityGroup(lister.Lister):
                 return getattr(project_hash[project_id], 'name', project_id)
             except KeyError:
                 return project_id
-
-        self.log.debug("take_action(%s)", parsed_args)
 
         compute_client = self.app.client_manager.compute
         columns = (
@@ -255,53 +239,58 @@ class ListSecurityGroup(lister.Lister):
                 ) for s in data))
 
 
-class ListSecurityGroupRule(lister.Lister):
+class ListSecurityGroupRule(command.Lister):
     """List security group rules"""
-
-    log = logging.getLogger(__name__ + ".ListSecurityGroupRule")
 
     def get_parser(self, prog_name):
         parser = super(ListSecurityGroupRule, self).get_parser(prog_name)
         parser.add_argument(
             'group',
             metavar='<group>',
+            nargs='?',
             help='List all rules in this security group (name or ID)',
         )
         return parser
 
     def take_action(self, parsed_args):
-        self.log.debug("take_action(%s)", parsed_args)
-
         compute_client = self.app.client_manager.compute
-        group = utils.find_resource(
-            compute_client.security_groups,
-            parsed_args.group,
-        )
-
-        # Argh, the rules are not Resources...
-        rules = []
-        for rule in group.rules:
-            rules.append(security_group_rules.SecurityGroupRule(
-                compute_client.security_group_rules,
-                _xform_security_group_rule(rule),
-            ))
-
         columns = column_headers = (
             "ID",
             "IP Protocol",
             "IP Range",
             "Port Range",
+            "Remote Security Group",
         )
+
+        rules_to_list = []
+        if parsed_args.group:
+            group = utils.find_resource(
+                compute_client.security_groups,
+                parsed_args.group,
+            )
+            rules_to_list = group.rules
+        else:
+            columns = columns + ('parent_group_id',)
+            column_headers = column_headers + ('Security Group',)
+            for group in compute_client.security_groups.list():
+                rules_to_list.extend(group.rules)
+
+        # Argh, the rules are not Resources...
+        rules = []
+        for rule in rules_to_list:
+            rules.append(security_group_rules.SecurityGroupRule(
+                compute_client.security_group_rules,
+                _xform_security_group_rule(rule),
+            ))
+
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
                 ) for s in rules))
 
 
-class SetSecurityGroup(show.ShowOne):
+class SetSecurityGroup(command.ShowOne):
     """Set security group properties"""
-
-    log = logging.getLogger(__name__ + '.SetSecurityGroup')
 
     def get_parser(self, prog_name):
         parser = super(SetSecurityGroup, self).get_parser(prog_name)
@@ -322,7 +311,6 @@ class SetSecurityGroup(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -349,10 +337,8 @@ class SetSecurityGroup(show.ShowOne):
             return ({}, {})
 
 
-class ShowSecurityGroup(show.ShowOne):
+class ShowSecurityGroup(command.ShowOne):
     """Display security group details"""
-
-    log = logging.getLogger(__name__ + '.ShowSecurityGroup')
 
     def get_parser(self, prog_name):
         parser = super(ShowSecurityGroup, self).get_parser(prog_name)
@@ -363,7 +349,6 @@ class ShowSecurityGroup(show.ShowOne):
         )
         return parser
 
-    @utils.log_method(log)
     def take_action(self, parsed_args):
 
         compute_client = self.app.client_manager.compute
@@ -374,11 +359,12 @@ class ShowSecurityGroup(show.ShowOne):
         )._info)
         rules = []
         for r in info['rules']:
-            rules.append(utils.format_dict(_xform_security_group_rule(r)))
+            formatted_rule = _xform_and_trim_security_group_rule(r)
+            rules.append(utils.format_dict(formatted_rule))
 
         # Format rules into a list of strings
         info.update(
-            {'rules': rules}
+            {'rules': utils.format_list(rules, separator='\n')}
         )
         # Map 'tenant_id' column to 'project_id'
         info.update(
