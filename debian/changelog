@@ -1,3 +1,9 @@
+python-openstackclient (2.1.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Corey Bryant <corey.bryant@canonical.com>  Tue, 01 Mar 2016 14:20:39 -0500
+
 python-openstackclient (2.0.0-3) experimental; urgency=medium
 
   * Blacklist 3 failed unit tests in Jessie (works in Sid):
