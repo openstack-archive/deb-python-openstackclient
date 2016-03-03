@@ -1,9 +1,13 @@
-python-openstackclient (2.1.0-1) UNRELEASED; urgency=medium
+python-openstackclient (2.1.0-1) experimental; urgency=medium
 
+  [ Corey Bryant ]
   * New upstream release.
   * Align (Build-)Depends with upstream.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Tue, 01 Mar 2016 14:20:39 -0500
+  [ Thomas Goirand ]
+  * Standards-Version: 3.9.7 (no change).
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 03 Mar 2016 04:19:43 +0000
 
 python-openstackclient (2.0.0-3) experimental; urgency=medium
 
