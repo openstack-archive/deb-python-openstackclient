@@ -220,7 +220,9 @@ class TestServiceProviderList(TestServiceProvider):
         verifylist = []
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.service_providers_mock.list.assert_called_with()
@@ -303,6 +305,7 @@ class TestServiceProviderSet(TestServiceProvider):
 
         Set Service Provider's ``enabled`` attribute to False.
         """
+
         def prepare(self):
             """Prepare fake return objects before the test is executed"""
             updated_sp = copy.deepcopy(service_fakes.SERVICE_PROVIDER)
@@ -341,6 +344,7 @@ class TestServiceProviderSet(TestServiceProvider):
 
         Set Service Provider's ``enabled`` attribute to True.
         """
+
         def prepare(self):
             """Prepare fake return objects before the test is executed"""
             resources = fakes.FakeResource(

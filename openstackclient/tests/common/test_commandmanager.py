@@ -20,6 +20,7 @@ from openstackclient.tests import utils
 
 
 class FakeCommand(object):
+
     @classmethod
     def load(cls):
         return cls
@@ -48,6 +49,7 @@ class FakeCommandManager(commandmanager.CommandManager):
 
 
 class TestCommandManager(utils.TestCase):
+
     def test_add_command_group(self):
         mgr = FakeCommandManager('test')
 
@@ -100,6 +102,6 @@ class TestCommandManager(utils.TestCase):
             mock_pkg_resources,
         ) as iter_entry_points:
             mgr = commandmanager.CommandManager('test')
-            assert iter_entry_points.called_once_with('test')
+            iter_entry_points.assert_called_once_with('test')
             cmds = mgr.get_command_names('test')
             self.assertEqual(['one', 'cmd two'], cmds)

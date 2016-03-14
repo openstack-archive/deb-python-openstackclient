@@ -63,10 +63,9 @@ class TestCreateRouter(TestRouter):
         arglist = []
         verifylist = []
 
-        try:
-            self.check_parser(self.cmd, arglist, verifylist)
-        except tests_utils.ParserException:
-            pass
+        # Missing required args should bail here
+        self.assertRaises(tests_utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
 
     def test_create_default_options(self):
         arglist = [
@@ -201,7 +200,9 @@ class TestListRouter(TestRouter):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.network.routers.assert_called_with()
@@ -217,7 +218,9 @@ class TestListRouter(TestRouter):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.network.routers.assert_called_with()
@@ -299,11 +302,66 @@ class TestSetRouter(TestRouter):
             ('distributed', False),
         ]
 
-        try:
-            # Argument parse failing should bail here
-            self.check_parser(self.cmd, arglist, verifylist)
-        except tests_utils.ParserException:
-            pass
+        # Missing required args should bail here
+        self.assertRaises(tests_utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
+
+    def test_set_route(self):
+        arglist = [
+            self._router.name,
+            '--route', 'destination=10.20.30.0/24,gateway=10.20.30.1',
+        ]
+        verifylist = [
+            ('router', self._router.name),
+            ('routes', [{'destination': '10.20.30.0/24',
+                         'gateway': '10.20.30.1'}]),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'routes': [{'destination': '10.20.30.0/24',
+                        'gateway': '10.20.30.1'}],
+        }
+        self.network.update_router.assert_called_with(self._router, **attrs)
+        self.assertIsNone(result)
+
+    def test_set_clear_routes(self):
+        arglist = [
+            self._router.name,
+            '--clear-routes',
+        ]
+        verifylist = [
+            ('router', self._router.name),
+            ('clear_routes', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'routes': [],
+        }
+        self.network.update_router.assert_called_with(self._router, **attrs)
+        self.assertIsNone(result)
+
+    def test_set_route_clear_routes(self):
+        arglist = [
+            self._router.name,
+            '--route', 'destination=10.20.30.0/24,gateway=10.20.30.1',
+            '--clear-routes',
+        ]
+        verifylist = [
+            ('router', self._router.name),
+            ('routes', [{'destination': '10.20.30.0/24',
+                         'gateway': '10.20.30.1'}]),
+            ('clear_routes', True),
+        ]
+
+        # Argument parse failing should bail here
+        self.assertRaises(tests_utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
 
     def test_set_nothing(self):
         arglist = [self._router.name, ]
@@ -349,11 +407,9 @@ class TestShowRouter(TestRouter):
         arglist = []
         verifylist = []
 
-        try:
-            # Missing required args should bail here
-            self.check_parser(self.cmd, arglist, verifylist)
-        except tests_utils.ParserException:
-            pass
+        # Missing required args should bail here
+        self.assertRaises(tests_utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
 
     def test_show_all_options(self):
         arglist = [

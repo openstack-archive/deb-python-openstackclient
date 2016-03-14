@@ -80,6 +80,12 @@ TOKEN = {
     'user_id': user_id,
 }
 
+UNSCOPED_TOKEN = {
+    'expires': token_expires,
+    'id': token_id,
+    'user_id': user_id,
+}
+
 endpoint_name = service_name
 endpoint_adminurl = 'https://admin.example.com/v2/UUID'
 endpoint_region = 'RegionOne'
@@ -122,6 +128,7 @@ EXTENSION = {
 
 
 class FakeIdentityv2Client(object):
+
     def __init__(self, **kwargs):
         self.roles = mock.Mock()
         self.roles.resource_class = fakes.FakeResource(None, {})
@@ -151,6 +158,7 @@ class FakeIdentityv2Client(object):
 
 
 class TestIdentityv2(utils.TestCommand):
+
     def setUp(self):
         super(TestIdentityv2, self).setUp()
 

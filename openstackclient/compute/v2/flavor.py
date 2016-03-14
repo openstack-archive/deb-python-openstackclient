@@ -149,20 +149,20 @@ class ListFlavor(command.Lister):
             action="store_true",
             default=True,
             help="List only public flavors (default)",
-            )
+        )
         public_group.add_argument(
             "--private",
             dest="public",
             action="store_false",
             help="List only private flavors",
-            )
+        )
         public_group.add_argument(
             "--all",
             dest="all",
             action="store_true",
             default=False,
             help="List all flavors, whether public or private",
-            )
+        )
         parser.add_argument(
             '--long',
             action='store_true',
@@ -218,6 +218,31 @@ class ListFlavor(command.Lister):
                 ) for s in data))
 
 
+class SetFlavor(command.Command):
+    """Set flavor properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(SetFlavor, self).get_parser(prog_name)
+        parser.add_argument(
+            "--property",
+            metavar="<key=value>",
+            action=parseractions.KeyValueAction,
+            help='Property to add or modify for this flavor '
+                 '(repeat option to set multiple properties)',
+        )
+        parser.add_argument(
+            "flavor",
+            metavar="<flavor>",
+            help="Flavor to modify (name or ID)",
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        flavor = compute_client.flavors.find(name=parsed_args.flavor)
+        flavor.set_keys(parsed_args.property)
+
+
 class ShowFlavor(command.ShowOne):
     """Display flavor details"""
 
@@ -242,38 +267,7 @@ class ShowFlavor(command.ShowOne):
         return zip(*sorted(six.iteritems(flavor)))
 
 
-class SetFlavor(command.ShowOne):
-    """Set flavor properties"""
-
-    def get_parser(self, prog_name):
-        parser = super(SetFlavor, self).get_parser(prog_name)
-        parser.add_argument(
-            "--property",
-            metavar="<key=value>",
-            action=parseractions.KeyValueAction,
-            help='Property to add or modify for this flavor '
-                 '(repeat option to set multiple properties)',
-        )
-        parser.add_argument(
-            "flavor",
-            metavar="<flavor>",
-            help="Flavor to modify (name or ID)",
-        )
-        return parser
-
-    def take_action(self, parsed_args):
-        compute_client = self.app.client_manager.compute
-        resource_flavor = compute_client.flavors.find(name=parsed_args.flavor)
-
-        resource_flavor.set_keys(parsed_args.property)
-
-        flavor = resource_flavor._info.copy()
-        flavor['properties'] = utils.format_dict(resource_flavor.get_keys())
-        flavor.pop("links", None)
-        return zip(*sorted(six.iteritems(flavor)))
-
-
-class UnsetFlavor(command.ShowOne):
+class UnsetFlavor(command.Command):
     """Unset flavor properties"""
 
     def get_parser(self, prog_name):
@@ -295,11 +289,5 @@ class UnsetFlavor(command.ShowOne):
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        resource_flavor = compute_client.flavors.find(name=parsed_args.flavor)
-
-        resource_flavor.unset_keys(parsed_args.property)
-
-        flavor = resource_flavor._info.copy()
-        flavor['properties'] = utils.format_dict(resource_flavor.get_keys())
-        flavor.pop("links", None)
-        return zip(*sorted(six.iteritems(flavor)))
+        flavor = compute_client.flavors.find(name=parsed_args.flavor)
+        flavor.unset_keys(parsed_args.property)

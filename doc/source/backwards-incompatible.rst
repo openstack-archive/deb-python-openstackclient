@@ -114,6 +114,54 @@ List of Backwards Incompatible Changes
   * Bug: https://launchpad.net/bugs/1506841
   * Commit: https://review.openstack.org/#/c/236736/
 
+9. `flavor set/unset` commands will no longer return the modified resource
+
+  Previously, modifying a flavor would result in the new flavor being displayed
+  to the user. To keep things consistent with other `set/unset` commands, we
+  will no longer be showing the modified resource.
+
+  * In favor of: Use `set/unset` then `show`
+  * As of: NA
+  * Removed in: NA
+  * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1546065
+  * Commit: https://review.openstack.org/#/c/280663/
+
+10. `security group set` commands will no longer return the modified resource
+
+  Previously, modifying a security group would result in the new security group
+  being displayed to the user. To keep things consistent with other `set`
+  commands, we will no longer be showing the modified resource.
+
+  * In favor of: Use `set` then `show`
+  * As of: NA
+  * Removed in: NA
+  * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1546065
+  * Commit: https://review.openstack.org/#/c/281087/
+
+11. `compute agent set` commands will no longer return the modified resource
+
+  Previously, modifying an agent would result in the new agent being displayed
+  to the user. To keep things consistent with other `set` commands, we will
+  no longer be showing the modified resource.
+
+  * In favor of: Use `set` then `show`
+  * As of: NA
+  * Removed in: NA
+  * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1546065
+  * Commit: https://review.openstack.org/#/c/281088/
+
+13. `aggregate set` commands will no longer return the modified resource
+
+  Previously, modifying an aggregate would result in the new aggregate being
+  displayed to the user. To keep things consistent with other `set` commands,
+  we will no longer be showing the modified resource.
+
+  * In favor of: Use `set` then `show`
+  * As of: NA
+  * Removed in: NA
+  * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1546065
+  * Commit: https://review.openstack.org/#/c/281089/
+
 For Developers
 ==============
 

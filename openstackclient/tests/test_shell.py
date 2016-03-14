@@ -109,6 +109,7 @@ global_options = {
     '--os-default-domain': (DEFAULT_DOMAIN_NAME, True, True),
     '--os-cacert': ('/dev/null', True, True),
     '--timing': (True, True, False),
+    '--profile': ('SECRET_KEY', True, False),
     '--os-interface': (DEFAULT_INTERFACE, True, True)
 }
 
@@ -161,6 +162,7 @@ def fake_execute(shell, cmd):
 
 
 class TestShell(utils.TestCase):
+
     def setUp(self):
         super(TestShell, self).setUp()
         patch = "openstackclient.shell.OpenStackShell.run_subcommand"
@@ -280,6 +282,7 @@ class TestShell(utils.TestCase):
 
 class TestShellHelp(TestShell):
     """Test the deferred help flag"""
+
     def setUp(self):
         super(TestShellHelp, self).setUp()
         self.orig_env, os.environ = os.environ, {}
@@ -304,6 +307,7 @@ class TestShellHelp(TestShell):
 
 
 class TestShellOptions(TestShell):
+
     def setUp(self):
         super(TestShellOptions, self).setUp()
         self.orig_env, os.environ = os.environ, {}
@@ -317,7 +321,7 @@ class TestShellOptions(TestShell):
             if not test_opts[opt][1]:
                 continue
             key = opt2attr(opt)
-            if type(test_opts[opt][0]) is str:
+            if isinstance(test_opts[opt][0], str):
                 cmd = opt + " " + test_opts[opt][0]
             else:
                 cmd = opt
@@ -331,7 +335,7 @@ class TestShellOptions(TestShell):
             if not test_opts[opt][1]:
                 continue
             key = opt2attr(opt)
-            if type(test_opts[opt][0]) is str:
+            if isinstance(test_opts[opt][0], str):
                 cmd = opt + " " + test_opts[opt][0]
             else:
                 cmd = opt
@@ -391,6 +395,7 @@ class TestShellOptions(TestShell):
 
 
 class TestShellTokenAuthEnv(TestShell):
+
     def setUp(self):
         super(TestShellTokenAuthEnv, self).setUp()
         env = {
@@ -438,6 +443,7 @@ class TestShellTokenAuthEnv(TestShell):
 
 
 class TestShellTokenEndpointAuthEnv(TestShell):
+
     def setUp(self):
         super(TestShellTokenEndpointAuthEnv, self).setUp()
         env = {
@@ -485,6 +491,7 @@ class TestShellTokenEndpointAuthEnv(TestShell):
 
 
 class TestShellCli(TestShell):
+
     def setUp(self):
         super(TestShellCli, self).setUp()
         env = {
@@ -706,6 +713,7 @@ class TestShellCli(TestShell):
 
 
 class TestShellCliEnv(TestShell):
+
     def setUp(self):
         super(TestShellCliEnv, self).setUp()
         env = {

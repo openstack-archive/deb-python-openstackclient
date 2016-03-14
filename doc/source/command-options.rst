@@ -14,8 +14,11 @@ for defining and using options in all situations.  The alternative of only
 using it when necessary leads to errors when copy-n-paste is used for a
 new command without understanding why or why not that instance is correct.
 
+General Command Options
+=======================
+
 Boolean Options
-===============
+---------------
 
 Boolean options for any command that sets a resource state, such as 'enabled'
 or 'public', shall always have both positive and negative options defined.
@@ -27,10 +30,10 @@ prepended (such as in the traditional GNU option usage) like `--share` and
 In order to handle those APIs that behave differently when a field is set to
 `None` and when the field is not present in a passed argument list or dict,
 each of the boolean options shall set its own variable to `True` as part of
-a mutiually exclusive group, rather than the more common configuration of setting a
-single destination variable `True` or `False` directly.  This allows us to
-detect the situation when neither option is present (both variables will be
-`False`) and act accordingly for those APIs where this matters.
+a mutiually exclusive group, rather than the more common configuration of
+setting a single destination variable `True` or `False` directly.  This allows
+us to detect the situation when neither option is present (both variables will
+be `False`) and act accordingly for those APIs where this matters.
 
 This also requires that each of the boolean values be tested in the
 `take_action()` method to correctly set (or not) the underlying API field
@@ -47,9 +50,9 @@ values.
 Implementation
 ~~~~~~~~~~~~~~
 
-The parser declaration should look like this::
+The parser declaration should look like this:
 
-.. code-block: python
+.. code-block:: python
 
         enable_group = parser.add_mutually_exclusive_group()
         enable_group.add_argument(
@@ -63,13 +66,44 @@ The parser declaration should look like this::
             help=_('Disable <resource>'),
         )
 
-An example handler in `take_action()`::
+An example handler in `take_action()`:
+
+.. code-block:: python
 
         # This leaves 'enabled' undefined if neither option is present
         if parsed_args.enable:
             kwargs['enabled'] = True
         if parsed_args.disable:
             kwargs['enabled'] = False
+
+Options with Choices
+--------------------
+
+Some options have a specific set of values (or choices) that are valid.
+These choices may be validated by the CLI. If the underlying API is stable
+and the list of choices are unlikely to change then the CLI may validate
+the choices. Otherwise, the CLI must defer validation of the choices to
+the API. If the option has a default choice then it must be documented.
+
+Having the CLI validate choices will be faster and may provide a better
+error message for the user if an invalid choice is specified
+(for example: ``argument --test: invalid choice: 'choice4' (choose from 'choice1', 'choice2', 'choice3')``).
+The trade-off is that CLI changes are required in order to take advantage
+of new choices.
+
+Implementation
+~~~~~~~~~~~~~~
+
+An example parser declaration:
+
+.. code-block:: python
+
+        choice_option.add_argument(
+            '--test',
+            metavar='<test>,
+            choices=['choice1', 'choice2', 'choice3'],
+            help=_('Test type (choice1, choice2 or choice3)'),
+        )
 
 List Command Options
 ====================
@@ -88,9 +122,9 @@ commands should allow `--long` even if they return all fields by default.
 Implementation
 ~~~~~~~~~~~~~~
 
-The parser declaration should look like this::
+The parser declaration should look like this:
 
-.. code-block: python
+.. code-block:: python
 
         parser.add_argument(
             '--long',
@@ -102,9 +136,9 @@ The parser declaration should look like this::
 Pagination
 ----------
 
-There are many ways to do pagination, some OpenStack APIs support it, some don't.
-OpenStackClient attempts to define a single common way to specify pagination on
-the command line.
+There are many ways to do pagination, some OpenStack APIs support it, some
+don't. OpenStackClient attempts to define a single common way to specify
+pagination on the command line.
 
 .. option:: --marker <marker>
 
@@ -117,9 +151,9 @@ the command line.
 Implementation
 ~~~~~~~~~~~~~~
 
-The parser declaration should look like this::
+The parser declaration should look like this:
 
-.. code-block: python
+.. code-block:: python
 
         parser.add_argument(
             "--marker",

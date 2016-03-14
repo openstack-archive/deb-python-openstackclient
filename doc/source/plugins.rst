@@ -30,13 +30,14 @@ python-ceilometerclient        using argparse
 python-congressclient          using OpenStackClient
 python-cueclient               using OpenStackClient
 python-designateclient         using OpenStackClient
-python-heatclient              patch in progress (https://review.openstack.org/#/c/195867/)
+python-heatclient              using OpenStackClient
 python-ironicclient            Using OpenStackClient
 python-magnumclient            using argparse
 python-manilaclient            using argparse
 python-mistralclient           using OpenStackClient
 python-muranoclient            using argparse
 python-saharaclient            using OpenStackClient
+python-searchlightclient       using OpenStackClient
 python-troveclient             using argparse
 python-zaqarclient             using OpenStackClient
 =============================  ======================================
@@ -128,3 +129,41 @@ so the version should not contain the leading 'v' character.
                  DEFAULT_API_VERSION +
                  ' (Env: OS_OSCPLUGIN_API_VERSION)')
         return parser
+
+Checklist for adding new OpenStack plugins
+==========================================
+
+Creating the initial plugin described above is the first step. There are a few
+more steps needed to fully integrate the client with openstackclient.
+
+Add the command checker to your CI
+----------------------------------
+
+#. Modify the section of ``zuul/layout.yaml`` related to your repository to
+   add ``osc-plugin-jobs`` to the list of job templates for your project.
+   This job checks that to see if any new commands are: duplicated, missing
+   entry points, or have overlap; across all openstackclient plugins.
+
+#. Update  ``jenkins/scripts/check-osc-plugins.sh`` to include your new
+   library to be installed from source. This is essential in running the
+   previously mentioned check job. Simply add
+   ``install_from_source python-fooclient`` to the block of code where all
+   other clients are installed.
+
+Changes to python-openstackclient
+---------------------------------
+
+#. In ``doc/source/plugins.rst``, update the `Adoption` section to reflect the
+   status of the project.
+
+#. Update ``doc/source/commands.rst`` to include objects that are defined by
+   fooclient's new plugin.
+
+#. Update ``doc/source/plugin-commands.rst`` to include the entry point defined
+   in fooclient. We use `sphinxext`_ to automatically document commands that
+   are used.
+
+#. Update ``test-requirements.txt`` to include fooclient. This is necessary
+   to auto-document the commands in the previous step.
+
+.. _sphinxext: http://docs.openstack.org/developer/stevedore/sphinxext.html

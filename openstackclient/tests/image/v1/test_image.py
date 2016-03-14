@@ -73,7 +73,9 @@ class TestImageCreate(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # ImageManager.create(name=, **)
@@ -120,7 +122,9 @@ class TestImageCreate(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # ImageManager.create(name=, **)
@@ -172,7 +176,9 @@ class TestImageCreate(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Ensure input file is opened
@@ -230,12 +236,10 @@ class TestImageDelete(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.images_mock.delete.assert_called_with(
-            image_fakes.image_id,
-        )
+        self.images_mock.delete.assert_called_with(image_fakes.image_id)
+        self.assertIsNone(result)
 
 
 class TestImageList(TestImage):
@@ -274,7 +278,9 @@ class TestImageList(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -295,7 +301,9 @@ class TestImageList(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -317,7 +325,9 @@ class TestImageList(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -337,7 +347,9 @@ class TestImageList(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -386,7 +398,9 @@ class TestImageList(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -412,7 +426,9 @@ class TestImageList(TestImage):
         verifylist = [('sort', 'name:asc')]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
         self.api_mock.image_list.assert_called_with(
             detailed=True,
@@ -456,11 +472,11 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         # Verify update() was not called, if it was show the args
         self.assertEqual(self.images_mock.update.call_args_list, [])
+        self.assertIsNone(result)
 
     def test_image_set_options(self):
         arglist = [
@@ -485,7 +501,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         kwargs = {
             'name': 'new-name',
@@ -501,6 +517,7 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
+        self.assertIsNone(result)
 
     def test_image_set_bools1(self):
         arglist = [
@@ -517,8 +534,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         kwargs = {
             'protected': True,
@@ -529,6 +545,7 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
+        self.assertIsNone(result)
 
     def test_image_set_bools2(self):
         arglist = [
@@ -545,8 +562,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         kwargs = {
             'protected': False,
@@ -557,6 +573,7 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
+        self.assertIsNone(result)
 
     def test_image_set_properties(self):
         arglist = [
@@ -570,8 +587,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         kwargs = {
             'properties': {
@@ -585,6 +601,7 @@ class TestImageSet(TestImage):
             image_fakes.image_id,
             **kwargs
         )
+        self.assertIsNone(result)
 
     def test_image_update_volume(self):
         # Set up VolumeManager Mock
@@ -626,7 +643,7 @@ class TestImageSet(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         # VolumeManager.upload_to_image(volume, force, image_name,
         #     container_format, disk_format)
@@ -637,13 +654,13 @@ class TestImageSet(TestImage):
             '',
             '',
         )
-
         # ImageManager.update(image_id, remove_props=, **)
         self.images_mock.update.assert_called_with(
             image_fakes.image_id,
             name='updated_image',
             volume='volly',
         )
+        self.assertIsNone(result)
 
 
 class TestImageShow(TestImage):
@@ -669,7 +686,9 @@ class TestImageShow(TestImage):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
         self.images_mock.get.assert_called_with(
             image_fakes.image_id,

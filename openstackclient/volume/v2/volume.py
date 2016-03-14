@@ -267,7 +267,7 @@ class ListVolume(command.Lister):
                 'Status',
                 'Size',
                 'Attachments',
-                ]
+            ]
             column_headers = copy.deepcopy(columns)
             column_headers[1] = 'Display Name'
             column_headers[4] = 'Attached to'
@@ -393,6 +393,16 @@ class ShowVolume(command.ShowOne):
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(volume_client.volumes, parsed_args.volume)
+
+        # Special mapping for columns to make the output easier to read:
+        # 'metadata' --> 'properties'
+        # 'volume_type' --> 'type'
+        volume._info.update(
+            {
+                'properties': utils.format_dict(volume._info.pop('metadata')),
+                'type': volume._info.pop('volume_type'),
+            },
+        )
 
         # Remove key links from being displayed
         volume._info.pop("links", None)

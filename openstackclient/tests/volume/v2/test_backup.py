@@ -33,6 +33,7 @@ class TestBackup(volume_fakes.TestVolume):
 
 
 class TestBackupCreate(TestBackup):
+
     def setUp(self):
         super(TestBackupCreate, self).setUp()
 
@@ -77,34 +78,8 @@ class TestBackupCreate(TestBackup):
         self.assertEqual(data, volume_fakes.BACKUP_data)
 
 
-class TestBackupShow(TestBackup):
-    def setUp(self):
-        super(TestBackupShow, self).setUp()
-
-        self.backups_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(volume_fakes.BACKUP),
-            loaded=True)
-        # Get the command object to test
-        self.cmd = backup.ShowBackup(self.app, None)
-
-    def test_backup_show(self):
-        arglist = [
-            volume_fakes.backup_id
-        ]
-        verifylist = [
-            ("backup", volume_fakes.backup_id)
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        columns, data = self.cmd.take_action(parsed_args)
-        self.backups_mock.get.assert_called_with(volume_fakes.backup_id)
-
-        self.assertEqual(volume_fakes.BACKUP_columns, columns)
-        self.assertEqual(volume_fakes.BACKUP_data, data)
-
-
 class TestBackupDelete(TestBackup):
+
     def setUp(self):
         super(TestBackupDelete, self).setUp()
 
@@ -129,40 +104,6 @@ class TestBackupDelete(TestBackup):
 
         self.cmd.take_action(parsed_args)
         self.backups_mock.delete.assert_called_with(volume_fakes.backup_id)
-
-
-class TestBackupRestore(TestBackup):
-    def setUp(self):
-        super(TestBackupRestore, self).setUp()
-
-        self.backups_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(volume_fakes.BACKUP),
-            loaded=True
-        )
-        self.volumes_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(volume_fakes.VOLUME),
-            loaded=True
-        )
-        self.restores_mock.restore.return_value = None
-        # Get the command object to mock
-        self.cmd = backup.RestoreBackup(self.app, None)
-
-    def test_backup_restore(self):
-        arglist = [
-            volume_fakes.backup_id,
-            volume_fakes.volume_id
-        ]
-        verifylist = [
-            ("backup", volume_fakes.backup_id),
-            ("volume", volume_fakes.volume_id)
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        self.cmd.take_action(parsed_args)
-        self.restores_mock.restore.assert_called_with(volume_fakes.backup_id,
-                                                      volume_fakes.volume_id)
 
 
 class TestBackupList(TestBackup):
@@ -240,3 +181,66 @@ class TestBackupList(TestBackup):
             volume_fakes.backup_container
         ),)
         self.assertEqual(datalist, tuple(data))
+
+
+class TestBackupRestore(TestBackup):
+
+    def setUp(self):
+        super(TestBackupRestore, self).setUp()
+
+        self.backups_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(volume_fakes.BACKUP),
+            loaded=True
+        )
+        self.volumes_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(volume_fakes.VOLUME),
+            loaded=True
+        )
+        self.restores_mock.restore.return_value = None
+        # Get the command object to mock
+        self.cmd = backup.RestoreBackup(self.app, None)
+
+    def test_backup_restore(self):
+        arglist = [
+            volume_fakes.backup_id,
+            volume_fakes.volume_id
+        ]
+        verifylist = [
+            ("backup", volume_fakes.backup_id),
+            ("volume", volume_fakes.volume_id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.cmd.take_action(parsed_args)
+        self.restores_mock.restore.assert_called_with(volume_fakes.backup_id,
+                                                      volume_fakes.volume_id)
+
+
+class TestBackupShow(TestBackup):
+
+    def setUp(self):
+        super(TestBackupShow, self).setUp()
+
+        self.backups_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(volume_fakes.BACKUP),
+            loaded=True)
+        # Get the command object to test
+        self.cmd = backup.ShowBackup(self.app, None)
+
+    def test_backup_show(self):
+        arglist = [
+            volume_fakes.backup_id
+        ]
+        verifylist = [
+            ("backup", volume_fakes.backup_id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+        self.backups_mock.get.assert_called_with(volume_fakes.backup_id)
+
+        self.assertEqual(volume_fakes.BACKUP_columns, columns)
+        self.assertEqual(volume_fakes.BACKUP_data, data)

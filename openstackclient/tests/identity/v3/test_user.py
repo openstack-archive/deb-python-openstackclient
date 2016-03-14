@@ -104,7 +104,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -141,7 +143,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -176,7 +180,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         mocker = mock.Mock()
         mocker.return_value = 'abc123'
         with mock.patch("openstackclient.common.utils.get_password", mocker):
@@ -214,7 +220,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -264,7 +272,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -324,7 +334,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -367,7 +379,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -401,7 +415,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -435,7 +451,9 @@ class TestUserCreate(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -481,7 +499,6 @@ class TestUserDelete(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         self.users_mock.delete.assert_called_with(
@@ -553,7 +570,9 @@ class TestUserList(TestUser):
         verifylist = []
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -578,7 +597,9 @@ class TestUserList(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -603,7 +624,9 @@ class TestUserList(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -628,7 +651,9 @@ class TestUserList(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -673,7 +698,9 @@ class TestUserList(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         kwargs = {
@@ -746,7 +773,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -778,7 +804,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -810,7 +835,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         mocker = mock.Mock()
         mocker.return_value = 'abc123'
         with mock.patch("openstackclient.common.utils.get_password", mocker):
@@ -844,7 +868,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -875,7 +898,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -908,7 +930,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -939,7 +960,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -969,7 +989,6 @@ class TestUserSet(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -1072,7 +1091,9 @@ class TestUserShow(TestUser):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.users_mock.get.assert_called_with(identity_fakes.user_id)

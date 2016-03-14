@@ -244,6 +244,12 @@ TRUST = {
 token_expires = '2014-01-01T00:00:00Z'
 token_id = 'tttttttt-tttt-tttt-tttt-tttttttttttt'
 
+UNSCOPED_TOKEN = {
+    'expires': token_expires,
+    'id': token_id,
+    'user_id': user_id,
+}
+
 TOKEN_WITH_PROJECT_ID = {
     'expires': token_expires,
     'id': token_id,
@@ -314,6 +320,22 @@ ASSIGNMENT_WITH_PROJECT_ID_AND_USER_ID = {
     'role': {'id': role_id},
 }
 
+ASSIGNMENT_WITH_PROJECT_ID_AND_USER_ID_INCLUDE_NAMES = {
+    'scope': {
+        'project': {
+            'domain': {'id': domain_id,
+                       'name': domain_name},
+            'id': project_id,
+            'name': project_name}},
+    'user': {
+        'domain': {'id': domain_id,
+                   'name': domain_name},
+        'id': user_id,
+        'name': user_name},
+    'role': {'id': role_id,
+             'name': role_name},
+}
+
 ASSIGNMENT_WITH_PROJECT_ID_AND_USER_ID_INHERITED = {
     'scope': {'project': {'id': project_id},
               'OS-INHERIT:inherited_to': 'projects'},
@@ -331,6 +353,19 @@ ASSIGNMENT_WITH_DOMAIN_ID_AND_USER_ID = {
     'scope': {'domain': {'id': domain_id}},
     'user': {'id': user_id},
     'role': {'id': role_id},
+}
+
+ASSIGNMENT_WITH_DOMAIN_ID_AND_USER_ID_INCLUDE_NAMES = {
+    'scope': {
+        'domain': {'id': domain_id,
+                   'name': domain_name}},
+    'user': {
+        'domain': {'id': domain_id,
+                   'name': domain_name},
+        'id': user_id,
+        'name': user_name},
+    'role': {'id': role_id,
+             'name': role_name},
 }
 
 ASSIGNMENT_WITH_DOMAIN_ID_AND_USER_ID_INHERITED = {
@@ -385,6 +420,7 @@ OAUTH_VERIFIER = {
 
 
 class FakeAuth(object):
+
     def __init__(self, auth_method_class=None):
         self._auth_method_class = auth_method_class
 
@@ -393,11 +429,13 @@ class FakeAuth(object):
 
 
 class FakeSession(object):
+
     def __init__(self, **kwargs):
         self.auth = FakeAuth()
 
 
 class FakeIdentityv3Client(object):
+
     def __init__(self, **kwargs):
         self.domains = mock.Mock()
         self.domains.resource_class = fakes.FakeResource(None, {})
@@ -420,6 +458,8 @@ class FakeIdentityv3Client(object):
         self.session = mock.Mock()
         self.session.auth.auth_ref.service_catalog.resource_class = \
             fakes.FakeResource(None, {})
+        self.tokens = mock.Mock()
+        self.tokens.resource_class = fakes.FakeResource(None, {})
         self.trusts = mock.Mock()
         self.trusts.resource_class = fakes.FakeResource(None, {})
         self.users = mock.Mock()
@@ -431,6 +471,7 @@ class FakeIdentityv3Client(object):
 
 
 class FakeFederationManager(object):
+
     def __init__(self, **kwargs):
         self.identity_providers = mock.Mock()
         self.identity_providers.resource_class = fakes.FakeResource(None, {})
@@ -447,12 +488,14 @@ class FakeFederationManager(object):
 
 
 class FakeFederatedClient(FakeIdentityv3Client):
+
     def __init__(self, **kwargs):
         super(FakeFederatedClient, self).__init__(**kwargs)
         self.federation = FakeFederationManager()
 
 
 class FakeOAuth1Client(FakeIdentityv3Client):
+
     def __init__(self, **kwargs):
         super(FakeOAuth1Client, self).__init__(**kwargs)
 
@@ -465,6 +508,7 @@ class FakeOAuth1Client(FakeIdentityv3Client):
 
 
 class TestIdentityv3(utils.TestCommand):
+
     def setUp(self):
         super(TestIdentityv3, self).setUp()
 
@@ -475,6 +519,7 @@ class TestIdentityv3(utils.TestCommand):
 
 
 class TestFederatedIdentity(utils.TestCommand):
+
     def setUp(self):
         super(TestFederatedIdentity, self).setUp()
 
@@ -485,6 +530,7 @@ class TestFederatedIdentity(utils.TestCommand):
 
 
 class TestOAuth1(utils.TestCommand):
+
     def setUp(self):
         super(TestOAuth1, self).setUp()
 

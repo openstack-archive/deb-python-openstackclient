@@ -24,6 +24,7 @@ from openstackclient.volume.v2 import volume
 
 
 class TestVolume(volume_fakes.TestVolume):
+
     def setUp(self):
         super(TestVolume, self).setUp()
 
@@ -96,7 +97,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -133,7 +136,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -181,7 +186,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -229,7 +236,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -263,7 +272,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -302,7 +313,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -341,7 +354,9 @@ class TestVolumeCreate(TestVolume):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.volumes_mock.create.assert_called_with(
@@ -363,6 +378,7 @@ class TestVolumeCreate(TestVolume):
 
 
 class TestVolumeDelete(TestVolume):
+
     def setUp(self):
         super(TestVolumeDelete, self).setUp()
 
@@ -712,6 +728,7 @@ class TestVolumeList(TestVolume):
 
 
 class TestVolumeShow(TestVolume):
+
     def setUp(self):
         super(TestVolumeShow, self).setUp()
 

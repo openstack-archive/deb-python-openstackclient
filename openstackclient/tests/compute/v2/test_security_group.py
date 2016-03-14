@@ -12,7 +12,6 @@
 #
 
 import copy
-import mock
 
 from openstackclient.compute.v2 import security_group
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
@@ -43,14 +42,12 @@ class TestSecurityGroup(compute_fakes.TestComputev2):
     def setUp(self):
         super(TestSecurityGroup, self).setUp()
 
-        self.secgroups_mock = mock.Mock()
-        self.secgroups_mock.resource_class = fakes.FakeResource(None, {})
-        self.app.client_manager.compute.security_groups = self.secgroups_mock
+        # Get a shortcut compute client security_groups mock
+        self.secgroups_mock = self.app.client_manager.compute.security_groups
         self.secgroups_mock.reset_mock()
 
-        self.projects_mock = mock.Mock()
-        self.projects_mock.resource_class = fakes.FakeResource(None, {})
-        self.app.client_manager.identity.projects = self.projects_mock
+        # Get a shortcut identity client projects mock
+        self.projects_mock = self.app.client_manager.identity.projects
         self.projects_mock.reset_mock()
 
 
@@ -90,7 +87,9 @@ class TestSecurityGroupCreate(TestSecurityGroup):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # SecurityGroupManager.create(name, description)
@@ -113,7 +112,9 @@ class TestSecurityGroupCreate(TestSecurityGroup):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # SecurityGroupManager.create(name, description)
@@ -124,63 +125,3 @@ class TestSecurityGroupCreate(TestSecurityGroup):
 
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
-
-
-class TestSecurityGroupList(TestSecurityGroup):
-
-    def setUp(self):
-        super(TestSecurityGroupList, self).setUp()
-
-        self.secgroups_mock.list.return_value = [
-            FakeSecurityGroupResource(
-                None,
-                copy.deepcopy(SECURITY_GROUP),
-                loaded=True,
-            ),
-        ]
-
-        # Get the command object to test
-        self.cmd = security_group.ListSecurityGroup(self.app, None)
-
-    def test_security_group_list_no_options(self):
-        self.projects_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.PROJECT),
-                loaded=True,
-            ),
-        ]
-
-        arglist = []
-        verifylist = [
-            ('all_projects', False),
-        ]
-
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # DisplayCommandBase.take_action() returns two tuples
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # Set expected values
-        kwargs = {
-            'search_opts': {
-                'all_tenants': False,
-            },
-        }
-
-        self.secgroups_mock.list.assert_called_with(
-            **kwargs
-        )
-
-        collist = (
-            'ID',
-            'Name',
-            'Description',
-        )
-        self.assertEqual(collist, columns)
-        datalist = ((
-            security_group_id,
-            security_group_name,
-            security_group_description,
-        ), )
-        self.assertEqual(datalist, tuple(data))

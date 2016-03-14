@@ -30,6 +30,32 @@ _formatters = {
 }
 
 
+def _get_columns(item):
+    columns = item.keys()
+    if 'tenant_id' in columns:
+        columns.remove('tenant_id')
+        columns.append('project_id')
+    return tuple(sorted(columns))
+
+
+class DeleteSubnet(command.Command):
+    """Delete subnet"""
+
+    def get_parser(self, prog_name):
+        parser = super(DeleteSubnet, self).get_parser(prog_name)
+        parser.add_argument(
+            'subnet',
+            metavar="<subnet>",
+            help="Subnet to delete (name or ID)"
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        client = self.app.client_manager.network
+        client.delete_subnet(
+            client.find_subnet(parsed_args.subnet))
+
+
 class ListSubnet(command.Lister):
     """List subnets"""
 
@@ -61,3 +87,23 @@ class ListSubnet(command.Lister):
                     s, columns,
                     formatters=_formatters,
                 ) for s in data))
+
+
+class ShowSubnet(command.ShowOne):
+    """Show subnet details"""
+
+    def get_parser(self, prog_name):
+        parser = super(ShowSubnet, self).get_parser(prog_name)
+        parser.add_argument(
+            'subnet',
+            metavar="<subnet>",
+            help="Subnet to show (name or ID)"
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        obj = self.app.client_manager.network.find_subnet(parsed_args.subnet,
+                                                          ignore_missing=False)
+        columns = _get_columns(obj)
+        data = utils.get_item_properties(obj, columns, formatters=_formatters)
+        return (columns, data)

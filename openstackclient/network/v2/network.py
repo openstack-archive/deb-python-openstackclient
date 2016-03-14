@@ -17,6 +17,7 @@ from openstackclient.common import command
 from openstackclient.common import exceptions
 from openstackclient.common import utils
 from openstackclient.identity import common as identity_common
+from openstackclient.network import common
 
 
 def _format_admin_state(item):
@@ -74,29 +75,26 @@ def _get_attrs(client_manager, parsed_args):
     return attrs
 
 
-class CreateNetwork(command.ShowOne):
+def _get_attrs_compute(client_manager, parsed_args):
+    attrs = {}
+    if parsed_args.name is not None:
+        attrs['label'] = str(parsed_args.name)
+    if parsed_args.shared is not None:
+        attrs['share_address'] = parsed_args.shared
+    if parsed_args.subnet is not None:
+        attrs['cidr'] = parsed_args.subnet
+
+    return attrs
+
+
+class CreateNetwork(common.NetworkAndComputeShowOne):
     """Create new network"""
 
-    def get_parser(self, prog_name):
-        parser = super(CreateNetwork, self).get_parser(prog_name)
+    def update_parser_common(self, parser):
         parser.add_argument(
             'name',
             metavar='<name>',
             help='New network name',
-        )
-        admin_group = parser.add_mutually_exclusive_group()
-        admin_group.add_argument(
-            '--enable',
-            dest='admin_state',
-            action='store_true',
-            default=True,
-            help='Enable network (default)',
-        )
-        admin_group.add_argument(
-            '--disable',
-            dest='admin_state',
-            action='store_false',
-            help='Disable network',
         )
         share_group = parser.add_mutually_exclusive_group()
         share_group.add_argument(
@@ -112,13 +110,29 @@ class CreateNetwork(command.ShowOne):
             action='store_false',
             help='Do not share the network between projects',
         )
+        return parser
+
+    def update_parser_network(self, parser):
+        admin_group = parser.add_mutually_exclusive_group()
+        admin_group.add_argument(
+            '--enable',
+            dest='admin_state',
+            action='store_true',
+            default=True,
+            help='Enable network (default)',
+        )
+        admin_group.add_argument(
+            '--disable',
+            dest='admin_state',
+            action='store_false',
+            help='Disable network',
+        )
         parser.add_argument(
             '--project',
             metavar='<project>',
             help="Owner's project (name or ID)"
         )
         identity_common.add_project_domain_option_to_parser(parser)
-
         parser.add_argument(
             '--availability-zone-hint',
             action='append',
@@ -130,22 +144,33 @@ class CreateNetwork(command.ShowOne):
         )
         return parser
 
-    def take_action(self, parsed_args):
-        client = self.app.client_manager.network
+    def update_parser_compute(self, parser):
+        parser.add_argument(
+            '--subnet',
+            metavar='<subnet>',
+            help="IPv4 subnet for fixed IPs (in CIDR notation)"
+        )
+        return parser
 
+    def take_action_network(self, client, parsed_args):
         attrs = _get_attrs(self.app.client_manager, parsed_args)
         obj = client.create_network(**attrs)
         columns = _get_columns(obj)
-
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
         return (columns, data)
 
+    def take_action_compute(self, client, parsed_args):
+        attrs = _get_attrs_compute(self.app.client_manager, parsed_args)
+        obj = client.networks.create(**attrs)
+        columns = tuple(sorted(obj._info.keys()))
+        data = utils.get_dict_properties(obj._info, columns)
+        return (columns, data)
 
-class DeleteNetwork(command.Command):
+
+class DeleteNetwork(common.NetworkAndComputeCommand):
     """Delete network(s)"""
 
-    def get_parser(self, prog_name):
-        parser = super(DeleteNetwork, self).get_parser(prog_name)
+    def update_parser_common(self, parser):
         parser.add_argument(
             'network',
             metavar="<network>",
@@ -154,18 +179,24 @@ class DeleteNetwork(command.Command):
         )
         return parser
 
-    def take_action(self, parsed_args):
-        client = self.app.client_manager.network
+    def take_action_network(self, client, parsed_args):
         for network in parsed_args.network:
             obj = client.find_network(network)
             client.delete_network(obj)
 
+    def take_action_compute(self, client, parsed_args):
+        for network in parsed_args.network:
+            network = utils.find_resource(
+                client.networks,
+                network,
+            )
+            client.networks.delete(network.id)
 
-class ListNetwork(command.Lister):
+
+class ListNetwork(common.NetworkAndComputeLister):
     """List networks"""
 
-    def get_parser(self, prog_name):
-        parser = super(ListNetwork, self).get_parser(prog_name)
+    def update_parser_common(self, parser):
         parser.add_argument(
             '--external',
             action='store_true',
@@ -180,9 +211,7 @@ class ListNetwork(command.Lister):
         )
         return parser
 
-    def take_action(self, parsed_args):
-        client = self.app.client_manager.network
-
+    def take_action_network(self, client, parsed_args):
         if parsed_args.long:
             columns = (
                 'id',
@@ -224,7 +253,29 @@ class ListNetwork(command.Lister):
             args = {'router:external': True}
         else:
             args = {}
+
         data = client.networks(**args)
+
+        return (column_headers,
+                (utils.get_item_properties(
+                    s, columns,
+                    formatters=_formatters,
+                ) for s in data))
+
+    def take_action_compute(self, client, parsed_args):
+        columns = (
+            'id',
+            'label',
+            'cidr',
+        )
+        column_headers = (
+            'ID',
+            'Name',
+            'Subnet',
+        )
+
+        data = client.networks.list()
+
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
@@ -238,7 +289,7 @@ class SetNetwork(command.Command):
     def get_parser(self, prog_name):
         parser = super(SetNetwork, self).get_parser(prog_name)
         parser.add_argument(
-            'identifier',
+            'network',
             metavar="<network>",
             help=("Network to modify (name or ID)")
         )
@@ -279,7 +330,7 @@ class SetNetwork(command.Command):
 
     def take_action(self, parsed_args):
         client = self.app.client_manager.network
-        obj = client.find_network(parsed_args.identifier, ignore_missing=False)
+        obj = client.find_network(parsed_args.network, ignore_missing=False)
 
         attrs = _get_attrs(self.app.client_manager, parsed_args)
         if attrs == {}:
@@ -290,21 +341,28 @@ class SetNetwork(command.Command):
         return
 
 
-class ShowNetwork(command.ShowOne):
+class ShowNetwork(common.NetworkAndComputeShowOne):
     """Show network details"""
 
-    def get_parser(self, prog_name):
-        parser = super(ShowNetwork, self).get_parser(prog_name)
+    def update_parser_common(self, parser):
         parser.add_argument(
-            'identifier',
+            'network',
             metavar="<network>",
             help=("Network to display (name or ID)")
         )
         return parser
 
-    def take_action(self, parsed_args):
-        client = self.app.client_manager.network
-        obj = client.find_network(parsed_args.identifier, ignore_missing=False)
+    def take_action_network(self, client, parsed_args):
+        obj = client.find_network(parsed_args.network, ignore_missing=False)
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
+        return (columns, data)
+
+    def take_action_compute(self, client, parsed_args):
+        network = utils.find_resource(
+            client.networks,
+            parsed_args.network,
+        )
+        columns = sorted(network._info.keys())
+        data = utils.get_dict_properties(network._info, columns)
         return (columns, data)

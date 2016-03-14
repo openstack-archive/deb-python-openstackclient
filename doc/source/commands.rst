@@ -74,6 +74,8 @@ referring to both Compute and Volume quotas.
 * ``aggregate``: (**Compute**) a grouping of servers
 * ``backup``: (**Volume**) a volume copy
 * ``catalog``: (**Identity**) service catalog
+* ``command``: (**Internal**) installed commands in the OSC process
+* ``configuration``: (**Internal**) openstack client configuration
 * ``console log``: (**Compute**) server console text dump
 * ``console url``: (**Compute**) server remote console URL
 * ``consumer``: (**Identity**) OAuth-based delegatee
@@ -86,7 +88,7 @@ referring to both Compute and Volume quotas.
 * ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
 * ``flavor``: (**Compute**) predefined server configurations: ram, root disk, etc
 * ``group``: (**Identity**) a grouping of users
-* ``host``: Compute - the physical computer running a hypervisor
+* ``host``: (**Compute**) - the physical computer running a hypervisor
 * ``hypervisor``: (**Compute**) the virtual machine manager
 * ``hypervisor stats``: (**Compute**) hypervisor statistics over all compute nodes
 * ``identity provider``: (**Identity**) a source of users and authentication
@@ -97,8 +99,8 @@ referring to both Compute and Volume quotas.
 * ``keypair``: (**Compute**) an SSH public key
 * ``limits``: (**Compute**, **Volume**) resource usage limits
 * ``mapping``: (**Identity**) a definition to translate identity provider attributes to Identity concepts
-* ``module``: internal - installed Python modules in the OSC process
-* ``network``: (**Network**) - a virtual network for connecting servers and other resources
+* ``module``: (**Internal**) - installed Python modules in the OSC process
+* ``network``: (**Compute**, **Network**) - a virtual network for connecting servers and other resources
 * ``object``: (**Object Storage**) a single file in the Object Storage
 * ``policy``: (**Identity**) determines authorization
 * ``port``: (**Network**) - a virtual port for connecting servers and other resources to a network
@@ -112,11 +114,13 @@ referring to both Compute and Volume quotas.
 * ``security group``: (**Compute**, **Network**) - groups of network access rules
 * ``security group rule``: (**Compute**, **Network**) - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
+* ``server dump``: (**Compute**) a dump file of a server created by features like kdump
 * ``server image``: (**Compute**) saved server disk image
 * ``service``: (**Identity**) a cloud service
 * ``service provider``: (**Identity**) a resource that consumes assertions from an ``identity provider``
 * ``snapshot``: (**Volume**) a point-in-time copy of a volume
 * ``subnet``: (**Network**) - a contiguous range of IP addresses assigned to a network
+* ``subnet pool``: (**Network**) - a pool of subnets
 * ``token``: (**Identity**) a bearer token managed by Identity service
 * ``usage``: (**Compute**) display host resources being consumed
 * ``user``: (**Identity**) individual cloud resources users
@@ -146,6 +150,8 @@ list check out :doc:`plugin-commands`.
 * ``dataprocessing plugin``: (**Data Processing (Sahara)**)
 * ``message-broker cluster``: (**Message Broker (Cue)**)
 * ``message flavor``: (**Messaging (Zaqar)**)
+* ``orchestration resource``: (**Orchestration (Heat)**)
+* ``orchestration template``: (**Orchestration (Heat)**)
 * ``pool``: (**Messaging (Zaqar)**)
 * ``ptr record``: (**DNS (Designate)**)
 * ``queue``: (**Messaging (Zaqar)**)
@@ -153,7 +159,14 @@ list check out :doc:`plugin-commands`.
 * ``secret``: (**Key Manager (Barbican)**)
 * ``secret container``: (**Key Manager (Barbican)**)
 * ``secret order``: (**Key Manager (Barbican)**)
-* ``stack``: (**Orchestration (Heat)**)
+* ``software config``: (**Orchestration (Heat)**)
+* ``software deployment``: (**Orchestration (Heat)**)
+* ``stack event``: (**Orchestration (Heat)**)
+* ``stack hook``: (**Orchestration (Heat)**)
+* ``stack output``: (**Orchestration (Heat)**)
+* ``stack resource``: (**Orchestration (Heat)**)
+* ``stack snapshot``: (**Orchestration (Heat)**)
+* ``stack template``: (**Orchestration (Heat)**)
 * ``task exeuction``: (**Workflow Engine (Mistral)**)
 * ``tld``: (**DNS (Designate)**)
 * ``workbook``: (**Workflow Engine (Mistral)**)
@@ -188,6 +201,7 @@ Those actions with an opposite action are noted in parens if applicable.
 * ``remove`` (``add``) - remove an object from a group of objects
 * ``rescue`` (``unrescue``) - reboot a server in a special rescue mode allowing access to the original disks
 * ``resize`` - change a server's flavor
+* ``restore`` - restore a heat stack snapshot
 * ``resume`` (``suspend``) - return one or more suspended servers to running state
 * ``revoke`` (``issue``) - revoke a token
 * ``save`` - download an object locally

@@ -164,6 +164,9 @@ class CreateRequestToken(command.ShowOne):
 class IssueToken(command.ShowOne):
     """Issue new token"""
 
+    # scoped token is optional
+    required_scope = False
+
     def get_parser(self, prog_name):
         parser = super(IssueToken, self).get_parser(prog_name)
         return parser
@@ -173,3 +176,21 @@ class IssueToken(command.ShowOne):
         if 'tenant_id' in token:
             token['project_id'] = token.pop('tenant_id')
         return zip(*sorted(six.iteritems(token)))
+
+
+class RevokeToken(command.Command):
+    """Revoke existing token"""
+
+    def get_parser(self, prog_name):
+        parser = super(RevokeToken, self).get_parser(prog_name)
+        parser.add_argument(
+            'token',
+            metavar='<token>',
+            help='Token to be deleted',
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        identity_client = self.app.client_manager.identity
+
+        identity_client.tokens.revoke_token(parsed_args.token)

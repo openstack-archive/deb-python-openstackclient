@@ -44,7 +44,9 @@ class TestTokenIssue(TestToken):
         self.sc_mock.get_token.return_value = \
             identity_fakes.TOKEN_WITH_PROJECT_ID
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.sc_mock.get_token.assert_called_with()
@@ -66,7 +68,9 @@ class TestTokenIssue(TestToken):
         self.sc_mock.get_token.return_value = \
             identity_fakes.TOKEN_WITH_DOMAIN_ID
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         self.sc_mock.get_token.assert_called_with()
@@ -80,3 +84,45 @@ class TestTokenIssue(TestToken):
             identity_fakes.user_id,
         )
         self.assertEqual(datalist, data)
+
+    def test_token_issue_with_unscoped(self):
+        arglist = []
+        verifylist = []
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.sc_mock.get_token.return_value = \
+            identity_fakes.UNSCOPED_TOKEN
+
+        # DisplayCommandBase.take_action() returns two tuples
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.sc_mock.get_token.assert_called_with()
+
+        collist = ('expires', 'id', 'user_id')
+        self.assertEqual(collist, columns)
+        datalist = (
+            identity_fakes.token_expires,
+            identity_fakes.token_id,
+            identity_fakes.user_id,
+        )
+        self.assertEqual(datalist, data)
+
+
+class TestTokenRevoke(TestToken):
+
+    TOKEN = 'fob'
+
+    def setUp(self):
+        super(TestTokenRevoke, self).setUp()
+        self.tokens_mock = self.app.client_manager.identity.tokens
+        self.tokens_mock.reset_mock()
+        self.tokens_mock.revoke_token.return_value = True
+        self.cmd = token.RevokeToken(self.app, None)
+
+    def test_token_revoke(self):
+        arglist = [self.TOKEN]
+        verifylist = [('token', self.TOKEN)]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.cmd.take_action(parsed_args)
+
+        self.tokens_mock.revoke_token.assert_called_with(self.TOKEN)

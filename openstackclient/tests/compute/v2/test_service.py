@@ -49,12 +49,12 @@ class TestServiceDelete(TestService):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         self.service_mock.delete.assert_called_with(
             compute_fakes.service_binary,
         )
+        self.assertIsNone(result)
 
 
 class TestServiceList(TestService):
@@ -82,7 +82,9 @@ class TestServiceList(TestService):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         self.cmd.take_action(parsed_args)
 
         self.service_mock.list.assert_called_with(
@@ -123,12 +125,13 @@ class TestServiceSet(TestService):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         self.service_mock.enable.assert_called_with(
             compute_fakes.service_host,
             compute_fakes.service_binary,
         )
+        self.assertIsNone(result)
 
     def test_service_set_disable(self):
         arglist = [
@@ -143,9 +146,10 @@ class TestServiceSet(TestService):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         self.service_mock.disable.assert_called_with(
             compute_fakes.service_host,
             compute_fakes.service_binary,
         )
+        self.assertIsNone(result)

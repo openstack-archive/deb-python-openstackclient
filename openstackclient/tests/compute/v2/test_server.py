@@ -12,7 +12,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 #
-
 import mock
 
 from mock import call
@@ -79,12 +78,12 @@ class TestServer(compute_fakes.TestComputev2):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         for s in servers:
             method = getattr(s, method_name)
             method.assert_called_with()
+        self.assertIsNone(result)
 
 
 class TestServerCreate(TestServer):
@@ -93,6 +92,7 @@ class TestServerCreate(TestServer):
         'addresses',
         'flavor',
         'id',
+        'image',
         'name',
         'networks',
         'properties',
@@ -101,8 +101,9 @@ class TestServerCreate(TestServer):
     def datalist(self):
         datalist = (
             '',
-            self.flavor.name + ' ()',
+            self.flavor.name + ' (' + self.new_server.flavor.get('id') + ')',
             self.new_server.id,
+            self.image.name + ' (' + self.new_server.image.get('id') + ')',
             self.new_server.name,
             self.new_server.networks,
             '',
@@ -144,11 +145,10 @@ class TestServerCreate(TestServer):
         verifylist = [
             ('server_name', self.new_server.name),
         ]
-        try:
-            # Missing required args should bail here
-            self.check_parser(self.cmd, arglist, verifylist)
-        except utils.ParserException:
-            pass
+
+        # Missing required args should bail here
+        self.assertRaises(utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
 
     def test_server_create_minimal(self):
         arglist = [
@@ -164,7 +164,9 @@ class TestServerCreate(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -242,7 +244,9 @@ class TestServerCreate(TestServer):
         self.app.client_manager.network.find_network = find_network
         self.app.client_manager.network.find_port = find_port
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -300,7 +304,9 @@ class TestServerCreate(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Ensure the userdata file is opened
@@ -411,12 +417,10 @@ class TestServerDelete(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.delete.assert_called_with(
-            servers[0].id,
-        )
+        self.servers_mock.delete.assert_called_with(servers[0].id)
+        self.assertIsNone(result)
 
     def test_server_delete_multi_servers(self):
         servers = self.setup_servers_mock(count=3)
@@ -431,13 +435,13 @@ class TestServerDelete(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         calls = []
         for s in servers:
             calls.append(call(s.id))
         self.servers_mock.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
 
     @mock.patch.object(common_utils, 'wait_for_delete', return_value=True)
     def test_server_delete_wait_ok(self, mock_wait_for_delete):
@@ -451,18 +455,15 @@ class TestServerDelete(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.delete.assert_called_with(
-            servers[0].id,
-        )
-
+        self.servers_mock.delete.assert_called_with(servers[0].id)
         mock_wait_for_delete.assert_called_once_with(
             self.servers_mock,
             servers[0].id,
             callback=server._show_progress
         )
+        self.assertIsNone(result)
 
     @mock.patch.object(common_utils, 'wait_for_delete', return_value=False)
     def test_server_delete_wait_fails(self, mock_wait_for_delete):
@@ -476,18 +477,34 @@ class TestServerDelete(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
         self.assertRaises(SystemExit, self.cmd.take_action, parsed_args)
 
-        self.servers_mock.delete.assert_called_with(
-            servers[0].id,
-        )
-
+        self.servers_mock.delete.assert_called_with(servers[0].id)
         mock_wait_for_delete.assert_called_once_with(
             self.servers_mock,
             servers[0].id,
             callback=server._show_progress
         )
+
+
+class TestServerDumpCreate(TestServer):
+
+    def setUp(self):
+        super(TestServerDumpCreate, self).setUp()
+
+        # Get the command object to test
+        self.cmd = server.CreateServerDump(self.app, None)
+
+        # Set methods to be tested.
+        self.methods = {
+            'trigger_crash_dump': None,
+        }
+
+    def test_server_dump_one_server(self):
+        self.run_method_with_servers('trigger_crash_dump', 1)
+
+    def test_server_dump_multi_servers(self):
+        self.run_method_with_servers('trigger_crash_dump', 3)
 
 
 class TestServerImageCreate(TestServer):
@@ -536,7 +553,9 @@ class TestServerImageCreate(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # ServerManager.create_image(server, image_name, metadata=)
@@ -559,7 +578,9 @@ class TestServerImageCreate(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
         # ServerManager.create_image(server, image_name, metadata=)
@@ -593,32 +614,31 @@ class TestServerList(TestServer):
         'Properties',
     )
 
-    # Default search options, in the case of no commandline option specified.
-    search_opts = {
-        'reservation_id': None,
-        'ip': None,
-        'ip6': None,
-        'name': None,
-        'instance_name': None,
-        'status': None,
-        'flavor': None,
-        'image': None,
-        'host': None,
-        'tenant_id': None,
-        'all_tenants': False,
-        'user_id': None,
-    }
-
-    # Default params of the core function of the command in the case of no
-    # commandline option specified.
-    kwargs = {
-        'search_opts': search_opts,
-        'marker': None,
-        'limit': None,
-    }
-
     def setUp(self):
         super(TestServerList, self).setUp()
+
+        self.search_opts = {
+            'reservation_id': None,
+            'ip': None,
+            'ip6': None,
+            'name': None,
+            'instance_name': None,
+            'status': None,
+            'flavor': None,
+            'image': None,
+            'host': None,
+            'tenant_id': None,
+            'all_tenants': False,
+            'user_id': None,
+        }
+
+        # Default params of the core function of the command in the case of no
+        # commandline option specified.
+        self.kwargs = {
+            'search_opts': self.search_opts,
+            'marker': None,
+            'limit': None,
+        }
 
         # The fake servers' attributes. Use the original attributes names in
         # nova, not the ones printed by "server list" command.
@@ -636,8 +656,13 @@ class TestServerList(TestServer):
 
         # The servers to be listed.
         self.servers = self.setup_servers_mock(3)
-
         self.servers_mock.list.return_value = self.servers
+
+        self.image = image_fakes.FakeImage.create_one_image()
+        self.cimages_mock.get.return_value = self.image
+
+        self.flavor = compute_fakes.FakeFlavor.create_one_flavor()
+        self.flavors_mock.get.return_value = self.flavor
 
         # Get the command object to test
         self.cmd = server.ListServer(self.app, None)
@@ -696,6 +721,46 @@ class TestServerList(TestServer):
         self.servers_mock.list.assert_called_with(**self.kwargs)
         self.assertEqual(self.columns_long, columns)
         self.assertEqual(tuple(self.data_long), tuple(data))
+
+    def test_server_list_with_image(self):
+
+        arglist = [
+            '--image', self.image.id
+        ]
+        verifylist = [
+            ('image', self.image.id)
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.cimages_mock.get.assert_called_with(self.image.id)
+
+        self.search_opts['image'] = self.image.id
+        self.servers_mock.list.assert_called_with(**self.kwargs)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
+
+    def test_server_list_with_flavor(self):
+
+        arglist = [
+            '--flavor', self.flavor.id
+        ]
+        verifylist = [
+            ('flavor', self.flavor.id)
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.flavors_mock.get.assert_called_with(self.flavor.id)
+
+        self.search_opts['flavor'] = self.flavor.id
+        self.servers_mock.list.assert_called_with(**self.kwargs)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(tuple(self.data), tuple(data))
 
 
 class TestServerLock(TestServer):
@@ -841,16 +906,14 @@ class TestServerResize(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.get.assert_called_with(
-            self.server.id,
-        )
+        self.servers_mock.get.assert_called_with(self.server.id)
 
         self.assertNotCalled(self.servers_mock.resize)
         self.assertNotCalled(self.servers_mock.confirm_resize)
         self.assertNotCalled(self.servers_mock.revert_resize)
+        self.assertIsNone(result)
 
     def test_server_resize(self):
         arglist = [
@@ -865,22 +928,19 @@ class TestServerResize(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.get.assert_called_with(
-            self.server.id,
-        )
+        self.servers_mock.get.assert_called_with(self.server.id)
         self.flavors_mock.get.assert_called_with(
             self.flavors_get_return_value.id,
         )
-
         self.servers_mock.resize.assert_called_with(
             self.server,
             self.flavors_get_return_value,
         )
         self.assertNotCalled(self.servers_mock.confirm_resize)
         self.assertNotCalled(self.servers_mock.revert_resize)
+        self.assertIsNone(result)
 
     def test_server_resize_confirm(self):
         arglist = [
@@ -894,18 +954,13 @@ class TestServerResize(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.get.assert_called_with(
-            self.server.id,
-        )
-
+        self.servers_mock.get.assert_called_with(self.server.id)
         self.assertNotCalled(self.servers_mock.resize)
-        self.servers_mock.confirm_resize.assert_called_with(
-            self.server,
-        )
+        self.servers_mock.confirm_resize.assert_called_with(self.server)
         self.assertNotCalled(self.servers_mock.revert_resize)
+        self.assertIsNone(result)
 
     def test_server_resize_revert(self):
         arglist = [
@@ -919,18 +974,13 @@ class TestServerResize(TestServer):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
-        self.servers_mock.get.assert_called_with(
-            self.server.id,
-        )
-
+        self.servers_mock.get.assert_called_with(self.server.id)
         self.assertNotCalled(self.servers_mock.resize)
         self.assertNotCalled(self.servers_mock.confirm_resize)
-        self.servers_mock.revert_resize.assert_called_with(
-            self.server,
-        )
+        self.servers_mock.revert_resize.assert_called_with(self.server)
+        self.assertIsNone(result)
 
 
 class TestServerResume(TestServer):

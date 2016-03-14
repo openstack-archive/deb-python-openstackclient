@@ -14,8 +14,10 @@
 #
 
 from openstackclient.common import exceptions
+from openstackclient.common import utils
 from openstackclient.compute.v2 import flavor
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
+from openstackclient.tests import utils as tests_utils
 
 
 class TestFlavor(compute_fakes.TestComputev2):
@@ -47,12 +49,12 @@ class TestFlavorDelete(TestFlavor):
         verifylist = [
             ('flavor', self.flavor.id),
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         self.flavors_mock.delete.assert_called_with(self.flavor.id)
+        self.assertIsNone(result)
 
     def test_flavor_delete_with_unexist_flavor(self):
         self.flavors_mock.get.side_effect = exceptions.NotFound(None)
@@ -97,15 +99,15 @@ class TestFlavorList(TestFlavor):
         flavors[0].id,
         flavors[0].name,
         flavors[0].ram,
-        '',
-        '',
+        flavors[0].disk,
+        flavors[0].ephemeral,
         flavors[0].vcpus,
-        ''
+        flavors[0].is_public,
     ), )
     data_long = (data[0] + (
-        '',
-        '',
-        'property=\'value\''
+        flavors[0].swap,
+        flavors[0].rxtx_factor,
+        u'property=\'value\''
     ), )
 
     def setUp(self):
@@ -126,7 +128,9 @@ class TestFlavorList(TestFlavor):
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -153,7 +157,9 @@ class TestFlavorList(TestFlavor):
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -180,7 +186,9 @@ class TestFlavorList(TestFlavor):
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -207,7 +215,9 @@ class TestFlavorList(TestFlavor):
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -234,7 +244,9 @@ class TestFlavorList(TestFlavor):
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        # DisplayCommandBase.take_action() returns two tuples
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
 
         # Set expected values
@@ -273,15 +285,77 @@ class TestFlavorSet(TestFlavor):
             ('property', {'FOO': '"B A R"'}),
             ('flavor', 'baremetal')
         ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        self.flavors_mock.find.assert_called_with(name='baremetal')
+        self.assertIsNone(result)
+
+
+class TestFlavorShow(TestFlavor):
+
+    # Return value of self.flavors_mock.find().
+    flavor = compute_fakes.FakeFlavor.create_one_flavor()
+
+    columns = (
+        'OS-FLV-DISABLED:disabled',
+        'OS-FLV-EXT-DATA:ephemeral',
+        'disk',
+        'id',
+        'name',
+        'os-flavor-access:is_public',
+        'properties',
+        'ram',
+        'rxtx_factor',
+        'swap',
+        'vcpus',
+    )
+
+    data = (
+        flavor.disabled,
+        flavor.ephemeral,
+        flavor.disk,
+        flavor.id,
+        flavor.name,
+        flavor.is_public,
+        utils.format_dict(flavor.get_keys()),
+        flavor.ram,
+        flavor.rxtx_factor,
+        flavor.swap,
+        flavor.vcpus,
+    )
+
+    def setUp(self):
+        super(TestFlavorShow, self).setUp()
+
+        # Return value of utils.find_resource()
+        self.flavors_mock.get.return_value = self.flavor
+
+        self.cmd = flavor.ShowFlavor(self.app, None)
+
+    def test_show_no_options(self):
+        arglist = []
+        verifylist = []
+
+        # Missing required args should boil here
+        self.assertRaises(tests_utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
+
+    def test_flavor_show(self):
+        arglist = [
+            self.flavor.name,
+        ]
+        verifylist = [
+            ('flavor', self.flavor.name),
+        ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.flavors_mock.find.assert_called_with(name='baremetal')
-
-        self.assertEqual('properties', columns[2])
-        self.assertIn('FOO=\'"B A R"\'', data[2])
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
 
 
 class TestFlavorUnset(TestFlavor):
@@ -305,12 +379,9 @@ class TestFlavorUnset(TestFlavor):
             ('property', ['property']),
             ('flavor', 'baremetal'),
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         self.flavors_mock.find.assert_called_with(name='baremetal')
-
-        self.assertEqual('properties', columns[2])
-        self.assertNotIn('property', data[2])
+        self.assertIsNone(result)

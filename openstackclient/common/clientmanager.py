@@ -37,6 +37,7 @@ USER_AGENT = 'python-openstackclient'
 
 class ClientCache(object):
     """Descriptor class for caching created client handles."""
+
     def __init__(self, factory):
         self.factory = factory
         self._handle = None
@@ -90,7 +91,7 @@ class ClientManager(object):
         self._cli_options = cli_options
         self._api_version = api_version
         self._pw_callback = pw_func
-        self._url = self._cli_options.auth.get('url', None)
+        self._url = self._cli_options.auth.get('url')
         self._region_name = self._cli_options.region_name
         self._interface = self._cli_options.interface
 
@@ -113,24 +114,40 @@ class ClientManager(object):
         root_logger = logging.getLogger('')
         LOG.setLevel(root_logger.getEffectiveLevel())
 
-    def setup_auth(self):
+        # NOTE(gyee): use this flag to indicate whether auth setup has already
+        # been completed. If so, do not perform auth setup again. The reason
+        # we need this flag is that we want to be able to perform auth setup
+        # outside of auth_ref as auth_ref itself is a property. We can not
+        # retrofit auth_ref to optionally skip scope check. Some operations
+        # do not require a scoped token. In those cases, we call setup_auth
+        # prior to dereferrencing auth_ref.
+        self._auth_setup_completed = False
+
+    def setup_auth(self, required_scope=True):
         """Set up authentication
+
+        :param required_scope: indicate whether a scoped token is required
 
         This is deferred until authentication is actually attempted because
         it gets in the way of things that do not require auth.
         """
+
+        if self._auth_setup_completed:
+            return
 
         # If no auth type is named by the user, select one based on
         # the supplied options
         self.auth_plugin_name = auth.select_auth_plugin(self._cli_options)
 
         # Basic option checking to avoid unhelpful error messages
-        auth.check_valid_auth_options(self._cli_options, self.auth_plugin_name)
+        auth.check_valid_auth_options(self._cli_options,
+                                      self.auth_plugin_name,
+                                      required_scope=required_scope)
 
         # Horrible hack alert...must handle prompt for null password if
         # password auth is requested.
         if (self.auth_plugin_name.endswith('password') and
-                not self._cli_options.auth.get('password', None)):
+                not self._cli_options.auth.get('password')):
             self._cli_options.auth['password'] = self._pw_callback()
 
         (auth_plugin, self._auth_params) = auth.build_auth_params(
@@ -146,9 +163,9 @@ class ClientManager(object):
         # PROJECT_DOMAIN_ID to 'OS_DEFAULT_DOMAIN' for better usability.
         if (self._api_version.get('identity') == '3' and
             self.auth_plugin_name.endswith('password') and
-            not self._auth_params.get('project_domain_id', None) and
+            not self._auth_params.get('project_domain_id') and
             not self.auth_plugin_name.startswith('v2') and
-                not self._auth_params.get('project_domain_name', None)):
+                not self._auth_params.get('project_domain_name')):
             self._auth_params['project_domain_id'] = default_domain
 
         # NOTE(stevemar): If USER_DOMAIN_ID or USER_DOMAIN_NAME is present,
@@ -157,8 +174,8 @@ class ClientManager(object):
         if (self._api_version.get('identity') == '3' and
             self.auth_plugin_name.endswith('password') and
             not self.auth_plugin_name.startswith('v2') and
-            not self._auth_params.get('user_domain_id', None) and
-                not self._auth_params.get('user_domain_name', None)):
+            not self._auth_params.get('user_domain_id') and
+                not self._auth_params.get('user_domain_name')):
             self._auth_params['user_domain_id'] = default_domain
 
         # For compatibility until all clients can be updated
@@ -167,8 +184,8 @@ class ClientManager(object):
         elif 'tenant_name' in self._auth_params:
             self._project_name = self._auth_params['tenant_name']
 
-        LOG.info('Using auth plugin: %s' % self.auth_plugin_name)
-        LOG.debug('Using parameters %s' %
+        LOG.info('Using auth plugin: %s', self.auth_plugin_name)
+        LOG.debug('Using parameters %s',
                   strutils.mask_password(self._auth_params))
         self.auth = auth_plugin.load_from_options(**self._auth_params)
         # needed by SAML authentication
@@ -179,6 +196,8 @@ class ClientManager(object):
             verify=self._verify,
             user_agent=USER_AGENT,
         )
+
+        self._auth_setup_completed = True
 
         return
 
