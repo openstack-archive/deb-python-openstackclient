@@ -1,3 +1,9 @@
+python-openstackclient (2.3.0-2) unstable; urgency=medium
+
+  * Uploading to unstable.
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 04 Apr 2016 11:30:04 +0000
+
 python-openstackclient (2.3.0-1) experimental; urgency=medium
 
   * New upstream release.
