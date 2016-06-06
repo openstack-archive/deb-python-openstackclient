@@ -24,6 +24,13 @@ class AuthorizationFailure(Exception):
     pass
 
 
+class PluginAttributeError(Exception):
+    """A plugin threw an AttributeError while being lazily loaded."""
+    # This *must not* inherit from AttributeError;
+    # that would defeat the whole purpose.
+    pass
+
+
 class NoTokenLookupException(Exception):
     """This does not support looking up endpoints from an existing token."""
     pass
@@ -108,28 +115,3 @@ _code_map = dict((c.http_status, c) for c in [
     OverLimit,
     HTTPNotImplemented
 ])
-
-
-def from_response(response, body):
-    """Return an instance of a ClientException based on an httplib2 response.
-
-    Usage::
-
-        resp, body = http.request(...)
-        if resp.status != 200:
-            raise exception_from_response(resp, body)
-    """
-    cls = _code_map.get(response.status, ClientException)
-    if body:
-        if hasattr(body, 'keys'):
-            error = body[body.keys()[0]]
-            message = error.get('message')
-            details = error.get('details')
-        else:
-            # If we didn't get back a properly formed error message we
-            # probably couldn't communicate with Keystone at all.
-            message = "Unable to communicate with image service: %s." % body
-            details = None
-        return cls(code=response.status, message=message, details=details)
-    else:
-        return cls(code=response.status)

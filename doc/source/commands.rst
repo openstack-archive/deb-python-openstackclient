@@ -70,17 +70,20 @@ the API resources will be merged, as in the ``quota`` object that has options
 referring to both Compute and Volume quotas.
 
 * ``access token``: (**Identity**) long-lived OAuth-based token
+* ``address scope``: (**Network**) a scope of IPv4 or IPv6 addresses
+* ``aggregate``: (**Compute**) a grouping of compute hosts
 * ``availability zone``: (**Compute**, **Network**, **Volume**) a logical partition of hosts or block storage or network services
-* ``aggregate``: (**Compute**) a grouping of servers
 * ``backup``: (**Volume**) a volume copy
 * ``catalog``: (**Identity**) service catalog
 * ``command``: (**Internal**) installed commands in the OSC process
+* ``compute agent``: (**Compute**) a cloud Compute agent available to a hypervisor
+* ``compute service``: (**Compute**) a cloud Compute process running on a host
 * ``configuration``: (**Internal**) openstack client configuration
 * ``console log``: (**Compute**) server console text dump
 * ``console url``: (**Compute**) server remote console URL
 * ``consumer``: (**Identity**) OAuth-based delegatee
 * ``container``: (**Object Storage**) a grouping of objects
-* ``credentials``: (**Identity**) specific to identity providers
+* ``credential``: (**Identity**) specific to identity providers
 * ``domain``: (**Identity**) a grouping of projects
 * ``ec2 credentials``: (**Identity**) AWS EC2-compatible credentials
 * ``endpoint``: (**Identity**) the base URL used to contact a specific service
@@ -88,7 +91,7 @@ referring to both Compute and Volume quotas.
 * ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
 * ``flavor``: (**Compute**) predefined server configurations: ram, root disk, etc
 * ``group``: (**Identity**) a grouping of users
-* ``host``: (**Compute**) - the physical computer running a hypervisor
+* ``host``: (**Compute**) - the physical computer running compute services
 * ``hypervisor``: (**Compute**) the virtual machine manager
 * ``hypervisor stats``: (**Compute**) hypervisor statistics over all compute nodes
 * ``identity provider``: (**Identity**) a source of users and authentication
@@ -102,6 +105,7 @@ referring to both Compute and Volume quotas.
 * ``module``: (**Internal**) - installed Python modules in the OSC process
 * ``network``: (**Compute**, **Network**) - a virtual network for connecting servers and other resources
 * ``object``: (**Object Storage**) a single file in the Object Storage
+* ``object store account``: (**Object Storage**) owns a group of Object Storage resources
 * ``policy``: (**Identity**) determines authorization
 * ``port``: (**Network**) - a virtual port for connecting servers and other resources to a network
 * ``project``: (**Identity**) owns a group of resources
@@ -115,6 +119,7 @@ referring to both Compute and Volume quotas.
 * ``security group rule``: (**Compute**, **Network**) - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
 * ``server dump``: (**Compute**) a dump file of a server created by features like kdump
+* ``server group``: (**Compute**) a grouping of servers
 * ``server image``: (**Compute**) saved server disk image
 * ``service``: (**Identity**) a cloud service
 * ``service provider``: (**Identity**) a resource that consumes assertions from an ``identity provider``
@@ -122,11 +127,14 @@ referring to both Compute and Volume quotas.
 * ``subnet``: (**Network**) - a contiguous range of IP addresses assigned to a network
 * ``subnet pool``: (**Network**) - a pool of subnets
 * ``token``: (**Identity**) a bearer token managed by Identity service
+* ``trust``: (**Identity**) project-specific role delegation between users, with optional impersonation
 * ``usage``: (**Compute**) display host resources being consumed
 * ``user``: (**Identity**) individual cloud resources users
 * ``user role``: (**Identity**) roles assigned to a user
 * ``volume``: (**Volume**) block volumes
+* ``volume qos``: (**Volume**) quality-of-service (QoS) specification for volumes
 * ``volume type``: (**Volume**) deployment-specific types of volumes available
+* ``volume service``: (**Volume**) services to manage block storage operations
 
 
 Plugin Objects
@@ -139,6 +147,17 @@ list check out :doc:`plugin-commands`.
 * ``action definition``: (**Workflow Engine (Mistral)**)
 * ``action execution``: (**Workflow Engine (Mistral)**)
 * ``baremetal``: (**Baremetal (Ironic)**)
+* ``cluster``: (**Clustering (Senlin)**)
+* ``cluster action``: (**Clustering (Senlin)**)
+* ``cluster event``: (**Clustering (Senlin)**)
+* ``cluster members``: (**Clustering (Senlin)**)
+* ``cluster node``: (**Clustering (Senlin)**)
+* ``cluster policy``: (**CLustering (Senlin)**)
+* ``cluster policy binding``: (**Clustering (Senlin)**)
+* ``cluster policy type``: (**Clustering (Senlin)**)
+* ``cluster profile``: (**Clustering (Senlin)**)
+* ``cluster profile type``: (**Clustering (Senlin)**)
+* ``cluster receiver``: (**Clustering (Senlin)**)
 * ``congress datasource``: (**Policy (Congress)**)
 * ``congress driver``: (**Policy (Congress)**)
 * ``congress policy``: (**Policy (Congress)**)
@@ -190,6 +209,7 @@ Those actions with an opposite action are noted in parens if applicable.
   the positional arguments appear in the same order
 * ``create`` (``delete``) - create a new occurrence of the specified object
 * ``delete`` (``create``) - delete specific occurrences of the specified objects
+* ``expand`` (``shrink``) - increase the capacity of a cluster
 * ``issue`` (``revoke``) - issue a token
 * ``list`` - display summary information about multiple objects
 * ``lock`` (``unlock``) - lock one or more servers so that non-admin user won't be able to execute actions
@@ -200,14 +220,15 @@ Those actions with an opposite action are noted in parens if applicable.
 * ``rebuild`` - rebuild a server using (most of) the same arguments as in the original create
 * ``remove`` (``add``) - remove an object from a group of objects
 * ``rescue`` (``unrescue``) - reboot a server in a special rescue mode allowing access to the original disks
-* ``resize`` - change a server's flavor
-* ``restore`` - restore a heat stack snapshot
+* ``resize`` - change a server's flavor or a cluster's capacity
+* ``restore`` - restore a heat stack snapshot or restore a server in soft-deleted state
 * ``resume`` (``suspend``) - return one or more suspended servers to running state
 * ``revoke`` (``issue``) - revoke a token
 * ``save`` - download an object locally
 * ``set`` (``unset``) - set a property on the object, formerly called metadata
 * ``shelve`` (``unshelve``) - shelve one or more servers
 * ``show`` - display detailed information about the specific object
+* ``shrink`` (``expand``) - reduce the capacity of a cluster
 * ``start`` (``stop``) - start one or more servers
 * ``stop`` (``start``) - stop one or more servers
 * ``suspend`` (``resume``) - stop one or more servers and save to disk freeing memory

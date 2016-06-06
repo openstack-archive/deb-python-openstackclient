@@ -20,6 +20,7 @@ import six
 from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.i18n import _
 
 
 class CreateVolumeType(command.ShowOne):
@@ -30,14 +31,14 @@ class CreateVolumeType(command.ShowOne):
         parser.add_argument(
             'name',
             metavar='<name>',
-            help='New volume type name',
+            help=_('Volume type name'),
         )
         parser.add_argument(
             '--property',
             metavar='<key=value>',
             action=parseractions.KeyValueAction,
-            help='Property to add for this volume type '
-                 '(repeat option to set multiple properties)',
+            help=_('Set a property on this volume type '
+                   '(repeat option to set multiple properties)'),
         )
         return parser
 
@@ -62,7 +63,7 @@ class DeleteVolumeType(command.Command):
         parser.add_argument(
             'volume_type',
             metavar='<volume-type>',
-            help='Volume type to delete (name or ID)',
+            help=_('Volume type to delete (name or ID)'),
         )
         return parser
 
@@ -82,7 +83,8 @@ class ListVolumeType(command.Lister):
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output')
+            help=_('List additional fields in output')
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -108,14 +110,14 @@ class SetVolumeType(command.Command):
         parser.add_argument(
             'volume_type',
             metavar='<volume-type>',
-            help='Volume type to modify (name or ID)',
+            help=_('Volume type to modify (name or ID)'),
         )
         parser.add_argument(
             '--property',
             metavar='<key=value>',
             action=parseractions.KeyValueAction,
-            help='Property to add or modify for this volume type '
-                 '(repeat option to set multiple properties)',
+            help=_('Set a property on this volume type '
+                   '(repeat option to set multiple properties)'),
         )
         return parser
 
@@ -128,6 +130,27 @@ class SetVolumeType(command.Command):
             volume_type.set_keys(parsed_args.property)
 
 
+class ShowVolumeType(command.ShowOne):
+    """Display volume type details"""
+
+    def get_parser(self, prog_name):
+        parser = super(ShowVolumeType, self).get_parser(prog_name)
+        parser.add_argument(
+            "volume_type",
+            metavar="<volume-type>",
+            help=_("Volume type to display (name or ID)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        volume_client = self.app.client_manager.volume
+        volume_type = utils.find_resource(
+            volume_client.volume_types, parsed_args.volume_type)
+        properties = utils.format_dict(volume_type._info.pop('extra_specs'))
+        volume_type._info.update({'properties': properties})
+        return zip(*sorted(six.iteritems(volume_type._info)))
+
+
 class UnsetVolumeType(command.Command):
     """Unset volume type properties"""
 
@@ -136,15 +159,15 @@ class UnsetVolumeType(command.Command):
         parser.add_argument(
             'volume_type',
             metavar='<volume-type>',
-            help='Volume type to modify (name or ID)',
+            help=_('Volume type to modify (name or ID)'),
         )
         parser.add_argument(
             '--property',
             metavar='<key>',
             action='append',
             default=[],
-            help='Property to remove from volume type '
-                 '(repeat option to remove multiple properties)',
+            help=_('Remove a property from this volume type '
+                   '(repeat option to remove multiple properties)'),
             required=True,
         )
         return parser
@@ -159,25 +182,4 @@ class UnsetVolumeType(command.Command):
         if parsed_args.property:
             volume_type.unset_keys(parsed_args.property)
         else:
-            self.app.log.error("No changes requested\n")
-
-
-class ShowVolumeType(command.ShowOne):
-    """Display volume type details"""
-
-    def get_parser(self, prog_name):
-        parser = super(ShowVolumeType, self).get_parser(prog_name)
-        parser.add_argument(
-            "volume_type",
-            metavar="<volume-type>",
-            help="Volume type to display (name or ID)"
-        )
-        return parser
-
-    def take_action(self, parsed_args):
-        volume_client = self.app.client_manager.volume
-        volume_type = utils.find_resource(
-            volume_client.volume_types, parsed_args.volume_type)
-        properties = utils.format_dict(volume_type._info.pop('extra_specs'))
-        volume_type._info.update({'properties': properties})
-        return zip(*sorted(six.iteritems(volume_type._info)))
+            self.app.log.error(_("No changes requested\n"))

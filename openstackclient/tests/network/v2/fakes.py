@@ -36,6 +36,9 @@ QUOTA = {
     "router": 10,
     "rbac_policy": -1,
     "port": 50,
+    "vip": 10,
+    "member": 10,
+    "health_monitor": 10,
 }
 
 
@@ -71,20 +74,74 @@ class TestNetworkV2(utils.TestCommand):
         )
 
 
+class FakeAddressScope(object):
+    """Fake one or more address scopes."""
+
+    @staticmethod
+    def create_one_address_scope(attrs=None):
+        """Create a fake address scope.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object with name, id, etc.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        address_scope_attrs = {
+            'name': 'address-scope-name-' + uuid.uuid4().hex,
+            'id': 'address-scope-id-' + uuid.uuid4().hex,
+            'tenant_id': 'project-id-' + uuid.uuid4().hex,
+            'shared': False,
+            'ip_version': 4,
+        }
+
+        # Overwrite default attributes.
+        address_scope_attrs.update(attrs)
+
+        address_scope = fakes.FakeResource(
+            info=copy.deepcopy(address_scope_attrs),
+            loaded=True)
+
+        # Set attributes with special mapping in OpenStack SDK.
+        address_scope.project_id = address_scope_attrs['tenant_id']
+
+        return address_scope
+
+    @staticmethod
+    def create_address_scopes(attrs=None, count=2):
+        """Create multiple fake address scopes.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of address scopes to fake
+        :return:
+            A list of FakeResource objects faking the address scopes
+        """
+        address_scopes = []
+        for i in range(0, count):
+            address_scopes.append(
+                FakeAddressScope.create_one_address_scope(attrs))
+
+        return address_scopes
+
+
 class FakeAvailabilityZone(object):
     """Fake one or more network availability zones (AZs)."""
 
     @staticmethod
-    def create_one_availability_zone(attrs={}, methods={}):
+    def create_one_availability_zone(attrs=None):
         """Create a fake AZ.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object with name, state, etc.
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         availability_zone = {
             'name': uuid.uuid4().hex,
@@ -97,18 +154,15 @@ class FakeAvailabilityZone(object):
 
         availability_zone = fakes.FakeResource(
             info=copy.deepcopy(availability_zone),
-            methods=methods,
             loaded=True)
         return availability_zone
 
     @staticmethod
-    def create_availability_zones(attrs={}, methods={}, count=2):
+    def create_availability_zones(attrs=None, count=2):
         """Create multiple fake AZs.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of AZs to fake
         :return:
@@ -117,8 +171,7 @@ class FakeAvailabilityZone(object):
         availability_zones = []
         for i in range(0, count):
             availability_zone = \
-                FakeAvailabilityZone.create_one_availability_zone(
-                    attrs, methods)
+                FakeAvailabilityZone.create_one_availability_zone(attrs)
             availability_zones.append(availability_zone)
 
         return availability_zones
@@ -128,17 +181,16 @@ class FakeNetwork(object):
     """Fake one or more networks."""
 
     @staticmethod
-    def create_one_network(attrs={}, methods={}):
+    def create_one_network(attrs=None):
         """Create a fake network.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
-            A FakeResource object, with id, name, admin_state_up,
-            router_external, status, subnets, tenant_id
+            A FakeResource object, with id, name, etc.
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         network_attrs = {
             'id': 'network-id-' + uuid.uuid4().hex,
@@ -149,41 +201,30 @@ class FakeNetwork(object):
             'shared': False,
             'subnets': ['a', 'b'],
             'provider_network_type': 'vlan',
-            'router_external': True,
+            'router:external': True,
             'availability_zones': [],
             'availability_zone_hints': [],
+            'is_default': False,
         }
 
         # Overwrite default attributes.
         network_attrs.update(attrs)
 
-        # Set default methods.
-        network_methods = {
-            'keys': ['id', 'name', 'admin_state_up', 'router_external',
-                     'status', 'subnets', 'tenant_id', 'availability_zones',
-                     'availability_zone_hints'],
-        }
-
-        # Overwrite default methods.
-        network_methods.update(methods)
-
         network = fakes.FakeResource(info=copy.deepcopy(network_attrs),
-                                     methods=copy.deepcopy(network_methods),
                                      loaded=True)
 
         # Set attributes with special mapping in OpenStack SDK.
         network.project_id = network_attrs['tenant_id']
+        network.is_router_external = network_attrs['router:external']
 
         return network
 
     @staticmethod
-    def create_networks(attrs={}, methods={}, count=2):
+    def create_networks(attrs=None, count=2):
         """Create multiple fake networks.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of networks to fake
         :return:
@@ -191,7 +232,7 @@ class FakeNetwork(object):
         """
         networks = []
         for i in range(0, count):
-            networks.append(FakeNetwork.create_one_network(attrs, methods))
+            networks.append(FakeNetwork.create_one_network(attrs))
 
         return networks
 
@@ -219,16 +260,16 @@ class FakePort(object):
     """Fake one or more ports."""
 
     @staticmethod
-    def create_one_port(attrs={}, methods={}):
+    def create_one_port(attrs=None):
         """Create a fake port.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object, with id, name, etc.
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         port_attrs = {
             'admin_state_up': True,
@@ -257,23 +298,7 @@ class FakePort(object):
         # Overwrite default attributes.
         port_attrs.update(attrs)
 
-        # Set default methods.
-        port_methods = {
-            'keys': ['admin_state_up', 'allowed_address_pairs',
-                     'binding:host_id', 'binding:profile',
-                     'binding:vif_details', 'binding:vif_type',
-                     'binding:vnic_type', 'device_id', 'device_owner',
-                     'dns_assignment', 'dns_name', 'extra_dhcp_opts',
-                     'fixed_ips', 'id', 'mac_address', 'name',
-                     'network_id', 'port_security_enabled',
-                     'security_groups', 'status', 'tenant_id'],
-        }
-
-        # Overwrite default methods.
-        port_methods.update(methods)
-
         port = fakes.FakeResource(info=copy.deepcopy(port_attrs),
-                                  methods=copy.deepcopy(port_methods),
                                   loaded=True)
 
         # Set attributes with special mappings in OpenStack SDK.
@@ -287,13 +312,11 @@ class FakePort(object):
         return port
 
     @staticmethod
-    def create_ports(attrs={}, methods={}, count=2):
+    def create_ports(attrs=None, count=2):
         """Create multiple fake ports.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of ports to fake
         :return:
@@ -301,7 +324,7 @@ class FakePort(object):
         """
         ports = []
         for i in range(0, count):
-            ports.append(FakePort.create_one_port(attrs, methods))
+            ports.append(FakePort.create_one_port(attrs))
 
         return ports
 
@@ -329,17 +352,17 @@ class FakeRouter(object):
     """Fake one or more routers."""
 
     @staticmethod
-    def create_one_router(attrs={}, methods={}):
+    def create_one_router(attrs=None):
         """Create a fake router.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object, with id, name, admin_state_up,
             status, tenant_id
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         router_attrs = {
             'id': 'router-id-' + uuid.uuid4().hex,
@@ -358,28 +381,20 @@ class FakeRouter(object):
         # Overwrite default attributes.
         router_attrs.update(attrs)
 
-        # Set default methods.
-        router_methods = {
-            'keys': ['id', 'name', 'admin_state_up', 'distributed', 'ha',
-                     'tenant_id'],
-        }
-
-        # Overwrite default methods.
-        router_methods.update(methods)
-
         router = fakes.FakeResource(info=copy.deepcopy(router_attrs),
-                                    methods=copy.deepcopy(router_methods),
                                     loaded=True)
+
+        # Set attributes with special mapping in OpenStack SDK.
+        router.project_id = router_attrs['tenant_id']
+
         return router
 
     @staticmethod
-    def create_routers(attrs={}, methods={}, count=2):
+    def create_routers(attrs=None, count=2):
         """Create multiple fake routers.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of routers to fake
         :return:
@@ -387,7 +402,7 @@ class FakeRouter(object):
         """
         routers = []
         for i in range(0, count):
-            routers.append(FakeRouter.create_one_router(attrs, methods))
+            routers.append(FakeRouter.create_one_router(attrs))
 
         return routers
 
@@ -415,16 +430,16 @@ class FakeSecurityGroup(object):
     """Fake one or more security groups."""
 
     @staticmethod
-    def create_one_security_group(attrs={}, methods={}):
+    def create_one_security_group(attrs=None):
         """Create a fake security group.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object, with id, name, etc.
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         security_group_attrs = {
             'id': 'security-group-id-' + uuid.uuid4().hex,
@@ -437,26 +452,21 @@ class FakeSecurityGroup(object):
         # Overwrite default attributes.
         security_group_attrs.update(attrs)
 
-        # Set default methods.
-        security_group_methods = {}
-
-        # Overwrite default methods.
-        security_group_methods.update(methods)
-
         security_group = fakes.FakeResource(
             info=copy.deepcopy(security_group_attrs),
-            methods=copy.deepcopy(security_group_methods),
             loaded=True)
+
+        # Set attributes with special mapping in OpenStack SDK.
+        security_group.project_id = security_group_attrs['tenant_id']
+
         return security_group
 
     @staticmethod
-    def create_security_groups(attrs={}, methods={}, count=2):
+    def create_security_groups(attrs=None, count=2):
         """Create multiple fake security groups.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of security groups to fake
         :return:
@@ -465,7 +475,7 @@ class FakeSecurityGroup(object):
         security_groups = []
         for i in range(0, count):
             security_groups.append(
-                FakeSecurityGroup.create_one_security_group(attrs, methods))
+                FakeSecurityGroup.create_one_security_group(attrs))
 
         return security_groups
 
@@ -474,16 +484,16 @@ class FakeSecurityGroupRule(object):
     """Fake one or more security group rules."""
 
     @staticmethod
-    def create_one_security_group_rule(attrs={}, methods={}):
+    def create_one_security_group_rule(attrs=None):
         """Create a fake security group rule.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object, with id, etc.
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         security_group_rule_attrs = {
             'direction': 'ingress',
@@ -491,9 +501,9 @@ class FakeSecurityGroupRule(object):
             'id': 'security-group-rule-id-' + uuid.uuid4().hex,
             'port_range_max': None,
             'port_range_min': None,
-            'protocol': None,
-            'remote_group_id': 'remote-security-group-id-' + uuid.uuid4().hex,
-            'remote_ip_prefix': None,
+            'protocol': 'tcp',
+            'remote_group_id': None,
+            'remote_ip_prefix': '0.0.0.0/0',
             'security_group_id': 'security-group-id-' + uuid.uuid4().hex,
             'tenant_id': 'project-id-' + uuid.uuid4().hex,
         }
@@ -501,34 +511,21 @@ class FakeSecurityGroupRule(object):
         # Overwrite default attributes.
         security_group_rule_attrs.update(attrs)
 
-        # Set default methods.
-        security_group_rule_methods = {
-            'keys': ['direction', 'ethertype', 'id', 'port_range_max',
-                     'port_range_min', 'protocol', 'remote_group_id',
-                     'remote_ip_prefix', 'security_group_id', 'tenant_id'],
-        }
-
-        # Overwrite default methods.
-        security_group_rule_methods.update(methods)
-
         security_group_rule = fakes.FakeResource(
             info=copy.deepcopy(security_group_rule_attrs),
-            methods=copy.deepcopy(security_group_rule_methods),
             loaded=True)
 
-        # Set attributes with special mappings.
+        # Set attributes with special mapping in OpenStack SDK.
         security_group_rule.project_id = security_group_rule_attrs['tenant_id']
 
         return security_group_rule
 
     @staticmethod
-    def create_security_group_rules(attrs={}, methods={}, count=2):
+    def create_security_group_rules(attrs=None, count=2):
         """Create multiple fake security group rules.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of security group rules to fake
         :return:
@@ -537,8 +534,7 @@ class FakeSecurityGroupRule(object):
         security_group_rules = []
         for i in range(0, count):
             security_group_rules.append(
-                FakeSecurityGroupRule.create_one_security_group_rule(
-                    attrs, methods))
+                FakeSecurityGroupRule.create_one_security_group_rule(attrs))
 
         return security_group_rules
 
@@ -547,16 +543,16 @@ class FakeSubnet(object):
     """Fake one or more subnets."""
 
     @staticmethod
-    def create_one_subnet(attrs={}, methods={}):
+    def create_one_subnet(attrs=None):
         """Create a fake subnet.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object faking the subnet
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         project_id = 'project-id-' + uuid.uuid4().hex
         subnet_attrs = {
@@ -569,7 +565,7 @@ class FakeSubnet(object):
             'dns_nameservers': [],
             'allocation_pools': [],
             'host_routes': [],
-            'ip_version': '4',
+            'ip_version': 4,
             'gateway_ip': '10.10.10.1',
             'ipv6_address_mode': 'None',
             'ipv6_ra_mode': 'None',
@@ -579,33 +575,20 @@ class FakeSubnet(object):
         # Overwrite default attributes.
         subnet_attrs.update(attrs)
 
-        # Set default methods.
-        subnet_methods = {
-            'keys': ['id', 'name', 'network_id', 'cidr', 'enable_dhcp',
-                     'allocation_pools', 'dns_nameservers', 'gateway_ip',
-                     'host_routes', 'ip_version', 'tenant_id',
-                     'ipv6_address_mode', 'ipv6_ra_mode', 'subnetpool_id']
-        }
-
-        # Overwrite default methods.
-        subnet_methods.update(methods)
-
         subnet = fakes.FakeResource(info=copy.deepcopy(subnet_attrs),
-                                    methods=copy.deepcopy(subnet_methods),
                                     loaded=True)
+
         # Set attributes with special mappings in OpenStack SDK.
         subnet.project_id = subnet_attrs['tenant_id']
 
         return subnet
 
     @staticmethod
-    def create_subnets(attrs={}, methods={}, count=2):
+    def create_subnets(attrs=None, count=2):
         """Create multiple fake subnets.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of subnets to fake
         :return:
@@ -613,7 +596,7 @@ class FakeSubnet(object):
         """
         subnets = []
         for i in range(0, count):
-            subnets.append(FakeSubnet.create_one_subnet(attrs, methods))
+            subnets.append(FakeSubnet.create_one_subnet(attrs))
 
         return subnets
 
@@ -622,16 +605,16 @@ class FakeFloatingIP(object):
     """Fake one or more floating ip."""
 
     @staticmethod
-    def create_one_floating_ip(attrs={}, methods={}):
+    def create_one_floating_ip(attrs=None):
         """Create a fake floating ip.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object, with id, ip, and so on
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         floating_ip_attrs = {
             'id': 'floating-ip-id-' + uuid.uuid4().hex,
@@ -649,19 +632,8 @@ class FakeFloatingIP(object):
         # Overwrite default attributes.
         floating_ip_attrs.update(attrs)
 
-        # Set default methods.
-        floating_ip_methods = {
-            'keys': ['id', 'floating_ip_address', 'fixed_ip_address',
-                     'dns_domain', 'dns_name', 'status', 'router_id',
-                     'floating_network_id', 'port_id', 'tenant_id']
-        }
-
-        # Overwrite default methods.
-        floating_ip_methods.update(methods)
-
         floating_ip = fakes.FakeResource(
             info=copy.deepcopy(floating_ip_attrs),
-            methods=copy.deepcopy(floating_ip_methods),
             loaded=True
         )
 
@@ -671,13 +643,11 @@ class FakeFloatingIP(object):
         return floating_ip
 
     @staticmethod
-    def create_floating_ips(attrs={}, methods={}, count=2):
+    def create_floating_ips(attrs=None, count=2):
         """Create multiple fake floating ips.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of floating ips to fake
         :return:
@@ -685,10 +655,7 @@ class FakeFloatingIP(object):
         """
         floating_ips = []
         for i in range(0, count):
-            floating_ips.append(FakeFloatingIP.create_one_floating_ip(
-                attrs,
-                methods
-            ))
+            floating_ips.append(FakeFloatingIP.create_one_floating_ip(attrs))
         return floating_ips
 
     @staticmethod
@@ -715,49 +682,37 @@ class FakeSubnetPool(object):
     """Fake one or more subnet pools."""
 
     @staticmethod
-    def create_one_subnet_pool(attrs={}, methods={}):
+    def create_one_subnet_pool(attrs=None):
         """Create a fake subnet pool.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :return:
             A FakeResource object faking the subnet pool
         """
+        attrs = attrs or {}
+
         # Set default attributes.
         subnet_pool_attrs = {
             'id': 'subnet-pool-id-' + uuid.uuid4().hex,
             'name': 'subnet-pool-name-' + uuid.uuid4().hex,
             'prefixes': ['10.0.0.0/24', '10.1.0.0/24'],
-            'default_prefixlen': 8,
+            'default_prefixlen': '8',
             'address_scope_id': 'address-scope-id-' + uuid.uuid4().hex,
             'tenant_id': 'project-id-' + uuid.uuid4().hex,
             'is_default': False,
             'shared': False,
-            'max_prefixlen': 32,
-            'min_prefixlen': 8,
+            'max_prefixlen': '32',
+            'min_prefixlen': '8',
             'default_quota': None,
-            'ip_version': 4,
+            'ip_version': '4',
         }
 
         # Overwrite default attributes.
         subnet_pool_attrs.update(attrs)
 
-        # Set default methods.
-        subnet_pool_methods = {
-            'keys': ['id', 'name', 'prefixes', 'default_prefixlen',
-                     'address_scope_id', 'tenant_id', 'is_default',
-                     'shared', 'max_prefixlen', 'min_prefixlen',
-                     'default_quota', 'ip_version']
-        }
-
-        # Overwrite default methods.
-        subnet_pool_methods.update(methods)
-
         subnet_pool = fakes.FakeResource(
             info=copy.deepcopy(subnet_pool_attrs),
-            methods=copy.deepcopy(subnet_pool_methods),
             loaded=True
         )
 
@@ -767,13 +722,11 @@ class FakeSubnetPool(object):
         return subnet_pool
 
     @staticmethod
-    def create_subnet_pools(attrs={}, methods={}, count=2):
+    def create_subnet_pools(attrs=None, count=2):
         """Create multiple fake subnet pools.
 
         :param Dictionary attrs:
             A dictionary with all attributes
-        :param Dictionary methods:
-            A dictionary with all methods
         :param int count:
             The number of subnet pools to fake
         :return:
@@ -782,7 +735,7 @@ class FakeSubnetPool(object):
         subnet_pools = []
         for i in range(0, count):
             subnet_pools.append(
-                FakeSubnetPool.create_one_subnet_pool(attrs, methods)
+                FakeSubnetPool.create_one_subnet_pool(attrs)
             )
 
         return subnet_pools

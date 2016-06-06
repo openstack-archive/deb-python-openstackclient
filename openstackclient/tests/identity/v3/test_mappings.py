@@ -92,11 +92,13 @@ class TestMappingDelete(TestMapping):
         verifylist = [
             ('mapping', identity_fakes.mapping_id)
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        self.cmd.take_action(parsed_args)
+
+        result = self.cmd.take_action(parsed_args)
+
         self.mapping_mock.delete.assert_called_with(
             identity_fakes.mapping_id)
+        self.assertIsNone(result)
 
 
 class TestMappingList(TestMapping):
@@ -140,41 +142,6 @@ class TestMappingList(TestMapping):
         self.assertEqual(collist, columns)
 
         datalist = [(identity_fakes.mapping_id,), ('extra_mapping',)]
-        self.assertEqual(datalist, data)
-
-
-class TestMappingShow(TestMapping):
-
-    def setUp(self):
-        super(TestMappingShow, self).setUp()
-
-        self.mapping_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.MAPPING_RESPONSE),
-            loaded=True
-        )
-
-        self.cmd = mapping.ShowMapping(self.app, None)
-
-    def test_mapping_show(self):
-        arglist = [
-            identity_fakes.mapping_id
-        ]
-        verifylist = [
-            ('mapping', identity_fakes.mapping_id)
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        columns, data = self.cmd.take_action(parsed_args)
-
-        self.mapping_mock.get.assert_called_with(
-            identity_fakes.mapping_id)
-
-        collist = ('id', 'rules')
-        self.assertEqual(collist, columns)
-
-        datalist = (identity_fakes.mapping_id,
-                    identity_fakes.MAPPING_RULES)
         self.assertEqual(datalist, data)
 
 
@@ -234,10 +201,44 @@ class TestMappingSet(TestMapping):
             ('mapping', identity_fakes.mapping_id),
             ('rules', identity_fakes.mapping_rules_file_path)
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         self.assertRaises(
             exceptions.CommandError,
             self.cmd.take_action,
             parsed_args)
+
+
+class TestMappingShow(TestMapping):
+
+    def setUp(self):
+        super(TestMappingShow, self).setUp()
+
+        self.mapping_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.MAPPING_RESPONSE),
+            loaded=True
+        )
+
+        self.cmd = mapping.ShowMapping(self.app, None)
+
+    def test_mapping_show(self):
+        arglist = [
+            identity_fakes.mapping_id
+        ]
+        verifylist = [
+            ('mapping', identity_fakes.mapping_id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.mapping_mock.get.assert_called_with(
+            identity_fakes.mapping_id)
+
+        collist = ('id', 'rules')
+        self.assertEqual(collist, columns)
+
+        datalist = (identity_fakes.mapping_id,
+                    identity_fakes.MAPPING_RULES)
+        self.assertEqual(datalist, data)

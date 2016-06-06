@@ -114,6 +114,12 @@ OPTIONS
 :option:`--verify` | :option:`--insecure`
     Verify or ignore server certificate (default: verify)
 
+:option:`--os-cert` <certificate-file>
+    Client certificate bundle file
+
+:option:`--os-key` <key-file>
+    Client certificate key file
+
 :option:`--os-identity-api-version` <identity-api-version>
     Identity API version (Default: 2.0)
 
@@ -123,11 +129,11 @@ OPTIONS
 :option:`--os-interface` <interface>
     Interface type. Valid options are `public`, `admin` and `internal`.
 
-:option: `--profile` <hmac-key>
-    HMAC key to use for encrypting context data for performance profiling of
-    requested operation. This key should be the value of one of the HMAC keys
-    defined in the configuration files of OpenStack services, user would like
-    to trace through.
+:option:`--os-profile` <hmac-key>
+    Performance profiling HMAC key for encrypting context data
+
+    This key should be the value of one of the HMAC keys defined in the
+    configuration files of OpenStack services to be traced.
 
 :option:`--log-file` <LOGFILE>
     Specify a file to log output. Disabled by default.
@@ -140,6 +146,9 @@ OPTIONS
 
 :option:`--debug`
     show tracebacks on errors and set verbosity to debug
+
+:option:`--enable-beta-commands`
+    Enable beta commands which are subject to change
 
 COMMANDS
 ========
@@ -366,6 +375,12 @@ The following environment variables can be set to alter the behaviour of :progra
 
 :envvar:`OS_CACERT`
     CA certificate bundle file
+
+:envvar:`OS_CERT`
+    Client certificate bundle file
+
+:envvar:`OS_KEY`
+    Client certificate key file
 
 :envvar:`OS_IDENTITY_API_VERSION`
     Identity API version (Default: 2.0)

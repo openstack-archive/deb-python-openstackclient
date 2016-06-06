@@ -19,7 +19,7 @@ import six
 
 from openstackclient.common import command
 from openstackclient.common import utils
-from openstackclient.i18n import _  # noqa
+from openstackclient.i18n import _
 from openstackclient.identity import common
 
 
@@ -87,7 +87,6 @@ class DeleteEndpoint(command.Command):
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
         identity_client.endpoints.delete(parsed_args.endpoint)
-        return
 
 
 class ListEndpoint(command.Lister):

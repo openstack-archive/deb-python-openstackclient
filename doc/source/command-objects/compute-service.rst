@@ -31,15 +31,20 @@ List service command
     os compute service list
         [--host <host>]
         [--service <service>]
+        [--long]
 
 .. _compute-service-list:
-.. describe:: --host <host>
+.. option:: --host <host>
 
-    Name of host
+    List services on specified host (name only)
 
-.. describe:: --service <service>
+.. option:: --service <service>
 
-    Name of service
+    List only specified service (name only)
+
+.. option:: --long
+
+    List additional fields in output
 
 
 compute service set
@@ -50,18 +55,24 @@ Set service command
 .. program:: compute service set
 .. code:: bash
 
-    os compute service list
+    os compute service set
         [--enable | --disable]
+        [--disable-reason <reason>]
         <host> <service>
 
 .. _compute-service-set:
-.. describe:: --enable
+.. option:: --enable
 
     Enable service (default)
 
-.. describe:: --disable
+.. option:: --disable
 
     Disable service
+
+.. option:: --disable-reason <reason>
+
+    Reason for disabling the service (in quotes).  Note that when the service
+    is enabled, this option is ignored.
 
 .. describe:: <host>
 

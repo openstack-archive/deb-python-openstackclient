@@ -30,6 +30,166 @@ class TestFlavor(compute_fakes.TestComputev2):
         self.flavors_mock.reset_mock()
 
 
+class TestFlavorCreate(TestFlavor):
+
+    flavor = compute_fakes.FakeFlavor.create_one_flavor(
+        attrs={'links': 'flavor-links'})
+
+    columns = (
+        'OS-FLV-DISABLED:disabled',
+        'OS-FLV-EXT-DATA:ephemeral',
+        'disk',
+        'id',
+        'name',
+        'os-flavor-access:is_public',
+        'ram',
+        'rxtx_factor',
+        'swap',
+        'vcpus',
+    )
+    data = (
+        flavor.disabled,
+        flavor.ephemeral,
+        flavor.disk,
+        flavor.id,
+        flavor.name,
+        flavor.is_public,
+        flavor.ram,
+        flavor.rxtx_factor,
+        flavor.swap,
+        flavor.vcpus,
+    )
+
+    def setUp(self):
+        super(TestFlavorCreate, self).setUp()
+
+        self.flavors_mock.create.return_value = self.flavor
+        self.cmd = flavor.CreateFlavor(self.app, None)
+
+    def test_flavor_create_default_options(self):
+
+        arglist = [
+            self.flavor.name
+        ]
+        verifylist = [
+            ('name', self.flavor.name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        default_args = (
+            self.flavor.name,
+            256,
+            1,
+            0,
+            'auto',
+            0,
+            0,
+            1.0,
+            True
+        )
+        columns, data = self.cmd.take_action(parsed_args)
+        self.flavors_mock.create.assert_called_once_with(*default_args)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
+
+    def test_flavor_create_all_options(self):
+
+        arglist = [
+            self.flavor.name,
+            '--id', self.flavor.id,
+            '--ram', str(self.flavor.ram),
+            '--disk', str(self.flavor.disk),
+            '--ephemeral', str(self.flavor.ephemeral),
+            '--swap', str(self.flavor.swap),
+            '--vcpus', str(self.flavor.vcpus),
+            '--rxtx-factor', str(self.flavor.rxtx_factor),
+            '--public',
+        ]
+        verifylist = [
+            ('name', self.flavor.name),
+            ('id', self.flavor.id),
+            ('ram', self.flavor.ram),
+            ('disk', self.flavor.disk),
+            ('ephemeral', self.flavor.ephemeral),
+            ('swap', self.flavor.swap),
+            ('vcpus', self.flavor.vcpus),
+            ('rxtx_factor', self.flavor.rxtx_factor),
+            ('public', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        args = (
+            self.flavor.name,
+            self.flavor.ram,
+            self.flavor.vcpus,
+            self.flavor.disk,
+            self.flavor.id,
+            self.flavor.ephemeral,
+            self.flavor.swap,
+            self.flavor.rxtx_factor,
+            self.flavor.is_public,
+        )
+        columns, data = self.cmd.take_action(parsed_args)
+        self.flavors_mock.create.assert_called_once_with(*args)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
+
+    def test_flavor_create_other_options(self):
+
+        self.flavor.is_public = False
+        arglist = [
+            self.flavor.name,
+            '--id', self.flavor.id,
+            '--ram', str(self.flavor.ram),
+            '--disk', str(self.flavor.disk),
+            '--ephemeral', str(self.flavor.ephemeral),
+            '--swap', str(self.flavor.swap),
+            '--vcpus', str(self.flavor.vcpus),
+            '--rxtx-factor', str(self.flavor.rxtx_factor),
+            '--private',
+        ]
+        verifylist = [
+            ('name', self.flavor.name),
+            ('id', self.flavor.id),
+            ('ram', self.flavor.ram),
+            ('disk', self.flavor.disk),
+            ('ephemeral', self.flavor.ephemeral),
+            ('swap', self.flavor.swap),
+            ('vcpus', self.flavor.vcpus),
+            ('rxtx_factor', self.flavor.rxtx_factor),
+            ('public', False),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        args = (
+            self.flavor.name,
+            self.flavor.ram,
+            self.flavor.vcpus,
+            self.flavor.disk,
+            self.flavor.id,
+            self.flavor.ephemeral,
+            self.flavor.swap,
+            self.flavor.rxtx_factor,
+            self.flavor.is_public,
+        )
+        columns, data = self.cmd.take_action(parsed_args)
+        self.flavors_mock.create.assert_called_once_with(*args)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
+
+    def test_flavor_create_no_options(self):
+        arglist = []
+        verifylist = None
+        self.assertRaises(tests_utils.ParserException,
+                          self.check_parser,
+                          self.cmd,
+                          arglist,
+                          verifylist)
+
+
 class TestFlavorDelete(TestFlavor):
 
     flavor = compute_fakes.FakeFlavor.create_one_flavor()
@@ -273,7 +433,7 @@ class TestFlavorSet(TestFlavor):
         super(TestFlavorSet, self).setUp()
 
         self.flavors_mock.find.return_value = self.flavor
-
+        self.flavors_mock.get.side_effect = exceptions.NotFound(None)
         self.cmd = flavor.SetFlavor(self.app, None)
 
     def test_flavor_set(self):
@@ -288,8 +448,8 @@ class TestFlavorSet(TestFlavor):
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
-
-        self.flavors_mock.find.assert_called_with(name='baremetal')
+        self.flavors_mock.find.assert_called_with(name=parsed_args.flavor,
+                                                  is_public=None)
         self.assertIsNone(result)
 
 
@@ -329,9 +489,9 @@ class TestFlavorShow(TestFlavor):
     def setUp(self):
         super(TestFlavorShow, self).setUp()
 
-        # Return value of utils.find_resource()
-        self.flavors_mock.get.return_value = self.flavor
-
+        # Return value of _find_resource()
+        self.flavors_mock.find.return_value = self.flavor
+        self.flavors_mock.get.side_effect = exceptions.NotFound(None)
         self.cmd = flavor.ShowFlavor(self.app, None)
 
     def test_show_no_options(self):
@@ -367,7 +527,7 @@ class TestFlavorUnset(TestFlavor):
         super(TestFlavorUnset, self).setUp()
 
         self.flavors_mock.find.return_value = self.flavor
-
+        self.flavors_mock.get.side_effect = exceptions.NotFound(None)
         self.cmd = flavor.UnsetFlavor(self.app, None)
 
     def test_flavor_unset(self):
@@ -382,6 +542,6 @@ class TestFlavorUnset(TestFlavor):
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
-
-        self.flavors_mock.find.assert_called_with(name='baremetal')
+        self.flavors_mock.find.assert_called_with(name=parsed_args.flavor,
+                                                  is_public=None)
         self.assertIsNone(result)

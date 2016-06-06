@@ -89,6 +89,7 @@ class TestServer(compute_fakes.TestComputev2):
 class TestServerCreate(TestServer):
 
     columns = (
+        'OS-EXT-STS:power_state',
         'addresses',
         'flavor',
         'id',
@@ -100,6 +101,8 @@ class TestServerCreate(TestServer):
 
     def datalist(self):
         datalist = (
+            server._format_servers_list_power_state(
+                getattr(self.new_server, 'OS-EXT-STS:power_state')),
             '',
             self.flavor.name + ' (' + self.new_server.flavor.get('id') + ')',
             self.new_server.id,
@@ -146,7 +149,6 @@ class TestServerCreate(TestServer):
             ('server_name', self.new_server.name),
         ]
 
-        # Missing required args should bail here
         self.assertRaises(utils.ParserException, self.check_parser,
                           self.cmd, arglist, verifylist)
 
@@ -592,6 +594,64 @@ class TestServerImageCreate(TestServer):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.datalist(), data)
 
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=False)
+    def test_server_create_image_with_wait_fails(self, mock_wait_for_status):
+        arglist = [
+            '--wait',
+            self.server.id,
+        ]
+        verifylist = [
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(SystemExit, self.cmd.take_action, parsed_args)
+
+        mock_wait_for_status.assert_called_once_with(
+            self.images_mock.get,
+            self.image.id,
+            callback=server._show_progress
+        )
+
+        # ServerManager.create_image(server, image_name, metadata=)
+        self.servers_mock.create_image.assert_called_with(
+            self.servers_mock.get.return_value,
+            self.server.name,
+        )
+
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=True)
+    def test_server_create_image_with_wait_ok(self, mock_wait_for_status):
+        arglist = [
+            '--wait',
+            self.server.id,
+        ]
+        verifylist = [
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
+        columns, data = self.cmd.take_action(parsed_args)
+
+        # ServerManager.create_image(server, image_name, metadata=)
+        self.servers_mock.create_image.assert_called_with(
+            self.servers_mock.get.return_value,
+            self.server.name,
+        )
+
+        mock_wait_for_status.assert_called_once_with(
+            self.images_mock.get,
+            self.image.id,
+            callback=server._show_progress
+        )
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist(), data)
+
 
 class TestServerList(TestServer):
 
@@ -872,6 +932,58 @@ class TestServerRebuild(TestServer):
         self.cimages_mock.get.assert_called_with(self.image.id)
         self.server.rebuild.assert_called_with(self.image, password)
 
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=True)
+    def test_rebuild_with_wait_ok(self, mock_wait_for_status):
+        arglist = [
+            '--wait',
+            self.server.id,
+        ]
+        verifylist = [
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # Get the command object to test.
+        self.cmd.take_action(parsed_args)
+
+        # kwargs = dict(success_status=['active', 'verify_resize'],)
+
+        mock_wait_for_status.assert_called_once_with(
+            self.servers_mock.get,
+            self.server.id,
+            callback=server._show_progress,
+            # **kwargs
+        )
+
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.cimages_mock.get.assert_called_with(self.image.id)
+        self.server.rebuild.assert_called_with(self.image, None)
+
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=False)
+    def test_rebuild_with_wait_fails(self, mock_wait_for_status):
+        arglist = [
+            '--wait',
+            self.server.id,
+        ]
+        verifylist = [
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(SystemExit, self.cmd.take_action, parsed_args)
+
+        mock_wait_for_status.assert_called_once_with(
+            self.servers_mock.get,
+            self.server.id,
+            callback=server._show_progress
+        )
+
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.cimages_mock.get.assert_called_with(self.image.id)
+        self.server.rebuild.assert_called_with(self.image, None)
+
 
 class TestServerResize(TestServer):
 
@@ -982,6 +1094,104 @@ class TestServerResize(TestServer):
         self.servers_mock.revert_resize.assert_called_with(self.server)
         self.assertIsNone(result)
 
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=True)
+    def test_server_resize_with_wait_ok(self, mock_wait_for_status):
+
+        arglist = [
+            '--flavor', self.flavors_get_return_value.id,
+            '--wait',
+            self.server.id,
+        ]
+
+        verifylist = [
+            ('flavor', self.flavors_get_return_value.id),
+            ('confirm', False),
+            ('revert', False),
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.cmd.take_action(parsed_args)
+
+        self.servers_mock.get.assert_called_with(
+            self.server.id,
+        )
+
+        kwargs = dict(success_status=['active', 'verify_resize'],)
+
+        mock_wait_for_status.assert_called_once_with(
+            self.servers_mock.get,
+            self.server.id,
+            callback=server._show_progress,
+            **kwargs
+        )
+
+        self.servers_mock.resize.assert_called_with(
+            self.server,
+            self.flavors_get_return_value
+        )
+        self.assertNotCalled(self.servers_mock.confirm_resize)
+        self.assertNotCalled(self.servers_mock.revert_resize)
+
+    @mock.patch.object(common_utils, 'wait_for_status', return_value=False)
+    def test_server_resize_with_wait_fails(self, mock_wait_for_status):
+
+        arglist = [
+            '--flavor', self.flavors_get_return_value.id,
+            '--wait',
+            self.server.id,
+        ]
+
+        verifylist = [
+            ('flavor', self.flavors_get_return_value.id),
+            ('confirm', False),
+            ('revert', False),
+            ('wait', True),
+            ('server', self.server.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(SystemExit, self.cmd.take_action, parsed_args)
+
+        self.servers_mock.get.assert_called_with(
+            self.server.id,
+        )
+
+        kwargs = dict(success_status=['active', 'verify_resize'],)
+
+        mock_wait_for_status.assert_called_once_with(
+            self.servers_mock.get,
+            self.server.id,
+            callback=server._show_progress,
+            **kwargs
+        )
+
+        self.servers_mock.resize.assert_called_with(
+            self.server,
+            self.flavors_get_return_value
+        )
+
+
+class TestServerRestore(TestServer):
+
+    def setUp(self):
+        super(TestServerRestore, self).setUp()
+
+        # Get the command object to test
+        self.cmd = server.RestoreServer(self.app, None)
+
+        # Set methods to be tested.
+        self.methods = {
+            'restore': None,
+        }
+
+    def test_server_restore_one_server(self):
+        self.run_method_with_servers('restore', 1)
+
+    def test_server_restore_multi_servers(self):
+        self.run_method_with_servers('restore', 3)
+
 
 class TestServerResume(TestServer):
 
@@ -1021,6 +1231,101 @@ class TestServerShelve(TestServer):
 
     def test_shelve_multi_servers(self):
         self.run_method_with_servers('shelve', 3)
+
+
+class TestServerShow(TestServer):
+
+    def setUp(self):
+        super(TestServerShow, self).setUp()
+
+        self.image = image_fakes.FakeImage.create_one_image()
+        self.flavor = compute_fakes.FakeFlavor.create_one_flavor()
+        server_info = {
+            'image': {'id': self.image.id},
+            'flavor': {'id': self.flavor.id},
+            'tenant_id': 'tenant-id-xxx',
+            'networks': {'public': ['10.20.30.40', '2001:db8::f']},
+        }
+        # Fake the server.diagnostics() method. The return value contains http
+        # response and data. The data is a dict. Sincce this method itself is
+        # faked, we don't need to fake everything of the return value exactly.
+        resp = mock.Mock()
+        resp.status_code = 200
+        server_method = {
+            'diagnostics': (resp, {'test': 'test'}),
+        }
+        self.server = compute_fakes.FakeServer.create_one_server(
+            attrs=server_info, methods=server_method)
+
+        # This is the return value for utils.find_resource()
+        self.servers_mock.get.return_value = self.server
+        self.cimages_mock.get.return_value = self.image
+        self.flavors_mock.get.return_value = self.flavor
+
+        # Get the command object to test
+        self.cmd = server.ShowServer(self.app, None)
+
+        self.columns = (
+            'OS-EXT-STS:power_state',
+            'addresses',
+            'flavor',
+            'id',
+            'image',
+            'name',
+            'networks',
+            'project_id',
+            'properties',
+        )
+
+        self.data = (
+            'Running',
+            'public=10.20.30.40, 2001:db8::f',
+            self.flavor.name + " (" + self.flavor.id + ")",
+            self.server.id,
+            self.image.name + " (" + self.image.id + ")",
+            self.server.name,
+            {'public': ['10.20.30.40', '2001:db8::f']},
+            'tenant-id-xxx',
+            '',
+        )
+
+    def test_show_no_options(self):
+        arglist = []
+        verifylist = []
+
+        self.assertRaises(utils.ParserException, self.check_parser,
+                          self.cmd, arglist, verifylist)
+
+    def test_show(self):
+        arglist = [
+            self.server.name,
+        ]
+        verifylist = [
+            ('diagnostics', False),
+            ('server', self.server.name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
+
+    def test_show_diagnostics(self):
+        arglist = [
+            '--diagnostics',
+            self.server.name,
+        ]
+        verifylist = [
+            ('diagnostics', True),
+            ('server', self.server.name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.assertEqual(('test',), columns)
+        self.assertEqual(('test',), data)
 
 
 class TestServerStart(TestServer):
@@ -1241,14 +1546,12 @@ class TestServerGeneral(TestServer):
     @mock.patch('openstackclient.common.utils.find_resource')
     def test_prep_server_detail(self, find_resource):
         # Setup mock method return value. utils.find_resource() will be called
-        # twice in _prep_server_detail():
-        # - The first time, return image info.
-        # - The second time, return flavor info.
+        # three times in _prep_server_detail():
+        # - The first time, return server info.
+        # - The second time, return image info.
+        # - The third time, return flavor info.
         _image = image_fakes.FakeImage.create_one_image()
         _flavor = compute_fakes.FakeFlavor.create_one_flavor()
-        find_resource.side_effect = [_image, _flavor]
-
-        # compute_client.servers.get() will be called once, return server info.
         server_info = {
             'image': {u'id': _image.id},
             'flavor': {u'id': _flavor.id},
@@ -1257,7 +1560,7 @@ class TestServerGeneral(TestServer):
             'links': u'http://xxx.yyy.com',
         }
         _server = compute_fakes.FakeServer.create_one_server(attrs=server_info)
-        self.servers_mock.get.return_value = _server
+        find_resource.side_effect = [_server, _image, _flavor]
 
         # Prepare result data.
         info = {
@@ -1268,6 +1571,8 @@ class TestServerGeneral(TestServer):
             'image': u'%s (%s)' % (_image.name, _image.id),
             'project_id': u'tenant-id-xxx',
             'properties': '',
+            'OS-EXT-STS:power_state': server._format_servers_list_power_state(
+                getattr(_server, 'OS-EXT-STS:power_state')),
         }
 
         # Call _prep_server_detail().

@@ -142,7 +142,7 @@ class FakeModule(object):
 
 class FakeResource(object):
 
-    def __init__(self, manager=None, info={}, loaded=False, methods={}):
+    def __init__(self, manager=None, info=None, loaded=False, methods=None):
         """Set attributes and methods for a resource.
 
         :param manager:
@@ -154,6 +154,9 @@ class FakeResource(object):
         :param Dictionary methods:
             A dictionary with all methods
         """
+        info = info or {}
+        methods = methods or {}
+
         self.__name__ = type(self).__name__
         self.manager = manager
         self._info = info
@@ -183,11 +186,21 @@ class FakeResource(object):
         info = ", ".join("%s=%s" % (k, getattr(self, k)) for k in reprkeys)
         return "<%s %s>" % (self.__class__.__name__, info)
 
+    def keys(self):
+        return self._info.keys()
+
+    @property
+    def info(self):
+        return self._info
+
 
 class FakeResponse(requests.Response):
 
-    def __init__(self, headers={}, status_code=200, data=None, encoding=None):
+    def __init__(self, headers=None, status_code=200,
+                 data=None, encoding=None):
         super(FakeResponse, self).__init__()
+
+        headers = headers or {}
 
         self.status_code = status_code
 

@@ -18,7 +18,7 @@
 import six
 
 from openstackclient.common import command
-from openstackclient.i18n import _  # noqa
+from openstackclient.i18n import _
 
 
 class IssueToken(command.ShowOne):
@@ -55,4 +55,3 @@ class RevokeToken(command.Command):
         identity_client = self.app.client_manager.identity
 
         identity_client.tokens.delete(parsed_args.token)
-        return

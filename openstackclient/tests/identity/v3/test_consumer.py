@@ -87,12 +87,12 @@ class TestConsumerDelete(TestOAuth1):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        result = self.cmd.run(parsed_args)
-        self.assertEqual(0, result)
+        result = self.cmd.take_action(parsed_args)
 
         self.consumers_mock.delete.assert_called_with(
             identity_fakes.consumer_id,
         )
+        self.assertIsNone(result)
 
 
 class TestConsumerList(TestOAuth1):
@@ -136,6 +136,50 @@ class TestConsumerList(TestOAuth1):
         self.assertEqual(datalist, tuple(data))
 
 
+class TestConsumerSet(TestOAuth1):
+
+    def setUp(self):
+        super(TestConsumerSet, self).setUp()
+
+        self.consumers_mock.get.return_value = fakes.FakeResource(
+            None,
+            copy.deepcopy(identity_fakes.OAUTH_CONSUMER),
+            loaded=True,
+        )
+
+        consumer_updated = copy.deepcopy(identity_fakes.OAUTH_CONSUMER)
+        consumer_updated['description'] = "consumer new description"
+        self.consumers_mock.update.return_value = fakes.FakeResource(
+            None,
+            consumer_updated,
+            loaded=True,
+        )
+
+        self.cmd = consumer.SetConsumer(self.app, None)
+
+    def test_consumer_update(self):
+        new_description = "consumer new description"
+
+        arglist = [
+            '--description', new_description,
+            identity_fakes.consumer_id,
+        ]
+        verifylist = [
+            ('description', new_description),
+            ('consumer', identity_fakes.consumer_id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        kwargs = {'description': new_description}
+        self.consumers_mock.update.assert_called_with(
+            identity_fakes.consumer_id,
+            **kwargs
+        )
+        self.assertIsNone(result)
+
+
 class TestConsumerShow(TestOAuth1):
 
     def setUp(self):
@@ -173,46 +217,3 @@ class TestConsumerShow(TestOAuth1):
             identity_fakes.consumer_id,
         )
         self.assertEqual(datalist, data)
-
-
-class TestConsumerSet(TestOAuth1):
-
-    def setUp(self):
-        super(TestConsumerSet, self).setUp()
-
-        self.consumers_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.OAUTH_CONSUMER),
-            loaded=True,
-        )
-
-        consumer_updated = copy.deepcopy(identity_fakes.OAUTH_CONSUMER)
-        consumer_updated['description'] = "consumer new description"
-        self.consumers_mock.update.return_value = fakes.FakeResource(
-            None,
-            consumer_updated,
-            loaded=True,
-        )
-
-        self.cmd = consumer.SetConsumer(self.app, None)
-
-    def test_consumer_update(self):
-        new_description = "consumer new description"
-
-        arglist = [
-            '--description', new_description,
-            identity_fakes.consumer_id,
-        ]
-        verifylist = [
-            ('description', new_description),
-            ('consumer', identity_fakes.consumer_id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        result = self.cmd.run(parsed_args)
-        self.assertEqual(0, result)
-
-        kwargs = {'description': new_description}
-        self.consumers_mock.update.assert_called_with(
-            identity_fakes.consumer_id,
-            **kwargs
-        )

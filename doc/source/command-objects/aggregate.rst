@@ -2,7 +2,7 @@
 aggregate
 =========
 
-Server aggregates provide a mechanism to group servers according to certain
+Host aggregates provide a mechanism to group hosts according to certain
 criteria.
 
 Compute v2
@@ -150,3 +150,26 @@ Display aggregate details
 .. describe:: <aggregate>
 
     Aggregate to display (name or ID)
+
+aggregate unset
+---------------
+
+Unset aggregate properties
+
+.. program:: aggregate unset
+.. code-block:: bash
+
+    os aggregate unset
+        --property <key>
+        [--property <key>] ...
+        <aggregate>
+
+.. option:: --property <key>
+
+    Property to remove from :ref:`\<aggregate\> <aggregate_unset-aggregate>`
+    (repeat option to remove multiple properties)
+
+.. _aggregate_unset-aggregate:
+.. describe:: <aggregate>
+
+    Aggregate to modify (name or ID)

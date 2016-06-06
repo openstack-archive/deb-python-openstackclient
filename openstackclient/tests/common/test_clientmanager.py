@@ -41,6 +41,7 @@ auth.get_options_list()
 
 class Container(object):
     attr = clientmanager.ClientCache(lambda x: object())
+    buggy_attr = clientmanager.ClientCache(lambda x: x.foo)
 
     def __init__(self):
         pass
@@ -58,6 +59,8 @@ class FakeOptions(object):
         self.interface = None
         self.url = None
         self.auth = {}
+        self.cert = None
+        self.key = None
         self.default_domain = 'default'
         self.__dict__.update(kwargs)
 
@@ -69,6 +72,13 @@ class TestClientCache(utils.TestCase):
         # the factory one time and always returns the same value after that.
         c = Container()
         self.assertEqual(c.attr, c.attr)
+
+    def test_attribute_error_propagates(self):
+        c = Container()
+        err = self.assertRaises(exc.PluginAttributeError,
+                                getattr, c, 'buggy_attr')
+        self.assertNotIsInstance(err, AttributeError)
+        self.assertEqual("'Container' object has no attribute 'foo'", str(err))
 
 
 class TestClientManager(utils.TestCase):
@@ -267,6 +277,21 @@ class TestClientManager(utils.TestCase):
         self.assertTrue(client_manager._verify)
         self.assertEqual('cafile', client_manager._cacert)
         self.assertTrue(client_manager.is_network_endpoint_enabled())
+
+    def test_client_manager_password_no_cert(self):
+        client_manager = clientmanager.ClientManager(
+            cli_options=FakeOptions())
+        self.assertIsNone(client_manager._cert)
+
+    def test_client_manager_password_client_cert(self):
+        client_manager = clientmanager.ClientManager(
+            cli_options=FakeOptions(cert='cert'))
+        self.assertEqual('cert', client_manager._cert)
+
+    def test_client_manager_password_client_cert_and_key(self):
+        client_manager = clientmanager.ClientManager(
+            cli_options=FakeOptions(cert='cert', key='key'))
+        self.assertEqual(('cert', 'key'), client_manager._cert)
 
     def _select_auth_plugin(self, auth_params, api_version, auth_plugin_name):
         auth_params['auth_type'] = auth_plugin_name

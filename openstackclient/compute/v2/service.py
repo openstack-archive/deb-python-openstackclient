@@ -17,6 +17,7 @@
 
 from openstackclient.common import command
 from openstackclient.common import utils
+from openstackclient.i18n import _
 
 
 class DeleteService(command.Command):
@@ -27,7 +28,8 @@ class DeleteService(command.Command):
         parser.add_argument(
             "service",
             metavar="<service>",
-            help="Compute service to delete (ID only)")
+            help=_("Compute service to delete (ID only)")
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -44,24 +46,44 @@ class ListService(command.Lister):
         parser.add_argument(
             "--host",
             metavar="<host>",
-            help="Name of host")
+            help=_("List services on specified host (name only)")
+        )
         parser.add_argument(
             "--service",
             metavar="<service>",
-            help="Name of service")
+            help=_("List only specified service (name only)")
+        )
+        parser.add_argument(
+            "--long",
+            action="store_true",
+            default=False,
+            help=_("List additional fields in output")
+        )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        columns = (
-            "Id",
-            "Binary",
-            "Host",
-            "Zone",
-            "Status",
-            "State",
-            "Updated At"
-        )
+        if parsed_args.long:
+            columns = (
+                "Id",
+                "Binary",
+                "Host",
+                "Zone",
+                "Status",
+                "State",
+                "Updated At",
+                "Disabled Reason"
+            )
+        else:
+            columns = (
+                "Id",
+                "Binary",
+                "Host",
+                "Zone",
+                "Status",
+                "State",
+                "Updated At"
+            )
         data = compute_client.services.list(parsed_args.host,
                                             parsed_args.service)
         return (columns,
@@ -78,31 +100,50 @@ class SetService(command.Command):
         parser.add_argument(
             "host",
             metavar="<host>",
-            help="Name of host")
+            help=_("Name of host")
+        )
         parser.add_argument(
             "service",
             metavar="<service>",
-            help="Name of service")
+            help=_("Name of service")
+        )
         enabled_group = parser.add_mutually_exclusive_group()
         enabled_group.add_argument(
             "--enable",
             dest="enabled",
             default=True,
-            help="Enable a service (default)",
-            action="store_true")
+            action="store_true",
+            help=_("Enable a service (default)")
+        )
         enabled_group.add_argument(
             "--disable",
             dest="enabled",
-            help="Disable a service",
-            action="store_false")
+            action="store_false",
+            help=_("Disable a service")
+        )
+        parser.add_argument(
+            "--disable-reason",
+            default=None,
+            metavar="<reason>",
+            help=_("Reason for disabling the service (in quotas).  Note that "
+                   "when the service is enabled, this option is ignored.")
+        )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
+        cs = compute_client.services
 
-        if parsed_args.enabled:
-            action = compute_client.services.enable
+        if not parsed_args.enabled:
+            if parsed_args.disable_reason:
+                cs.disable_log_reason(parsed_args.host,
+                                      parsed_args.service,
+                                      parsed_args.disable_reason)
+            else:
+                cs.disable(parsed_args.host, parsed_args.service)
         else:
-            action = compute_client.services.disable
+            if parsed_args.disable_reason:
+                msg = _("argument --disable-reason has been ignored")
+                self.log.info(msg)
 
-        action(parsed_args.host, parsed_args.service)
+            cs.enable(parsed_args.host, parsed_args.service)

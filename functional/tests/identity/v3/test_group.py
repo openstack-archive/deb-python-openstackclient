@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest_lib.common.utils import data_utils
+from tempest.lib.common.utils import data_utils
 
 from functional.tests.identity.v3 import test_identity
 
@@ -25,7 +25,7 @@ class GroupTests(test_identity.IdentityTests):
         raw_output = self.openstack('group list')
         items = self.parse_listing(raw_output)
         self.assert_table_structure(items, test_identity.BASIC_LIST_HEADERS)
-        self.assertInOutput(group_name, raw_output)
+        self.assertIn(group_name, raw_output)
 
     def test_group_list_with_domain(self):
         group_name = self._create_dummy_group()
@@ -33,7 +33,7 @@ class GroupTests(test_identity.IdentityTests):
             'group list --domain %s' % self.domain_name)
         items = self.parse_listing(raw_output)
         self.assert_table_structure(items, test_identity.BASIC_LIST_HEADERS)
-        self.assertInOutput(group_name, raw_output)
+        self.assertIn(group_name, raw_output)
 
     def test_group_delete(self):
         group_name = self._create_dummy_group(add_clean_up=False)
@@ -93,11 +93,6 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
-        self.assertOutput(
-            '%(user)s added to group %(group)s\n' % {'user': username,
-                                                     'group': group_name},
-            raw_output
-        )
         self.addCleanup(
             self.openstack,
             'group remove user '
@@ -107,6 +102,11 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
+        self.assertEqual(
+            '%(user)s added to group %(group)s\n' % {'user': username,
+                                                     'group': group_name},
+            raw_output
+        )
 
     def test_group_contains_user(self):
         group_name = self._create_dummy_group()
@@ -119,7 +119,16 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
-        self.assertOutput(
+        self.addCleanup(
+            self.openstack,
+            'group remove user '
+            '--group-domain %(group_domain)s '
+            '--user-domain %(user_domain)s '
+            '%(group)s %(user)s' % {'group_domain': self.domain_name,
+                                    'user_domain': self.domain_name,
+                                    'group': group_name,
+                                    'user': username})
+        self.assertEqual(
             '%(user)s added to group %(group)s\n' % {'user': username,
                                                      'group': group_name},
             raw_output
@@ -132,24 +141,15 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
-        self.assertOutput(
+        self.assertEqual(
             '%(user)s in group %(group)s\n' % {'user': username,
                                                'group': group_name},
             raw_output)
-        self.addCleanup(
-            self.openstack,
-            'group remove user '
-            '--group-domain %(group_domain)s '
-            '--user-domain %(user_domain)s '
-            '%(group)s %(user)s' % {'group_domain': self.domain_name,
-                                    'user_domain': self.domain_name,
-                                    'group': group_name,
-                                    'user': username})
 
     def test_group_remove_user(self):
         group_name = self._create_dummy_group()
         username = self._create_dummy_user()
-        raw_output = self.openstack(
+        add_raw_output = self.openstack(
             'group add user '
             '--group-domain %(group_domain)s '
             '--user-domain %(user_domain)s '
@@ -157,12 +157,7 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
-        self.assertOutput(
-            '%(user)s added to group %(group)s\n' % {'user': username,
-                                                     'group': group_name},
-            raw_output
-        )
-        raw_output = self.openstack(
+        remove_raw_output = self.openstack(
             'group remove user '
             '--group-domain %(group_domain)s '
             '--user-domain %(user_domain)s '
@@ -170,9 +165,14 @@ class GroupTests(test_identity.IdentityTests):
                                     'user_domain': self.domain_name,
                                     'group': group_name,
                                     'user': username})
-        self.assertOutput(
+        self.assertEqual(
+            '%(user)s added to group %(group)s\n' % {'user': username,
+                                                     'group': group_name},
+            add_raw_output
+        )
+        self.assertEqual(
             '%(user)s removed from '
             'group %(group)s\n' % {'user': username,
                                    'group': group_name},
-            raw_output
+            remove_raw_output
         )

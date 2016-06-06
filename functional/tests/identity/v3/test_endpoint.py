@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest_lib.common.utils import data_utils
+from tempest.lib.common.utils import data_utils
 
 from functional.tests.identity.v3 import test_identity
 
@@ -31,7 +31,7 @@ class EndpointTests(test_identity.IdentityTests):
     def test_endpoint_list(self):
         endpoint_id = self._create_dummy_endpoint()
         raw_output = self.openstack('endpoint list')
-        self.assertInOutput(endpoint_id, raw_output)
+        self.assertIn(endpoint_id, raw_output)
         items = self.parse_listing(raw_output)
         self.assert_table_structure(items, self.ENDPOINT_LIST_HEADERS)
 

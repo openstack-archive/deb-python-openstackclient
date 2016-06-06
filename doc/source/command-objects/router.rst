@@ -2,7 +2,55 @@
 router
 ======
 
+A **router** is a logical component that forwards data packets between
+networks. It also provides Layer 3 and NAT forwarding to provide external
+network access for servers on project networks.
+
 Network v2
+
+router add port
+---------------
+
+Add a port to a router
+
+.. program:: router add port
+.. code:: bash
+
+    os router add port
+        <router>
+        <port>
+
+.. _router_add_port:
+
+.. describe:: <router>
+
+    Router to which port will be added (name or ID)
+
+.. describe:: <port>
+
+    Port to be added (name or ID)
+
+router add subnet
+-----------------
+
+Add a subnet to a router
+
+.. program:: router add subnet
+.. code:: bash
+
+    os router add subnet
+        <router>
+        <subnet>
+
+.. _router_add_subnet:
+
+.. describe:: <router>
+
+    Router to which subnet will be added (name or ID)
+
+.. describe:: <subnet>
+
+    Subnet to be added (name or ID)
 
 router create
 -------------
@@ -16,7 +64,7 @@ Create new router
         [--project <project> [--project-domain <project-domain>]]
         [--enable | --disable]
         [--distributed]
-	[--availability-zone-hint <availability-zone>]
+        [--availability-zone-hint <availability-zone>]
         <name>
 
 .. option:: --project <project>
@@ -42,8 +90,9 @@ Create new router
 
 .. option:: --availability-zone-hint <availability-zone>
 
-    Availability Zone in which to create this router (requires the Router
-    Availability Zone extension, this option can be repeated).
+    Availability Zone in which to create this router
+    (Router Availability Zone extension required,
+    repeat option to set multiple availability zones)
 
 .. _router_create-name:
 .. describe:: <name>
@@ -81,6 +130,50 @@ List routers
 
     List additional fields in output
 
+router remove port
+------------------
+
+Remove a port from a router
+
+.. program:: router remove port
+.. code:: bash
+
+    os router remove port
+        <router>
+        <port>
+
+.. _router_remove_port:
+
+.. describe:: <router>
+
+    Router from which port will be removed (name or ID)
+
+.. describe:: <port>
+
+    Port to be removed (name or ID)
+
+router remove subnet
+--------------------
+
+Remove a subnet from a router
+
+.. program:: router remove subnet
+.. code:: bash
+
+    os router remove subnet
+        <router>
+        <subnet>
+
+.. _router_remove_subnet:
+
+.. describe:: <router>
+
+    Router from which subnet will be removed (name or ID)
+
+.. describe:: <subnet>
+
+    Subnet to be removed (name or ID)
+
 router set
 ----------
 
@@ -93,7 +186,7 @@ Set router properties
         [--name <name>]
         [--enable | --disable]
         [--distributed | --centralized]
-        [--route destination=<subnet>,gateway=<ip-address> | --clear-routes]
+        [--route destination=<subnet>,gateway=<ip-address> | --no-route]
         <router>
 
 .. option:: --name <name>
@@ -118,12 +211,12 @@ Set router properties
 
 .. option:: --route destination=<subnet>,gateway=<ip-address>
 
-    Routes associated with the router.
-    Repeat this option to set multiple routes.
-    destination: destination subnet (in CIDR notation).
-    gateway: nexthop IP address.
+    Routes associated with the router
+    destination: destination subnet (in CIDR notation)
+    gateway: nexthop IP address
+    (repeat option to set multiple routes)
 
-.. option:: --clear-routes
+.. option:: --no-route
 
     Clear routes associated with the router
 

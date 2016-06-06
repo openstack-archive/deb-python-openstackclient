@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Add ``--disable-reason`` option to the ``service set`` command

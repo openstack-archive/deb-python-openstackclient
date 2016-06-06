@@ -13,11 +13,10 @@
 #   under the License.
 #
 
-import copy
+import mock
 
 from openstackclient.compute.v2 import service
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
-from openstackclient.tests import fakes
 
 
 class TestService(compute_fakes.TestComputev2):
@@ -35,6 +34,8 @@ class TestServiceDelete(TestService):
     def setUp(self):
         super(TestServiceDelete, self).setUp()
 
+        self.service = compute_fakes.FakeService.create_one_service()
+
         self.service_mock.delete.return_value = None
 
         # Get the command object to test
@@ -42,17 +43,17 @@ class TestServiceDelete(TestService):
 
     def test_service_delete_no_options(self):
         arglist = [
-            compute_fakes.service_binary,
+            self.service.binary,
         ]
         verifylist = [
-            ('service', compute_fakes.service_binary),
+            ('service', self.service.binary),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.service_mock.delete.assert_called_with(
-            compute_fakes.service_binary,
+            self.service.binary,
         )
         self.assertIsNone(result)
 
@@ -62,35 +63,57 @@ class TestServiceList(TestService):
     def setUp(self):
         super(TestServiceList, self).setUp()
 
-        self.service_mock.list.return_value = [fakes.FakeResource(
-            None,
-            copy.deepcopy(compute_fakes.SERVICE),
-            loaded=True,
-        )]
+        self.service = compute_fakes.FakeService.create_one_service()
+
+        self.service_mock.list.return_value = [self.service]
 
         # Get the command object to test
         self.cmd = service.ListService(self.app, None)
 
     def test_service_list(self):
         arglist = [
-            '--host', compute_fakes.service_host,
-            '--service', compute_fakes.service_binary,
+            '--host', self.service.host,
+            '--service', self.service.binary,
         ]
         verifylist = [
-            ('host', compute_fakes.service_host),
-            ('service', compute_fakes.service_binary),
+            ('host', self.service.host),
+            ('service', self.service.binary),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         # In base command class Lister in cliff, abstract method take_action()
         # returns a tuple containing the column names and an iterable
         # containing the data to be listed.
-        self.cmd.take_action(parsed_args)
+        columns, data = self.cmd.take_action(parsed_args)
 
         self.service_mock.list.assert_called_with(
-            compute_fakes.service_host,
-            compute_fakes.service_binary,
+            self.service.host,
+            self.service.binary,
         )
+
+        self.assertNotIn("Disabled Reason", columns)
+        self.assertNotIn(self.service.disabled_reason, list(data)[0])
+
+    def test_service_list_with_long_option(self):
+        arglist = [
+            '--host', self.service.host,
+            '--service', self.service.binary,
+            '--long'
+        ]
+        verifylist = [
+            ('host', self.service.host),
+            ('service', self.service.binary),
+            ('long', True)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # In base command class Lister in cliff, abstract method take_action()
+        # returns a tuple containing the column names and an iterable
+        # containing the data to be listed.
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.assertIn("Disabled Reason", columns)
+        self.assertIn(self.service.disabled_reason, list(data)[0])
 
 
 class TestServiceSet(TestService):
@@ -98,58 +121,131 @@ class TestServiceSet(TestService):
     def setUp(self):
         super(TestServiceSet, self).setUp()
 
-        self.service_mock.enable.return_value = [fakes.FakeResource(
-            None,
-            copy.deepcopy(compute_fakes.SERVICE),
-            loaded=True,
-        )]
+        self.service = compute_fakes.FakeService.create_one_service()
 
-        self.service_mock.disable.return_value = [fakes.FakeResource(
-            None,
-            copy.deepcopy(compute_fakes.SERVICE),
-            loaded=True,
-        )]
+        self.service_mock.enable.return_value = self.service
+        self.service_mock.disable.return_value = self.service
 
         self.cmd = service.SetService(self.app, None)
 
     def test_service_set_enable(self):
         arglist = [
-            compute_fakes.service_host,
-            compute_fakes.service_binary,
             '--enable',
+            self.service.host,
+            self.service.binary,
         ]
         verifylist = [
-            ('host', compute_fakes.service_host),
-            ('service', compute_fakes.service_binary),
             ('enabled', True),
+            ('host', self.service.host),
+            ('service', self.service.binary),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.service_mock.enable.assert_called_with(
-            compute_fakes.service_host,
-            compute_fakes.service_binary,
+            self.service.host,
+            self.service.binary
         )
         self.assertIsNone(result)
 
     def test_service_set_disable(self):
         arglist = [
-            compute_fakes.service_host,
-            compute_fakes.service_binary,
             '--disable',
+            self.service.host,
+            self.service.binary,
         ]
         verifylist = [
-            ('host', compute_fakes.service_host),
-            ('service', compute_fakes.service_binary),
             ('enabled', False),
+            ('host', self.service.host),
+            ('service', self.service.binary),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.service_mock.disable.assert_called_with(
-            compute_fakes.service_host,
-            compute_fakes.service_binary,
+            self.service.host,
+            self.service.binary
+        )
+        self.assertIsNone(result)
+
+    def test_service_set_disable_with_reason(self):
+        reason = 'earthquake'
+        arglist = [
+            '--disable',
+            '--disable-reason', reason,
+            self.service.host,
+            self.service.binary,
+        ]
+        verifylist = [
+            ('enabled', False),
+            ('disable_reason', reason),
+            ('host', self.service.host),
+            ('service', self.service.binary),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        self.service_mock.disable_log_reason.assert_called_with(
+            self.service.host,
+            self.service.binary,
+            reason
+        )
+        self.assertIsNone(result)
+
+    def test_service_set_only_with_disable_reason(self):
+        reason = 'earthquake'
+        arglist = [
+            '--disable-reason', reason,
+            self.service.host,
+            self.service.binary,
+        ]
+        verifylist = [
+            ('enabled', True),
+            ('disable_reason', reason),
+            ('host', self.service.host),
+            ('service', self.service.binary),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        with mock.patch.object(self.cmd.log, 'info') as mock_log:
+            result = self.cmd.take_action(parsed_args)
+
+            msg = "argument --disable-reason has been ignored"
+            mock_log.assert_called_once_with(msg)
+
+        self.service_mock.enable.assert_called_with(
+            self.service.host,
+            self.service.binary
+        )
+        self.assertIsNone(result)
+
+    def test_service_set_enable_with_disable_reason(self):
+        reason = 'earthquake'
+        arglist = [
+            '--enable',
+            '--disable-reason', reason,
+            self.service.host,
+            self.service.binary,
+        ]
+        verifylist = [
+            ('enabled', True),
+            ('disable_reason', reason),
+            ('host', self.service.host),
+            ('service', self.service.binary),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        with mock.patch.object(self.cmd.log, 'info') as mock_log:
+            result = self.cmd.take_action(parsed_args)
+
+            msg = "argument --disable-reason has been ignored"
+            mock_log.assert_called_once_with(msg)
+
+        self.service_mock.enable.assert_called_with(
+            self.service.host,
+            self.service.binary
         )
         self.assertIsNone(result)

@@ -22,8 +22,10 @@ import sys
 
 from oslo_utils import strutils
 import requests
+import six
 
 from openstackclient.api import auth
+from openstackclient.common import exceptions
 from openstackclient.common import session as osc_session
 from openstackclient.identity import client as identity_client
 
@@ -45,7 +47,13 @@ class ClientCache(object):
     def __get__(self, instance, owner):
         # Tell the ClientManager to login to keystone
         if self._handle is None:
-            self._handle = self.factory(instance)
+            try:
+                self._handle = self.factory(instance)
+            except AttributeError as err:
+                # Make sure the failure propagates. Otherwise, the plugin just
+                # quietly isn't there.
+                new_err = exceptions.PluginAttributeError(err)
+                six.reraise(new_err.__class__, new_err, sys.exc_info()[2])
         return self._handle
 
 
@@ -109,6 +117,15 @@ class ClientManager(object):
         else:
             self._cacert = verify
             self._insecure = False
+
+        # Set up client certificate and key
+        # NOTE(cbrandily): This converts client certificate/key to requests
+        #                  cert argument: None (no client certificate), a path
+        #                  to client certificate or a tuple with client
+        #                  certificate/key paths.
+        self._cert = self._cli_options.cert
+        if self._cert and self._cli_options.key:
+            self._cert = self._cert, self._cli_options.key
 
         # Get logging from root logger
         root_logger = logging.getLogger('')
@@ -178,6 +195,18 @@ class ClientManager(object):
                 not self._auth_params.get('user_domain_name')):
             self._auth_params['user_domain_id'] = default_domain
 
+        # NOTE(hieulq): If USER_DOMAIN_NAME, USER_DOMAIN_ID, PROJECT_DOMAIN_ID
+        # or PROJECT_DOMAIN_NAME is present and API_VERSION is 2.0, then
+        # ignore all domain related configs.
+        if (self._api_version.get('identity') == '2.0' and
+                self.auth_plugin_name.endswith('password')):
+            domain_props = ['project_domain_name', 'project_domain_id',
+                            'user_domain_name', 'user_domain_id']
+            for prop in domain_props:
+                if self._auth_params.pop(prop, None) is not None:
+                    LOG.warning("Ignoring domain related configs " +
+                                prop + " because identity API version is 2.0")
+
         # For compatibility until all clients can be updated
         if 'project_name' in self._auth_params:
             self._project_name = self._auth_params['project_name']
@@ -194,12 +223,11 @@ class ClientManager(object):
             auth=self.auth,
             session=request_session,
             verify=self._verify,
+            cert=self._cert,
             user_agent=USER_AGENT,
         )
 
         self._auth_setup_completed = True
-
-        return
 
     @property
     def auth_ref(self):

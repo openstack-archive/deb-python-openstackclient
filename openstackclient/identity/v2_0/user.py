@@ -21,7 +21,7 @@ from keystoneauth1 import exceptions as ks_exc
 
 from openstackclient.common import command
 from openstackclient.common import utils
-from openstackclient.i18n import _  # noqa
+from openstackclient.i18n import _
 
 
 class CreateUser(command.ShowOne):
@@ -143,7 +143,6 @@ class DeleteUser(command.Command):
                 user,
             )
             identity_client.users.delete(user_obj.id)
-        return
 
 
 class ListUser(command.Lister):
@@ -330,7 +329,6 @@ class SetUser(command.Command):
             kwargs['enabled'] = False
 
         identity_client.users.update(user.id, **kwargs)
-        return
 
 
 class ShowUser(command.ShowOne):

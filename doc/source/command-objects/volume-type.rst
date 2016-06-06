@@ -20,7 +20,7 @@ Create new volume type
 
 .. option:: --description <description>
 
-    New volume type description
+    Volume type description
 
     .. versionadded:: 2
 
@@ -40,9 +40,10 @@ Create new volume type
 
     Set a property on this volume type (repeat option to set multiple properties)
 
+.. _volume_type_create-name:
 .. describe:: <name>
 
-    New volume type name
+    Volume type name
 
 volume type delete
 ------------------
@@ -55,6 +56,7 @@ Delete volume type
     os volume type delete
         <volume-type>
 
+.. _volume_type_delete-volume-type:
 .. describe:: <volume-type>
 
     Volume type to delete (name or ID)
@@ -86,6 +88,8 @@ Set volume type properties
         [--name <name>]
         [--description <description>]
         [--property <key=value> [...] ]
+        [--project <project>]
+        [--project-domain <project-domain>]
         <volume-type>
 
 .. option:: --name <name>
@@ -100,13 +104,42 @@ Set volume type properties
 
     .. versionadded:: 2
 
+.. option:: --project <project>
+
+    Set volume type access to project (name or ID) (admin only)
+
+    *Volume version 2 only*
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
 .. option:: --property <key=value>
 
-    Property to add or modify for this volume type (repeat option to set multiple properties)
+    Set a property on this volume type (repeat option to set multiple properties)
 
+.. _volume_type_set-volume-type:
 .. describe:: <volume-type>
 
     Volume type to modify (name or ID)
+
+volume type show
+----------------
+
+Display volume type details
+
+
+.. program:: volume type show
+.. code:: bash
+
+    os volume type show
+        <volume-type>
+
+.. _volume_type_show-volume-type:
+.. describe:: <volume-type>
+
+    Volume type to display (name or ID)
 
 volume type unset
 -----------------
@@ -118,12 +151,26 @@ Unset volume type properties
 
     os volume type unset
         [--property <key>]
+        [--project <project>]
+        [--project-domain <project-domain>]
         <volume-type>
 
 .. option:: --property <key>
 
     Property to remove from volume type (repeat option to remove multiple properties)
 
+.. option:: --project <project>
+
+    Removes volume type access from project (name or ID) (admin only)
+
+    *Volume version 2 only*
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
+.. _volume_type_unset-volume-type:
 .. describe:: <volume-type>
 
     Volume type to modify (name or ID)

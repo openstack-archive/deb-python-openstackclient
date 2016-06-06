@@ -35,7 +35,7 @@ class CreateIdentityProvider(command.ShowOne):
             metavar='<remote-id>',
             action='append',
             help='Remote IDs to associate with the Identity Provider '
-                 '(repeat to provide multiple values)'
+                 '(repeat option to provide multiple values)'
         )
         identity_remote_id_provider.add_argument(
             '--remote-id-file',
@@ -139,7 +139,7 @@ class SetIdentityProvider(command.Command):
             metavar='<remote-id>',
             action='append',
             help='Remote IDs to associate with the Identity Provider '
-                 '(repeat to provide multiple values)'
+                 '(repeat option to provide multiple values)'
         )
         identity_remote_id_provider.add_argument(
             '--remote-id-file',
@@ -214,7 +214,8 @@ class ShowIdentityProvider(command.ShowOne):
         identity_client = self.app.client_manager.identity
         idp = utils.find_resource(
             identity_client.federation.identity_providers,
-            parsed_args.identity_provider)
+            parsed_args.identity_provider,
+            id=parsed_args.identity_provider)
 
         idp._info.pop('links', None)
         remote_ids = utils.format_list(idp._info.pop('remote_ids', []))

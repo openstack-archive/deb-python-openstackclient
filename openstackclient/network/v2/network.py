@@ -16,6 +16,7 @@
 from openstackclient.common import command
 from openstackclient.common import exceptions
 from openstackclient.common import utils
+from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 from openstackclient.network import common
 
@@ -31,20 +32,17 @@ def _format_router_external(item):
 _formatters = {
     'subnets': utils.format_list,
     'admin_state_up': _format_admin_state,
-    'router_external': _format_router_external,
+    'router:external': _format_router_external,
     'availability_zones': utils.format_list,
     'availability_zone_hints': utils.format_list,
 }
 
 
 def _get_columns(item):
-    columns = item.keys()
+    columns = list(item.keys())
     if 'tenant_id' in columns:
         columns.remove('tenant_id')
         columns.append('project_id')
-    if 'router:external' in columns:
-        columns.remove('router:external')
-        columns.append('router_external')
     return tuple(sorted(columns))
 
 
@@ -52,10 +50,14 @@ def _get_attrs(client_manager, parsed_args):
     attrs = {}
     if parsed_args.name is not None:
         attrs['name'] = str(parsed_args.name)
-    if parsed_args.admin_state is not None:
-        attrs['admin_state_up'] = parsed_args.admin_state
-    if parsed_args.shared is not None:
-        attrs['shared'] = parsed_args.shared
+    if parsed_args.enable:
+        attrs['admin_state_up'] = True
+    if parsed_args.disable:
+        attrs['admin_state_up'] = False
+    if parsed_args.share:
+        attrs['shared'] = True
+    if parsed_args.no_share:
+        attrs['shared'] = False
 
     # "network set" command doesn't support setting project.
     if 'project' in parsed_args and parsed_args.project is not None:
@@ -72,18 +74,75 @@ def _get_attrs(client_manager, parsed_args):
        parsed_args.availability_zone_hints is not None:
         attrs['availability_zone_hints'] = parsed_args.availability_zone_hints
 
+    # update_external_network_options
+    if parsed_args.internal:
+        attrs['router:external'] = False
+    if parsed_args.external:
+        attrs['router:external'] = True
+        if parsed_args.no_default:
+            attrs['is_default'] = False
+        if parsed_args.default:
+            attrs['is_default'] = True
+    # Update Provider network options
+    if parsed_args.provider_network_type:
+        attrs['provider:network_type'] = parsed_args.provider_network_type
+    if parsed_args.physical_network:
+        attrs['provider:physical_network'] = parsed_args.physical_network
+    if parsed_args.segmentation_id:
+        attrs['provider:segmentation_id'] = parsed_args.segmentation_id
+    # Update VLAN Transparency for networks
+    if parsed_args.transparent_vlan:
+        attrs['vlan_transparent'] = True
+    if parsed_args.no_transparent_vlan:
+        attrs['vlan_transparent'] = False
     return attrs
+
+
+def _add_additional_network_options(parser):
+    # Add additional network options
+
+    parser.add_argument(
+        '--provider-network-type',
+        metavar='<provider-network-type>',
+        choices=['flat', 'gre', 'local',
+                 'vlan', 'vxlan'],
+        help=_("The physical mechanism by which the virtual network "
+               "is implemented. The supported options are: "
+               "flat, gre, local, vlan, vxlan"))
+    parser.add_argument(
+        '--provider-physical-network',
+        metavar='<provider-physical-network>',
+        dest='physical_network',
+        help=_("Name of the physical network over which the virtual "
+               "network is implemented"))
+    parser.add_argument(
+        '--provider-segment',
+        metavar='<provider-segment>',
+        dest='segmentation_id',
+        help=_("VLAN ID for VLAN networks or Tunnel ID for GRE/VXLAN "
+               "networks"))
+
+    vlan_transparent_grp = parser.add_mutually_exclusive_group()
+    vlan_transparent_grp.add_argument(
+        '--transparent-vlan',
+        action='store_true',
+        help=_("Make the network VLAN transparent"))
+    vlan_transparent_grp.add_argument(
+        '--no-transparent-vlan',
+        action='store_true',
+        help=_("Do not make the network VLAN transparent"))
 
 
 def _get_attrs_compute(client_manager, parsed_args):
     attrs = {}
     if parsed_args.name is not None:
         attrs['label'] = str(parsed_args.name)
-    if parsed_args.shared is not None:
-        attrs['share_address'] = parsed_args.shared
+    if parsed_args.share:
+        attrs['share_address'] = True
+    if parsed_args.no_share:
+        attrs['share_address'] = False
     if parsed_args.subnet is not None:
         attrs['cidr'] = parsed_args.subnet
-
     return attrs
 
 
@@ -94,21 +153,19 @@ class CreateNetwork(common.NetworkAndComputeShowOne):
         parser.add_argument(
             'name',
             metavar='<name>',
-            help='New network name',
+            help=_("New network name")
         )
         share_group = parser.add_mutually_exclusive_group()
         share_group.add_argument(
             '--share',
-            dest='shared',
             action='store_true',
             default=None,
-            help='Share the network between projects',
+            help=_("Share the network between projects")
         )
         share_group.add_argument(
             '--no-share',
-            dest='shared',
-            action='store_false',
-            help='Do not share the network between projects',
+            action='store_true',
+            help=_("Do not share the network between projects")
         )
         return parser
 
@@ -116,21 +173,19 @@ class CreateNetwork(common.NetworkAndComputeShowOne):
         admin_group = parser.add_mutually_exclusive_group()
         admin_group.add_argument(
             '--enable',
-            dest='admin_state',
             action='store_true',
             default=True,
-            help='Enable network (default)',
+            help=_("Enable network (default)")
         )
         admin_group.add_argument(
             '--disable',
-            dest='admin_state',
-            action='store_false',
-            help='Disable network',
+            action='store_true',
+            help=_("Disable network")
         )
         parser.add_argument(
             '--project',
             metavar='<project>',
-            help="Owner's project (name or ID)"
+            help=_("Owner's project (name or ID)")
         )
         identity_common.add_project_domain_option_to_parser(parser)
         parser.add_argument(
@@ -138,17 +193,43 @@ class CreateNetwork(common.NetworkAndComputeShowOne):
             action='append',
             dest='availability_zone_hints',
             metavar='<availability-zone>',
-            help='Availability Zone in which to create this network '
-                 '(requires the Network Availability Zone extension, '
-                 'this option can be repeated).',
+            help=_("Availability Zone in which to create this network "
+                   "(Network Availability Zone extension required, "
+                   "repeat option to set multiple availability zones)")
         )
+        external_router_grp = parser.add_mutually_exclusive_group()
+        external_router_grp.add_argument(
+            '--external',
+            action='store_true',
+            help=_("Set this network as an external network "
+                   "(external-net extension required)")
+        )
+        external_router_grp.add_argument(
+            '--internal',
+            action='store_true',
+            help=_("Set this network as an internal network (default)")
+        )
+        default_router_grp = parser.add_mutually_exclusive_group()
+        default_router_grp.add_argument(
+            '--default',
+            action='store_true',
+            help=_("Specify if this network should be used as "
+                   "the default external network")
+        )
+        default_router_grp.add_argument(
+            '--no-default',
+            action='store_true',
+            help=_("Do not use the network as the default external network "
+                   "(default)")
+        )
+        _add_additional_network_options(parser)
         return parser
 
     def update_parser_compute(self, parser):
         parser.add_argument(
             '--subnet',
             metavar='<subnet>',
-            help="IPv4 subnet for fixed IPs (in CIDR notation)"
+            help=_("IPv4 subnet for fixed IPs (in CIDR notation)")
         )
         return parser
 
@@ -162,35 +243,35 @@ class CreateNetwork(common.NetworkAndComputeShowOne):
     def take_action_compute(self, client, parsed_args):
         attrs = _get_attrs_compute(self.app.client_manager, parsed_args)
         obj = client.networks.create(**attrs)
-        columns = tuple(sorted(obj._info.keys()))
+        columns = _get_columns(obj._info)
         data = utils.get_dict_properties(obj._info, columns)
         return (columns, data)
 
 
-class DeleteNetwork(common.NetworkAndComputeCommand):
+class DeleteNetwork(common.NetworkAndComputeDelete):
     """Delete network(s)"""
+
+    # Used by base class to find resources in parsed_args.
+    resource = 'network'
+    r = None
 
     def update_parser_common(self, parser):
         parser.add_argument(
             'network',
             metavar="<network>",
             nargs="+",
-            help=("Network(s) to delete (name or ID)")
+            help=_("Network(s) to delete (name or ID)")
         )
+
         return parser
 
     def take_action_network(self, client, parsed_args):
-        for network in parsed_args.network:
-            obj = client.find_network(network)
-            client.delete_network(obj)
+        obj = client.find_network(self.r, ignore_missing=False)
+        client.delete_network(obj)
 
     def take_action_compute(self, client, parsed_args):
-        for network in parsed_args.network:
-            network = utils.find_resource(
-                client.networks,
-                network,
-            )
-            client.networks.delete(network.id)
+        network = utils.find_resource(client.networks, self.r)
+        client.networks.delete(network.id)
 
 
 class ListNetwork(common.NetworkAndComputeLister):
@@ -201,13 +282,13 @@ class ListNetwork(common.NetworkAndComputeLister):
             '--external',
             action='store_true',
             default=False,
-            help='List external networks',
+            help=_("List external networks")
         )
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output',
+            help=_("List additional fields in output")
         )
         return parser
 
@@ -222,7 +303,7 @@ class ListNetwork(common.NetworkAndComputeLister):
                 'shared',
                 'subnets',
                 'provider_network_type',
-                'router_external',
+                'router:external',
                 'availability_zones',
             )
             column_headers = (
@@ -291,41 +372,61 @@ class SetNetwork(command.Command):
         parser.add_argument(
             'network',
             metavar="<network>",
-            help=("Network to modify (name or ID)")
+            help=_("Network to modify (name or ID)")
         )
         parser.add_argument(
             '--name',
             metavar='<name>',
-            help='Set network name',
+            help=_("Set network name")
         )
         admin_group = parser.add_mutually_exclusive_group()
         admin_group.add_argument(
             '--enable',
-            dest='admin_state',
             action='store_true',
             default=None,
-            help='Enable network',
+            help=_("Enable network")
         )
         admin_group.add_argument(
             '--disable',
-            dest='admin_state',
-            action='store_false',
-            help='Disable network',
+            action='store_true',
+            help=_("Disable network")
         )
         share_group = parser.add_mutually_exclusive_group()
         share_group.add_argument(
             '--share',
-            dest='shared',
             action='store_true',
             default=None,
-            help='Share the network between projects',
+            help=_("Share the network between projects")
         )
         share_group.add_argument(
             '--no-share',
-            dest='shared',
-            action='store_false',
-            help='Do not share the network between projects',
+            action='store_true',
+            help=_("Do not share the network between projects")
         )
+        external_router_grp = parser.add_mutually_exclusive_group()
+        external_router_grp.add_argument(
+            '--external',
+            action='store_true',
+            help=_("Set this network as an external network "
+                   "(external-net extension required)")
+        )
+        external_router_grp.add_argument(
+            '--internal',
+            action='store_true',
+            help=_("Set this network as an internal network")
+        )
+        default_router_grp = parser.add_mutually_exclusive_group()
+        default_router_grp.add_argument(
+            '--default',
+            action='store_true',
+            help=_("Set the network as the default external network")
+        )
+        default_router_grp.add_argument(
+            '--no-default',
+            action='store_true',
+            help=_("Do not use the network as the default external network")
+        )
+        _add_additional_network_options(parser)
         return parser
 
     def take_action(self, parsed_args):
@@ -334,11 +435,10 @@ class SetNetwork(command.Command):
 
         attrs = _get_attrs(self.app.client_manager, parsed_args)
         if attrs == {}:
-            msg = "Nothing specified to be set"
+            msg = _("Nothing specified to be set")
             raise exceptions.CommandError(msg)
 
         client.update_network(obj, **attrs)
-        return
 
 
 class ShowNetwork(common.NetworkAndComputeShowOne):
@@ -348,7 +448,7 @@ class ShowNetwork(common.NetworkAndComputeShowOne):
         parser.add_argument(
             'network',
             metavar="<network>",
-            help=("Network to display (name or ID)")
+            help=_("Network to display (name or ID)")
         )
         return parser
 
@@ -359,10 +459,10 @@ class ShowNetwork(common.NetworkAndComputeShowOne):
         return (columns, data)
 
     def take_action_compute(self, client, parsed_args):
-        network = utils.find_resource(
+        obj = utils.find_resource(
             client.networks,
             parsed_args.network,
         )
-        columns = sorted(network._info.keys())
-        data = utils.get_dict_properties(network._info, columns)
+        columns = _get_columns(obj._info)
+        data = utils.get_dict_properties(obj._info, columns)
         return (columns, data)

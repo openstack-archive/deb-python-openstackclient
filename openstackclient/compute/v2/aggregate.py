@@ -21,6 +21,7 @@ import six
 from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.i18n import _
 
 
 class AddAggregateHost(command.ShowOne):
@@ -31,12 +32,12 @@ class AddAggregateHost(command.ShowOne):
         parser.add_argument(
             'aggregate',
             metavar='<aggregate>',
-            help='Aggregate (name or ID)',
+            help=_("Aggregate (name or ID)")
         )
         parser.add_argument(
             'host',
             metavar='<host>',
-            help='Host to add to <aggregate>',
+            help=_("Host to add to <aggregate>")
         )
         return parser
 
@@ -62,19 +63,19 @@ class CreateAggregate(command.ShowOne):
         parser.add_argument(
             "name",
             metavar="<name>",
-            help="New aggregate name",
+            help=_("New aggregate name")
         )
         parser.add_argument(
             "--zone",
             metavar="<availability-zone>",
-            help="Availability zone name",
+            help=_("Availability zone name")
         )
         parser.add_argument(
             "--property",
             metavar="<key=value>",
             action=parseractions.KeyValueAction,
-            help='Property to add to this aggregate '
-                 '(repeat option to set multiple properties)',
+            help=_("Property to add to this aggregate "
+                   "(repeat option to set multiple properties)")
         )
         return parser
 
@@ -105,7 +106,7 @@ class DeleteAggregate(command.Command):
         parser.add_argument(
             'aggregate',
             metavar='<aggregate>',
-            help='Aggregate to delete (name or ID)',
+            help=_("Aggregate to delete (name or ID)")
         )
         return parser
 
@@ -128,7 +129,8 @@ class ListAggregate(command.Lister):
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output')
+            help=_("List additional fields in output")
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -175,12 +177,12 @@ class RemoveAggregateHost(command.ShowOne):
         parser.add_argument(
             'aggregate',
             metavar='<aggregate>',
-            help='Aggregate (name or ID)',
+            help=_("Aggregate (name or ID)")
         )
         parser.add_argument(
             'host',
             metavar='<host>',
-            help='Host to remove from <aggregate>',
+            help=_("Host to remove from <aggregate>")
         )
         return parser
 
@@ -209,24 +211,24 @@ class SetAggregate(command.Command):
         parser.add_argument(
             'aggregate',
             metavar='<aggregate>',
-            help='Aggregate to modify (name or ID)',
+            help=_("Aggregate to modify (name or ID)")
         )
         parser.add_argument(
             '--name',
             metavar='<name>',
-            help='Set aggregate name',
+            help=_("Set aggregate name")
         )
         parser.add_argument(
             "--zone",
             metavar="<availability-zone>",
-            help="Set availability zone name",
+            help=_("Set availability zone name")
         )
         parser.add_argument(
             "--property",
             metavar="<key=value>",
             action=parseractions.KeyValueAction,
-            help='Property to set on <aggregate> '
-                 '(repeat option to set multiple properties)',
+            help=_("Property to set on <aggregate> "
+                   "(repeat option to set multiple properties)")
         )
         return parser
 
@@ -264,7 +266,7 @@ class ShowAggregate(command.ShowOne):
         parser.add_argument(
             'aggregate',
             metavar='<aggregate>',
-            help='Aggregate to display (name or ID)',
+            help=_("Aggregate to display (name or ID)")
         )
         return parser
 
@@ -290,3 +292,34 @@ class ShowAggregate(command.ShowOne):
         info = {}
         info.update(data._info)
         return zip(*sorted(six.iteritems(info)))
+
+
+class UnsetAggregate(command.Command):
+    """Unset aggregate properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetAggregate, self).get_parser(prog_name)
+        parser.add_argument(
+            "aggregate",
+            metavar="<aggregate>",
+            help=_("Aggregate to modify (name or ID)")
+        )
+        parser.add_argument(
+            "--property",
+            metavar="<key>",
+            action='append',
+            required=True,
+            help=_("Property to remove from aggregate "
+                   "(repeat option to remove multiple properties)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+        aggregate = utils.find_resource(
+            compute_client.aggregates,
+            parsed_args.aggregate)
+
+        unset_property = {key: None for key in parsed_args.property}
+        compute_client.aggregates.set_metadata(aggregate,
+                                               unset_property)

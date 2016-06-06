@@ -16,6 +16,7 @@
 
 """Command-line interface to the OpenStack APIs"""
 
+import argparse
 import getpass
 import logging
 import sys
@@ -131,6 +132,16 @@ class OpenStackShell(app.App):
             self.log.info("END return value: %s", ret_val)
 
     def init_profile(self):
+        # NOTE(dtroyer): Remove this 'if' block when the --profile global
+        #                option is removed
+        if osprofiler_profiler and self.options.old_profile:
+            self.log.warning(
+                'The --profile option is deprecated, '
+                'please use --os-profile instead'
+            )
+            if not self.options.profile:
+                self.options.profile = self.options.old_profile
+
         self.do_profile = osprofiler_profiler and self.options.profile
         if self.do_profile:
             osprofiler_profiler.init(self.options.profile)
@@ -144,7 +155,7 @@ class OpenStackShell(app.App):
             # bigger than most big default one (CRITICAL) or something like
             # that (PROFILE = 60 for instance), but not sure we need it here.
             self.log.warning("Trace ID: %s" % trace_id)
-            self.log.warning("To display trace use next command:\n"
+            self.log.warning("Display trace with command:\n"
                              "osprofiler trace show --html %s " % trace_id)
 
     def run_subcommand(self, argv):
@@ -189,6 +200,18 @@ class OpenStackShell(app.App):
             dest='cacert',
             default=utils.env('OS_CACERT'),
             help='CA certificate bundle file (Env: OS_CACERT)')
+        parser.add_argument(
+            '--os-cert',
+            metavar='<certificate-file>',
+            dest='cert',
+            default=utils.env('OS_CERT'),
+            help='Client certificate bundle file (Env: OS_CERT)')
+        parser.add_argument(
+            '--os-key',
+            metavar='<key-file>',
+            dest='key',
+            default=utils.env('OS_KEY'),
+            help='Client certificate key file (Env: OS_KEY)')
         verify_group = parser.add_mutually_exclusive_group()
         verify_group.add_argument(
             '--verify',
@@ -227,19 +250,30 @@ class OpenStackShell(app.App):
             action='store_true',
             help="Print API call timing info",
         )
+        parser.add_argument(
+            '--enable-beta-commands',
+            action='store_true',
+            help="Enable beta commands which are subject to change",
+        )
 
         # osprofiler HMAC key argument
         if osprofiler_profiler:
-            parser.add_argument('--profile',
-                                metavar='hmac-key',
-                                help='HMAC key to use for encrypting context '
-                                'data for performance profiling of operation. '
-                                'This key should be the value of one of the '
-                                'HMAC keys configured in osprofiler '
-                                'middleware in the projects user would like '
-                                'to profile. It needs to be specified in '
-                                'configuration files of the required '
-                                'projects.')
+            parser.add_argument(
+                '--os-profile',
+                metavar='hmac-key',
+                dest='profile',
+                help='HMAC key for encrypting profiling context data',
+            )
+            # NOTE(dtroyer): This global option should have been named
+            #                --os-profile as --profile interferes with at
+            #                least one existing command option.  Deprecate
+            #                --profile and remove after Apr 2017.
+            parser.add_argument(
+                '--profile',
+                metavar='hmac-key',
+                dest='old_profile',
+                help=argparse.SUPPRESS,
+            )
 
         return clientmanager.build_plugin_option_parser(parser)
 
@@ -355,7 +389,7 @@ class OpenStackShell(app.App):
                         self.log.warning(
                             "%s version %s is not in supported versions %s"
                             % (api, version_opt,
-                               ', '.join(mod.API_VERSIONS.keys())))
+                               ', '.join(list(mod.API_VERSIONS.keys()))))
 
                 # Command groups deal only with major versions
                 version = '.v' + version_opt.replace('.', '_').split('_')[0]

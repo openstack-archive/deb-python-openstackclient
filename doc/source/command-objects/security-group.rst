@@ -2,6 +2,10 @@
 security group
 ==============
 
+A **security group** acts as a virtual firewall for servers and other
+resources on a network. It is a container for security group rules
+which specify the network access rules.
+
 Compute v2, Network v2
 
 security group create
@@ -14,11 +18,25 @@ Create a new security group
 
     os security group create
         [--description <description>]
+        [--project <project> [--project-domain <project-domain>]]
         <name>
 
 .. option:: --description <description>
 
     Security group description
+
+.. option:: --project <project>
+
+    Owner's project (name or ID)
+
+    *Network version 2 only*
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
+    *Network version 2 only*
 
 .. describe:: <name>
 
@@ -55,7 +73,7 @@ List security groups
     Display information from all projects (admin only)
 
     *Network version 2 ignores this option and will always display information*
-    *for all projects.*
+    *for all projects (admin only).*
 
 security group set
 ------------------

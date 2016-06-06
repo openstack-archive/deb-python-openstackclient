@@ -100,10 +100,110 @@ An example parser declaration:
 
         choice_option.add_argument(
             '--test',
-            metavar='<test>,
+            metavar='<test>',
             choices=['choice1', 'choice2', 'choice3'],
             help=_('Test type (choice1, choice2 or choice3)'),
         )
+
+Options with Multiple Values
+----------------------------
+
+Some options can be repeated to build a collection of values for a property.
+Adding a value to the collection must be provided via the ``set`` action.
+Removing a value from the collection must be provided via an ``unset`` action.
+As a convenience, removing all values from the collection may be provided via a
+``--no`` option on the ``set`` and ``unset`` actions. If both ``--no`` option
+and option are specified, the values specified on the command would overwrite
+the collection property instead of appending on the ``set`` action. The
+``--no`` option must be part of a mutually exclusive group with the related
+property option on the ``unset`` action, overwrite case don't exist in
+``unset`` action.
+
+An example behavior for ``set`` action:
+
+Append:
+
+.. code-block:: bash
+
+    object set --example-property xxx
+
+Overwrite:
+
+.. code-block:: bash
+
+    object set --no-example-property --example-property xxx
+
+The example below assumes a property that contains a list of unique values.
+However, this example can also be applied to other collections using the
+appropriate parser action and action implementation (e.g. a dict of key/value
+pairs). Implementations will vary depending on how the REST API handles
+adding/removing values to/from the collection and whether or not duplicate
+values are allowed.
+
+Implementation
+~~~~~~~~~~~~~~
+
+An example parser declaration for `set` action:
+
+.. code-block:: python
+
+        parser.add_argument(
+            '--example-property',
+            metavar='<example-property>',
+            dest='example_property',
+            action='append',
+            help=_('Example property for this <resource> '
+                   '(repeat option to set multiple properties)'),
+        )
+        parser.add_argument(
+            '--no-example-property',
+            dest='no_example_property',
+            action='store_true',
+            help=_('Remove all example properties for this <resource>'),
+        )
+
+An example handler in `take_action()` for `set` action:
+
+.. code-block:: python
+
+        if parsed_args.example_property and parsed_args.no_example_property:
+            kwargs['example_property'] = parsed_args.example_property
+        elif parsed_args.example_property:
+            kwargs['example_property'] = \
+                resource_example_property + parsed_args.example_property
+        elif parsed_args.no_example_property:
+            kwargs['example_property'] = []
+
+An example parser declaration for `unset` action:
+
+.. code-block:: python
+
+        example_property_group = parser.add_mutually_exclusive_group()
+        example_property_group.add_argument(
+            '--example-property',
+            metavar='<example-property>',
+            dest='example_property',
+            action='append',
+            help=_('Example property for this <resource> '
+                   '(repeat option to remove multiple properties)'),
+        )
+        example_property_group.add_argument(
+            '--no-example-property',
+            dest='no_example_property',
+            action='store_true',
+            help=_('Remove all example properties for this <resource>'),
+        )
+
+An example handler in `take_action()` for `unset` action:
+
+.. code-block:: python
+
+        if parsed_args.example_property:
+            kwargs['example_property'] = \
+                list(set(resource_example_property) - \
+                     set(parsed_args.example_property))
+        if parsed_args.no_example_property:
+            kwargs['example_property'] = []
 
 List Command Options
 ====================

@@ -21,6 +21,7 @@ import six
 from openstackclient.common import command
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 
 
@@ -32,61 +33,61 @@ class CreateVolume(command.ShowOne):
         parser.add_argument(
             "name",
             metavar="<name>",
-            help="New volume name"
+            help=_("Volume name"),
         )
         parser.add_argument(
             "--size",
             metavar="<size>",
             type=int,
             required=True,
-            help="New volume size in GB"
-        )
-        parser.add_argument(
-            "--snapshot",
-            metavar="<snapshot>",
-            help="Use <snapshot> as source of new volume (name or ID)"
-        )
-        parser.add_argument(
-            "--description",
-            metavar="<description>",
-            help="New volume description"
+            help=_("Volume size in GB"),
         )
         parser.add_argument(
             "--type",
             metavar="<volume-type>",
-            help="Use <volume-type> as the new volume type",
-        )
-        parser.add_argument(
-            '--user',
-            metavar='<user>',
-            help='Specify an alternate user (name or ID)',
-        )
-        parser.add_argument(
-            '--project',
-            metavar='<project>',
-            help='Specify an alternate project (name or ID)',
-        )
-        parser.add_argument(
-            "--availability-zone",
-            metavar="<availability-zone>",
-            help="Create new volume in <availability_zone>"
+            help=_("Set the type of volume"),
         )
         parser.add_argument(
             "--image",
             metavar="<image>",
-            help="Use <image> as source of new volume (name or ID)"
+            help=_("Use <image> as source of volume (name or ID)"),
+        )
+        parser.add_argument(
+            "--snapshot",
+            metavar="<snapshot>",
+            help=_("Use <snapshot> as source of volume (name or ID)"),
         )
         parser.add_argument(
             "--source",
             metavar="<volume>",
-            help="Volume to clone (name or ID)"
+            help=_("Volume to clone (name or ID)"),
+        )
+        parser.add_argument(
+            "--description",
+            metavar="<description>",
+            help=_("Volume description"),
+        )
+        parser.add_argument(
+            '--user',
+            metavar='<user>',
+            help=_('Specify an alternate user (name or ID)'),
+        )
+        parser.add_argument(
+            '--project',
+            metavar='<project>',
+            help=_('Specify an alternate project (name or ID)'),
+        )
+        parser.add_argument(
+            "--availability-zone",
+            metavar="<availability-zone>",
+            help=_("Create volume in <availability-zone>"),
         )
         parser.add_argument(
             "--property",
             metavar="<key=value>",
             action=parseractions.KeyValueAction,
-            help="Set a property to this volume "
-                 "(repeat option to set multiple properties)"
+            help=_("Set a property to this volume "
+                   "(repeat option to set multiple properties)"),
         )
         return parser
 
@@ -110,7 +111,7 @@ class CreateVolume(command.ShowOne):
         snapshot = None
         if parsed_args.snapshot:
             snapshot = utils.find_resource(
-                volume_client.snapshots,
+                volume_client.volume_snapshots,
                 parsed_args.snapshot).id
 
         project = None
@@ -158,15 +159,15 @@ class DeleteVolume(command.Command):
             "volumes",
             metavar="<volume>",
             nargs="+",
-            help="Volume(s) to delete (name or ID)"
+            help=_("Volume(s) to delete (name or ID)")
         )
         parser.add_argument(
             "--force",
             dest="force",
             action="store_true",
             default=False,
-            help="Attempt forced removal of volume(s), regardless of state "
-                 "(defaults to False)"
+            help=_("Attempt forced removal of volume(s), regardless of state "
+                   "(defaults to False)")
         )
         return parser
 
@@ -188,37 +189,37 @@ class ListVolume(command.Lister):
         parser = super(ListVolume, self).get_parser(prog_name)
         parser.add_argument(
             '--project',
-            metavar='<project-id>',
-            help='Filter results by project (name or ID) (admin only)'
+            metavar='<project>',
+            help=_('Filter results by project (name or ID) (admin only)')
         )
         identity_common.add_project_domain_option_to_parser(parser)
         parser.add_argument(
             '--user',
-            metavar='<user-id>',
-            help='Filter results by user (name or ID) (admin only)'
+            metavar='<user>',
+            help=_('Filter results by user (name or ID) (admin only)')
         )
         identity_common.add_user_domain_option_to_parser(parser)
         parser.add_argument(
             '--name',
             metavar='<name>',
-            help='Filter results by volume name',
+            help=_('Filter results by volume name'),
         )
         parser.add_argument(
             '--status',
             metavar='<status>',
-            help='Filter results by status',
+            help=_('Filter results by status'),
         )
         parser.add_argument(
             '--all-projects',
             action='store_true',
             default=False,
-            help='Include all projects (admin only)',
+            help=_('Include all projects (admin only)'),
         )
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output',
+            help=_('List additional fields in output'),
         )
         return parser
 
@@ -320,30 +321,37 @@ class SetVolume(command.Command):
         parser.add_argument(
             'volume',
             metavar='<volume>',
-            help='Volume to change (name or ID)',
+            help=_('Volume to modify (name or ID)'),
         )
         parser.add_argument(
             '--name',
             metavar='<name>',
-            help='New volume name',
-        )
-        parser.add_argument(
-            '--description',
-            metavar='<description>',
-            help='New volume description',
+            help=_('New volume name'),
         )
         parser.add_argument(
             '--size',
             metavar='<size>',
             type=int,
-            help='Extend volume size in GB',
+            help=_('Extend volume size in GB'),
+        )
+        parser.add_argument(
+            '--description',
+            metavar='<description>',
+            help=_('New volume description'),
         )
         parser.add_argument(
             '--property',
             metavar='<key=value>',
             action=parseractions.KeyValueAction,
-            help='Property to add or modify for this volume '
-                 '(repeat option to set multiple properties)',
+            help=_('Set a property on this volume '
+                   '(repeat option to set multiple properties)'),
+        )
+        parser.add_argument(
+            '--image-property',
+            metavar='<key=value>',
+            action=parseractions.KeyValueAction,
+            help=_('Set an image property on this volume '
+                   '(repeat option to set multiple image properties)'),
         )
         return parser
 
@@ -353,18 +361,21 @@ class SetVolume(command.Command):
 
         if parsed_args.size:
             if volume.status != 'available':
-                self.app.log.error("Volume is in %s state, it must be "
-                                   "available before size can be extended" %
+                self.app.log.error(_("Volume is in %s state, it must be "
+                                   "available before size can be extended") %
                                    volume.status)
                 return
             if parsed_args.size <= volume.size:
-                self.app.log.error("New size must be greater than %s GB" %
+                self.app.log.error(_("New size must be greater than %s GB") %
                                    volume.size)
                 return
             volume_client.volumes.extend(volume.id, parsed_args.size)
 
         if parsed_args.property:
             volume_client.volumes.set_metadata(volume.id, parsed_args.property)
+        if parsed_args.image_property:
+            volume_client.volumes.set_image_metadata(
+                volume.id, parsed_args.image_property)
 
         kwargs = {}
         if parsed_args.name:
@@ -374,8 +385,9 @@ class SetVolume(command.Command):
         if kwargs:
             volume_client.volumes.update(volume.id, **kwargs)
 
-        if not kwargs and not parsed_args.property and not parsed_args.size:
-            self.app.log.error("No changes requested\n")
+        if (not kwargs and not parsed_args.property
+           and not parsed_args.image_property and not parsed_args.size):
+            self.app.log.error(_("No changes requested\n"))
 
 
 class ShowVolume(command.ShowOne):
@@ -386,7 +398,7 @@ class ShowVolume(command.ShowOne):
         parser.add_argument(
             'volume',
             metavar="<volume-id>",
-            help="Volume to display (name or ID)"
+            help=_("Volume to display (name or ID)")
         )
         return parser
 
@@ -417,16 +429,21 @@ class UnsetVolume(command.Command):
         parser.add_argument(
             'volume',
             metavar='<volume>',
-            help='Volume to modify (name or ID)',
+            help=_('Volume to modify (name or ID)'),
         )
         parser.add_argument(
             '--property',
             metavar='<key>',
-            required=True,
             action='append',
-            default=[],
-            help='Property to remove from volume '
-                 '(repeat option to remove multiple properties)',
+            help=_('Remove a property from volume '
+                   '(repeat option to remove multiple properties)'),
+        )
+        parser.add_argument(
+            '--image-property',
+            metavar='<key>',
+            action='append',
+            help=_('Remove an image property from volume '
+                   '(repeat option to remove multiple image properties)'),
         )
         return parser
 
@@ -435,5 +452,12 @@ class UnsetVolume(command.Command):
         volume = utils.find_resource(
             volume_client.volumes, parsed_args.volume)
 
-        volume_client.volumes.delete_metadata(
-            volume.id, parsed_args.property)
+        if parsed_args.property:
+            volume_client.volumes.delete_metadata(
+                volume.id, parsed_args.property)
+        if parsed_args.image_property:
+            volume_client.volumes.delete_image_metadata(
+                volume.id, parsed_args.image_property)
+
+        if (not parsed_args.image_property and not parsed_args.property):
+            self.app.log.error(_("No changes requested\n"))

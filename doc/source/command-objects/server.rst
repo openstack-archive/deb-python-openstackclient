@@ -90,7 +90,7 @@ Create a new server
 .. option:: --security-group <security-group-name>
 
     Security group to assign to this server (name or ID)
-    (repeat for multiple groups)
+    (repeat option to set multiple groups)
 
 .. option:: --key-name <key-name>
 
@@ -98,11 +98,13 @@ Create a new server
 
 .. option:: --property <key=value>
 
-    Set a property on this server (repeat for multiple values)
+    Set a property on this server
+    (repeat option to set multiple values)
 
 .. option:: --file <dest-filename=source-filename>
 
-    File to inject into image before boot (repeat for multiple files)
+    File to inject into image before boot
+    (repeat option to set multiple files)
 
 .. option:: --user-data <user-data>
 
@@ -514,6 +516,21 @@ process for the user: the first is to perform the resize, the second is
 to either confirm (verify) success and release the old server, or to declare
 a revert to release the new server and restart the old one.
 
+server restore
+--------------
+
+Restore server(s) from soft-deleted state
+
+.. program:: server restore
+.. code:: bash
+
+    os server restore
+        <server> [<server> ...]
+
+.. describe:: <server>
+
+    Server(s) to restore (name or ID)
+
 server resume
 -------------
 
@@ -554,8 +571,8 @@ Set server properties
 
 .. option:: --property <key=value>
 
-    Property to add/change for this server (repeat option to set
-    multiple properties)
+    Property to add/change for this server
+    (repeat option to set multiple properties)
 
 .. describe:: <server>
 
@@ -599,7 +616,7 @@ Show server details
 server ssh
 ----------
 
-Ssh to server
+SSH to server
 
 .. program:: server ssh
 .. code:: bash
@@ -749,7 +766,8 @@ Unset server properties
 
 .. option:: --property <key>
 
-    Property key to remove from server (repeat to set multiple values)
+    Property key to remove from server
+    (repeat option to remove multiple values)
 
 .. describe:: <server>
 

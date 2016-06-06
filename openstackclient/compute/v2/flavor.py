@@ -18,8 +18,28 @@
 import six
 
 from openstackclient.common import command
+from openstackclient.common import exceptions
 from openstackclient.common import parseractions
 from openstackclient.common import utils
+from openstackclient.i18n import _
+
+
+def _find_flavor(compute_client, flavor):
+    try:
+        return compute_client.flavors.get(flavor)
+    except Exception as ex:
+        if type(ex).__name__ == 'NotFound':
+            pass
+        else:
+            raise
+    try:
+        return compute_client.flavors.find(name=flavor, is_public=None)
+    except Exception as ex:
+        if type(ex).__name__ == 'NotFound':
+            msg = _("No flavor with a name or ID of '%s' exists.") % flavor
+            raise exceptions.CommandError(msg)
+        else:
+            raise
 
 
 class CreateFlavor(command.ShowOne):
@@ -30,56 +50,56 @@ class CreateFlavor(command.ShowOne):
         parser.add_argument(
             "name",
             metavar="<flavor-name>",
-            help="New flavor name",
+            help=_("New flavor name")
         )
         parser.add_argument(
             "--id",
             metavar="<id>",
             default='auto',
-            help="Unique flavor ID; 'auto' creates a UUID "
-                 "(default: auto)",
+            help=_("Unique flavor ID; 'auto' creates a UUID "
+                   "(default: auto)")
         )
         parser.add_argument(
             "--ram",
             type=int,
             metavar="<size-mb>",
             default=256,
-            help="Memory size in MB (default 256M)",
+            help=_("Memory size in MB (default 256M)")
         )
         parser.add_argument(
             "--disk",
             type=int,
             metavar="<size-gb>",
             default=0,
-            help="Disk size in GB (default 0G)",
+            help=_("Disk size in GB (default 0G)")
         )
         parser.add_argument(
             "--ephemeral",
             type=int,
             metavar="<size-gb>",
             default=0,
-            help="Ephemeral disk size in GB (default 0G)",
+            help=_("Ephemeral disk size in GB (default 0G)")
         )
         parser.add_argument(
             "--swap",
             type=int,
             metavar="<size-gb>",
             default=0,
-            help="Swap space size in GB (default 0G)",
+            help=_("Swap space size in GB (default 0G)")
         )
         parser.add_argument(
             "--vcpus",
             type=int,
             metavar="<vcpus>",
             default=1,
-            help="Number of vcpus (default 1)",
+            help=_("Number of vcpus (default 1)")
         )
         parser.add_argument(
             "--rxtx-factor",
-            type=int,
+            type=float,
             metavar="<factor>",
-            default=1,
-            help="RX/TX factor (default 1)",
+            default=1.0,
+            help=_("RX/TX factor (default 1.0)")
         )
         public_group = parser.add_mutually_exclusive_group()
         public_group.add_argument(
@@ -87,13 +107,13 @@ class CreateFlavor(command.ShowOne):
             dest="public",
             action="store_true",
             default=True,
-            help="Flavor is available to other projects (default)",
+            help=_("Flavor is available to other projects (default)")
         )
         public_group.add_argument(
             "--private",
             dest="public",
             action="store_false",
-            help="Flavor is not available to other projects",
+            help=_("Flavor is not available to other projects")
         )
         return parser
 
@@ -126,14 +146,13 @@ class DeleteFlavor(command.Command):
         parser.add_argument(
             "flavor",
             metavar="<flavor>",
-            help="Flavor to delete (name or ID)",
+            help=_("Flavor to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        flavor = utils.find_resource(compute_client.flavors,
-                                     parsed_args.flavor)
+        flavor = _find_flavor(compute_client, parsed_args.flavor)
         compute_client.flavors.delete(flavor.id)
 
 
@@ -148,35 +167,38 @@ class ListFlavor(command.Lister):
             dest="public",
             action="store_true",
             default=True,
-            help="List only public flavors (default)",
+            help=_("List only public flavors (default)")
         )
         public_group.add_argument(
             "--private",
             dest="public",
             action="store_false",
-            help="List only private flavors",
+            help=_("List only private flavors")
         )
         public_group.add_argument(
             "--all",
             dest="all",
             action="store_true",
             default=False,
-            help="List all flavors, whether public or private",
+            help=_("List all flavors, whether public or private")
         )
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output')
+            help=_("List additional fields in output")
+        )
         parser.add_argument(
             '--marker',
             metavar="<marker>",
-            help='The last flavor ID of the previous page')
+            help=_("The last flavor ID of the previous page")
+        )
         parser.add_argument(
             '--limit',
             type=int,
             metavar="<limit>",
-            help='Maximum number of flavors to display')
+            help=_("Maximum number of flavors to display")
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -227,19 +249,19 @@ class SetFlavor(command.Command):
             "--property",
             metavar="<key=value>",
             action=parseractions.KeyValueAction,
-            help='Property to add or modify for this flavor '
-                 '(repeat option to set multiple properties)',
+            help=_("Property to add or modify for this flavor "
+                   "(repeat option to set multiple properties)")
         )
         parser.add_argument(
             "flavor",
             metavar="<flavor>",
-            help="Flavor to modify (name or ID)",
+            help=_("Flavor to modify (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        flavor = compute_client.flavors.find(name=parsed_args.flavor)
+        flavor = _find_flavor(compute_client, parsed_args.flavor)
         flavor.set_keys(parsed_args.property)
 
 
@@ -251,14 +273,13 @@ class ShowFlavor(command.ShowOne):
         parser.add_argument(
             "flavor",
             metavar="<flavor>",
-            help="Flavor to display (name or ID)",
+            help=_("Flavor to display (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        resource_flavor = utils.find_resource(compute_client.flavors,
-                                              parsed_args.flavor)
+        resource_flavor = _find_flavor(compute_client, parsed_args.flavor)
         flavor = resource_flavor._info.copy()
         flavor.pop("links", None)
 
@@ -276,18 +297,18 @@ class UnsetFlavor(command.Command):
             "--property",
             metavar="<key>",
             action='append',
-            help='Property to remove from flavor '
-                 '(repeat option to unset multiple properties)',
             required=True,
+            help=_("Property to remove from flavor "
+                   "(repeat option to unset multiple properties)")
         )
         parser.add_argument(
             "flavor",
             metavar="<flavor>",
-            help="Flavor to modify (name or ID)",
+            help=_("Flavor to modify (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        flavor = compute_client.flavors.find(name=parsed_args.flavor)
+        flavor = _find_flavor(compute_client, parsed_args.flavor)
         flavor.unset_keys(parsed_args.property)

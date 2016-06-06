@@ -14,6 +14,7 @@
 
 import copy
 
+import mock
 from mock import call
 
 from openstackclient.common import utils
@@ -40,6 +41,9 @@ class TestVolume(volume_fakes.TestVolume):
         self.images_mock = self.app.client_manager.image.images
         self.images_mock.reset_mock()
 
+        self.snapshots_mock = self.app.client_manager.volume.volume_snapshots
+        self.snapshots_mock.reset_mock()
+
     def setup_volumes_mock(self, count):
         volumes = volume_fakes.FakeVolume.create_volumes(count=count)
 
@@ -54,6 +58,7 @@ class TestVolumeCreate(TestVolume):
     columns = (
         'attachments',
         'availability_zone',
+        'bootable',
         'description',
         'id',
         'name',
@@ -73,6 +78,7 @@ class TestVolumeCreate(TestVolume):
         self.datalist = (
             self.new_volume.attachments,
             self.new_volume.availability_zone,
+            self.new_volume.bootable,
             self.new_volume.description,
             self.new_volume.id,
             self.new_volume.name,
@@ -376,6 +382,45 @@ class TestVolumeCreate(TestVolume):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.datalist, data)
 
+    def test_volume_create_with_snapshot(self):
+        arglist = [
+            '--size', str(self.new_volume.size),
+            '--snapshot', volume_fakes.snapshot_id,
+            self.new_volume.name,
+        ]
+        verifylist = [
+            ('size', self.new_volume.size),
+            ('snapshot', volume_fakes.snapshot_id),
+            ('name', self.new_volume.name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        fake_snapshot = mock.Mock()
+        fake_snapshot.id = volume_fakes.snapshot_id
+        self.snapshots_mock.get.return_value = fake_snapshot
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns a two-part tuple with a tuple of column names and a tuple of
+        # data to be shown.
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.volumes_mock.create.assert_called_once_with(
+            size=self.new_volume.size,
+            snapshot_id=fake_snapshot.id,
+            name=self.new_volume.name,
+            description=None,
+            volume_type=None,
+            user_id=None,
+            project_id=None,
+            availability_zone=None,
+            metadata=None,
+            imageRef=None,
+            source_volid=None
+        )
+
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.datalist, data)
+
 
 class TestVolumeDelete(TestVolume):
 
@@ -396,11 +441,12 @@ class TestVolumeDelete(TestVolume):
         verifylist = [
             ("volumes", [volumes[0].id])
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
+
         self.volumes_mock.delete.assert_called_with(volumes[0].id)
+        self.assertIsNone(result)
 
     def test_volume_delete_multi_volumes(self):
         volumes = self.setup_volumes_mock(count=3)
@@ -409,14 +455,13 @@ class TestVolumeDelete(TestVolume):
         verifylist = [
             ('volumes', arglist),
         ]
-
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.cmd.take_action(parsed_args)
+        result = self.cmd.take_action(parsed_args)
 
         calls = [call(v.id) for v in volumes]
-
         self.volumes_mock.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
 
 
 class TestVolumeList(TestVolume):
@@ -432,13 +477,8 @@ class TestVolumeList(TestVolume):
     def setUp(self):
         super(TestVolumeList, self).setUp()
 
-        self.volumes_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(volume_fakes.VOLUME),
-                loaded=True,
-            ),
-        ]
+        self.mock_volume = volume_fakes.FakeVolume.create_one_volume()
+        self.volumes_mock.list.return_value = [self.mock_volume]
 
         self.users_mock.get.return_value = [
             fakes.FakeResource(
@@ -473,14 +513,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -501,14 +541,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -531,14 +571,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -558,14 +598,14 @@ class TestVolumeList(TestVolume):
         columns, data = self.cmd.take_action(parsed_args)
 
         self.assertEqual(self.columns, columns)
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -588,14 +628,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -616,14 +656,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -644,14 +684,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -672,14 +712,14 @@ class TestVolumeList(TestVolume):
 
         self.assertEqual(self.columns, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
             msg,
         ), )
         self.assertEqual(datalist, tuple(data))
@@ -711,18 +751,18 @@ class TestVolumeList(TestVolume):
         ]
         self.assertEqual(collist, columns)
 
-        server = volume_fakes.volume_attachment_server['server_id']
-        device = volume_fakes.volume_attachment_server['device']
+        server = self.mock_volume.attachments[0]['server_id']
+        device = self.mock_volume.attachments[0]['device']
         msg = 'Attached to %s on %s ' % (server, device)
         datalist = ((
-            volume_fakes.volume_id,
-            volume_fakes.volume_name,
-            volume_fakes.volume_status,
-            volume_fakes.volume_size,
-            volume_fakes.volume_type,
-            '',
+            self.mock_volume.id,
+            self.mock_volume.name,
+            self.mock_volume.status,
+            self.mock_volume.size,
+            self.mock_volume.volume_type,
+            self.mock_volume.bootable,
             msg,
-            "Alpha='a', Beta='b', Gamma='g'",
+            utils.format_dict(self.mock_volume.metadata),
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -732,24 +772,110 @@ class TestVolumeShow(TestVolume):
     def setUp(self):
         super(TestVolumeShow, self).setUp()
 
-        self.volumes_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(volume_fakes.VOLUME),
-            loaded=True)
+        self._volume = volume_fakes.FakeVolume.create_one_volume()
+        self.volumes_mock.get.return_value = self._volume
         # Get the command object to test
         self.cmd = volume.ShowVolume(self.app, None)
 
     def test_volume_show(self):
         arglist = [
-            volume_fakes.volume_id
+            self._volume.id
         ]
         verifylist = [
-            ("volume", volume_fakes.volume_id)
+            ("volume", self._volume.id)
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
-        self.volumes_mock.get.assert_called_with(volume_fakes.volume_id)
+        self.volumes_mock.get.assert_called_with(self._volume.id)
 
-        self.assertEqual(volume_fakes.VOLUME_columns, columns)
-        self.assertEqual(volume_fakes.VOLUME_data, data)
+        self.assertEqual(
+            volume_fakes.FakeVolume.get_volume_columns(self._volume),
+            columns)
+
+        self.assertEqual(
+            volume_fakes.FakeVolume.get_volume_data(self._volume),
+            data)
+
+
+class TestVolumeSet(TestVolume):
+
+    def setUp(self):
+        super(TestVolumeSet, self).setUp()
+
+        self.new_volume = volume_fakes.FakeVolume.create_one_volume()
+        self.volumes_mock.create.return_value = self.new_volume
+
+        # Get the command object to test
+        self.cmd = volume.SetVolume(self.app, None)
+
+    def test_volume_set_image_property(self):
+        arglist = [
+            '--image-property', 'Alpha=a',
+            '--image-property', 'Beta=b',
+            self.new_volume.id,
+        ]
+        verifylist = [
+            ('image_property', {'Alpha': 'a', 'Beta': 'b'}),
+            ('volume', self.new_volume.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns nothing
+        self.cmd.take_action(parsed_args)
+        self.volumes_mock.set_image_metadata.assert_called_with(
+            self.volumes_mock.get().id, parsed_args.image_property)
+
+
+class TestVolumeUnset(TestVolume):
+
+    def setUp(self):
+        super(TestVolumeUnset, self).setUp()
+
+        self.new_volume = volume_fakes.FakeVolume.create_one_volume()
+        self.volumes_mock.create.return_value = self.new_volume
+
+        # Get the command object to set property
+        self.cmd_set = volume.SetVolume(self.app, None)
+
+        # Get the command object to unset property
+        self.cmd_unset = volume.UnsetVolume(self.app, None)
+
+    def test_volume_unset_image_property(self):
+
+        # Arguments for setting image properties
+        arglist = [
+            '--image-property', 'Alpha=a',
+            '--image-property', 'Beta=b',
+            self.new_volume.id,
+        ]
+        verifylist = [
+            ('image_property', {'Alpha': 'a', 'Beta': 'b'}),
+            ('volume', self.new_volume.id),
+        ]
+        parsed_args = self.check_parser(self.cmd_set, arglist, verifylist)
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns nothing
+        self.cmd_set.take_action(parsed_args)
+
+        # Arguments for unsetting image properties
+        arglist_unset = [
+            '--image-property', 'Alpha',
+            self.new_volume.id,
+        ]
+        verifylist_unset = [
+            ('image_property', ['Alpha']),
+            ('volume', self.new_volume.id),
+        ]
+        parsed_args_unset = self.check_parser(self.cmd_unset,
+                                              arglist_unset,
+                                              verifylist_unset)
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns nothing
+        self.cmd_unset.take_action(parsed_args_unset)
+
+        self.volumes_mock.delete_image_metadata.assert_called_with(
+            self.volumes_mock.get().id, parsed_args_unset.image_property)
