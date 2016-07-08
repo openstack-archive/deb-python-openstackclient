@@ -1,3 +1,9 @@
+python-openstackclient (2.6.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Corey Bryant <corey.bryant@canonical.com>  Fri, 08 Jul 2016 09:25:37 -0400
+
 python-openstackclient (2.5.0-1) experimental; urgency=medium
 
   [ Ondřej Nový ]
