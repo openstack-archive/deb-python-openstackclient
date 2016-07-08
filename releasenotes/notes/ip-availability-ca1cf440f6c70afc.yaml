@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add ``ip availability list`` and  ``ip availability show`` commands
+    [Blueprint :oscbp:`neutron-ip-capacity`]

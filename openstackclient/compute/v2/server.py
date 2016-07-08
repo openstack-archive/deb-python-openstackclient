@@ -562,7 +562,7 @@ class CreateServer(command.ShowOne):
             else:
                 self.log.error(_('Error creating server: %s'),
                                parsed_args.server_name)
-                sys.stdout.write(_('\nError creating server'))
+                sys.stdout.write(_('Error creating server\n'))
                 raise SystemExit
 
         details = _prep_server_detail(compute_client, server)
@@ -646,7 +646,7 @@ class CreateServerImage(command.ShowOne):
             else:
                 self.log.error(_('Error creating snapshot of server: %s'),
                                parsed_args.server)
-                sys.stdout.write(_('\nError creating server snapshot'))
+                sys.stdout.write(_('Error creating server snapshot\n'))
                 raise SystemExit
 
         image = _prep_image_detail(image_client, image_id)
@@ -688,7 +688,7 @@ class DeleteServer(command.Command):
                 else:
                     self.log.error(_('Error deleting server: %s'),
                                    server_obj.id)
-                    sys.stdout.write(_('\nError deleting server'))
+                    sys.stdout.write(_('Error deleting server\n'))
                     raise SystemExit
 
 
@@ -1013,7 +1013,9 @@ class MigrateServer(command.Command):
             ):
                 sys.stdout.write(_('Complete\n'))
             else:
-                sys.stdout.write(_('\nError migrating server'))
+                self.log.error(_('Error migrating server: %s'),
+                               server.id)
+                sys.stdout.write(_('Error migrating server\n'))
                 raise SystemExit
 
 
@@ -1085,9 +1087,11 @@ class RebootServer(command.Command):
                 server.id,
                 callback=_show_progress,
             ):
-                sys.stdout.write(_('\nReboot complete\n'))
+                sys.stdout.write(_('Complete\n'))
             else:
-                sys.stdout.write(_('\nError rebooting server\n'))
+                self.log.error(_('Error rebooting server: %s'),
+                               server.id)
+                sys.stdout.write(_('Error rebooting server\n'))
                 raise SystemExit
 
 
@@ -1136,9 +1140,11 @@ class RebuildServer(command.ShowOne):
                 server.id,
                 callback=_show_progress,
             ):
-                sys.stdout.write(_('\nComplete\n'))
+                sys.stdout.write(_('Complete\n'))
             else:
-                sys.stdout.write(_('\nError rebuilding server'))
+                self.log.error(_('Error rebuilding server: %s'),
+                               server.id)
+                sys.stdout.write(_('Error rebuilding server\n'))
                 raise SystemExit
 
         details = _prep_server_detail(compute_client, server)
@@ -1290,7 +1296,9 @@ class ResizeServer(command.Command):
                 ):
                     sys.stdout.write(_('Complete\n'))
                 else:
-                    sys.stdout.write(_('\nError resizing server'))
+                    self.log.error(_('Error resizing server: %s'),
+                                   server.id)
+                    sys.stdout.write(_('Error resizing server\n'))
                     raise SystemExit
         elif parsed_args.confirm:
             compute_client.servers.confirm_resize(server)
@@ -1370,6 +1378,12 @@ class SetServer(command.Command):
             help=_('Property to add/change for this server '
                    '(repeat option to set multiple properties)'),
         )
+        parser.add_argument(
+            '--state',
+            metavar='<state>',
+            choices=['active', 'error'],
+            help=_('New server state (valid value: active, error)'),
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -1388,6 +1402,9 @@ class SetServer(command.Command):
                 server,
                 parsed_args.property,
             )
+
+        if parsed_args.state:
+            server.reset_state(state=parsed_args.state)
 
         if parsed_args.root_password:
             p1 = getpass.getpass(_('New password: '))
@@ -1447,7 +1464,7 @@ class ShowServer(command.ShowOne):
         if parsed_args.diagnostics:
             (resp, data) = server.diagnostics()
             if not resp.status_code == 200:
-                sys.stderr.write(_("Error retrieving diagnostics data"))
+                sys.stderr.write(_("Error retrieving diagnostics data\n"))
                 return ({}, {})
         else:
             data = _prep_server_detail(compute_client, server)

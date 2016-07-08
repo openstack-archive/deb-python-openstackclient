@@ -202,8 +202,6 @@ class SetQos(command.Command):
         if parsed_args.property:
             volume_client.qos_specs.set_keys(qos_spec.id,
                                              parsed_args.property)
-        else:
-            self.app.log.error(_("No changes requested\n"))
 
 
 class ShowQos(command.ShowOne):
@@ -250,8 +248,8 @@ class UnsetQos(command.Command):
             metavar='<key>',
             action='append',
             default=[],
-            help=('Property to remove from the QoS specification. '
-                  '(repeat option to unset multiple properties)'),
+            help=_('Property to remove from the QoS specification. '
+                   '(repeat option to unset multiple properties)'),
         )
         return parser
 
@@ -263,5 +261,3 @@ class UnsetQos(command.Command):
         if parsed_args.property:
             volume_client.qos_specs.unset_keys(qos_spec.id,
                                                parsed_args.property)
-        else:
-            self.app.log.error(_("No changes requested\n"))

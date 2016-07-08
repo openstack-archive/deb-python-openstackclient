@@ -127,6 +127,25 @@ class FakeAddressScope(object):
 
         return address_scopes
 
+    @staticmethod
+    def get_address_scopes(address_scopes=None, count=2):
+        """Get an iterable MagicMock object with a list of faked address scopes.
+
+        If address scopes list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List address scopes:
+            A list of FakeResource objects faking address scopes
+        :param int count:
+            The number of address scopes to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            address scopes
+        """
+        if address_scopes is None:
+            address_scopes = FakeAddressScope.create_address_scopes(count)
+        return mock.MagicMock(side_effect=address_scopes)
+
 
 class FakeAvailabilityZone(object):
     """Fake one or more network availability zones (AZs)."""
@@ -175,6 +194,50 @@ class FakeAvailabilityZone(object):
             availability_zones.append(availability_zone)
 
         return availability_zones
+
+
+class FakeIPAvailability(object):
+    """Fake one or more network ip availabilities."""
+
+    @staticmethod
+    def create_one_ip_availability():
+        """Create a fake list with ip availability stats of a network.
+
+        :return:
+            A FakeResource object with network_name, network_id, etc.
+        """
+
+        # Set default attributes.
+        network_ip_availability = {
+            'network_id': 'network-id-' + uuid.uuid4().hex,
+            'network_name': 'network-name-' + uuid.uuid4().hex,
+            'tenant_id': '',
+            'subnet_ip_availability': [],
+            'total_ips': 254,
+            'used_ips': 6,
+        }
+
+        network_ip_availability = fakes.FakeResource(
+            info=copy.deepcopy(network_ip_availability),
+            loaded=True)
+        return network_ip_availability
+
+    @staticmethod
+    def create_ip_availability(count=2):
+        """Create fake list of ip availability stats of multiple networks.
+
+        :param int count:
+            The number of networks to fake
+        :return:
+            A list of FakeResource objects faking network ip availability stats
+        """
+        network_ip_availabilities = []
+        for i in range(0, count):
+            network_ip_availability = \
+                FakeIPAvailability.create_one_ip_availability()
+            network_ip_availabilities.append(network_ip_availability)
+
+        return network_ip_availabilities
 
 
 class FakeNetwork(object):
@@ -254,6 +317,58 @@ class FakeNetwork(object):
         if networks is None:
             networks = FakeNetwork.create_networks(count)
         return mock.MagicMock(side_effect=networks)
+
+
+class FakeNetworkSegment(object):
+    """Fake one or more network segments."""
+
+    @staticmethod
+    def create_one_network_segment(attrs=None):
+        """Create a fake network segment.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object faking the network segment
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        network_segment_attrs = {
+            'id': 'segment-id-' + uuid.uuid4().hex,
+            'network_id': 'network-id-' + uuid.uuid4().hex,
+            'network_type': 'vlan',
+            'physical_network': 'physical-network-name-' + uuid.uuid4().hex,
+            'segmentation_id': 1024,
+        }
+
+        # Overwrite default attributes.
+        network_segment_attrs.update(attrs)
+
+        network_segment = fakes.FakeResource(
+            info=copy.deepcopy(network_segment_attrs),
+            loaded=True
+        )
+
+        return network_segment
+
+    @staticmethod
+    def create_network_segments(attrs=None, count=2):
+        """Create multiple fake network segments.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of network segments to fake
+        :return:
+            A list of FakeResource objects faking the network segments
+        """
+        network_segments = []
+        for i in range(0, count):
+            network_segments.append(
+                FakeNetworkSegment.create_one_network_segment(attrs)
+            )
+        return network_segments
 
 
 class FakePort(object):

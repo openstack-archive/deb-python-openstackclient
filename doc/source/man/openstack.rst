@@ -82,7 +82,7 @@ OPTIONS
     Project-level authentication scope (name or ID)
 
 :option:`--os-project-domain-name` <auth-project-domain-name> | :option:`--os-project-domain-id` <auth-project-domain-id>
-    Domain name or id containing project
+    Domain name or ID containing project
 
 :option:`--os-username` <auth-username>
     Authentication username
@@ -94,13 +94,10 @@ OPTIONS
     Authenticated token or service token
 
 :option:`--os-user-domain-name` <auth-user-domain-name> | :option:`--os-user-domain-id` <auth-user-domain-id>
-    Domain name or id containing user
-
-:option:`--os-user-domain-name` <auth-user-domain-name> | :option:`--os-user-domain-id` <auth-user-domain-id>
     Domain name or ID containing user
 
 :option:`--os-trust-id` <trust-id>
-    id of the trust to use as a trustee user
+    ID of the trust to use as a trustee user
 
 :option:`--os-default-domain` <auth-domain>
     Default domain ID (Default: 'default')
@@ -135,6 +132,9 @@ OPTIONS
     This key should be the value of one of the HMAC keys defined in the
     configuration files of OpenStack services to be traced.
 
+:option:`--os-beta-command`
+    Enable beta commands which are subject to change
+
 :option:`--log-file` <LOGFILE>
     Specify a file to log output. Disabled by default.
 
@@ -142,13 +142,10 @@ OPTIONS
     Increase verbosity of output. Can be repeated.
 
 :option:`-q, --quiet`
-    suppress output except warnings and errors
+    Suppress output except warnings and errors
 
 :option:`--debug`
-    show tracebacks on errors and set verbosity to debug
-
-:option:`--enable-beta-commands`
-    Enable beta commands which are subject to change
+    Show tracebacks on errors and set verbosity to debug
 
 COMMANDS
 ========
@@ -350,7 +347,7 @@ The following environment variables can be set to alter the behaviour of :progra
     Project-level authentication scope (name or ID)
 
 :envvar:`OS_PROJECT_DOMAIN_NAME`
-    Domain name or id containing project
+    Domain name or ID containing project
 
 :envvar:`OS_USERNAME`
     Authentication username
@@ -362,10 +359,10 @@ The following environment variables can be set to alter the behaviour of :progra
     Authentication password
 
 :envvar:`OS_USER_DOMAIN_NAME`
-    Domain name or id containing user
+    Domain name or ID containing user
 
 :envvar:`OS_TRUST_ID`
-    id of the trust to use as a trustee user
+    ID of the trust to use as a trustee user
 
 :envvar:`OS_DEFAULT_DOMAIN`
     Default domain ID (Default: 'default')

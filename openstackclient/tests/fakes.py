@@ -97,6 +97,11 @@ class FakeApp(object):
         self.log = _log
 
 
+class FakeOptions(object):
+    def __init__(self, **kwargs):
+        self.os_beta_command = False
+
+
 class FakeClient(object):
 
     def __init__(self, **kwargs):
@@ -105,6 +110,9 @@ class FakeClient(object):
 
 
 class FakeClientManager(object):
+    _api_version = {
+        'image': '2',
+    }
 
     def __init__(self):
         self.compute = None

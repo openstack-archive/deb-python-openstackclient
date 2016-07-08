@@ -37,7 +37,7 @@ class CreateSnapshot(command.ShowOne):
         parser.add_argument(
             "--name",
             metavar="<name>",
-            help=("Name of the snapshot")
+            help=_("Name of the snapshot")
         )
         parser.add_argument(
             "--description",
@@ -205,11 +205,6 @@ class SetSnapshot(command.Command):
         if parsed_args.description:
             kwargs['description'] = parsed_args.description
 
-        if (not kwargs and not parsed_args.property and not
-                parsed_args.state):
-            self.app.log.error(_("No changes requested\n"))
-            return
-
         if parsed_args.property:
             volume_client.volume_snapshots.set_metadata(snapshot.id,
                                                         parsed_args.property)
@@ -271,5 +266,3 @@ class UnsetSnapshot(command.Command):
                 snapshot.id,
                 parsed_args.property,
             )
-        else:
-            self.app.log.error(_("No changes requested\n"))

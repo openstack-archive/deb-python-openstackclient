@@ -176,13 +176,6 @@ class SetVolumeType(command.Command):
         volume_type = utils.find_resource(
             volume_client.volume_types, parsed_args.volume_type)
 
-        if (not parsed_args.name
-                and not parsed_args.description
-                and not parsed_args.property
-                and not parsed_args.project):
-            self.app.log.error(_("No changes requested\n"))
-            return
-
         result = 0
         kwargs = {}
         if parsed_args.name:
@@ -205,8 +198,8 @@ class SetVolumeType(command.Command):
             try:
                 volume_type.set_keys(parsed_args.property)
             except Exception as e:
-                self.app.log.error(_("Failed to set volume type property: ") +
-                                   str(e))
+                self.app.log.error(_("Failed to set volume type"
+                                     " property: %s") % str(e))
                 result += 1
 
         if parsed_args.project:
@@ -225,8 +218,8 @@ class SetVolumeType(command.Command):
                 result += 1
 
         if result > 0:
-            raise exceptions.CommandError("Command Failed: One or more of the"
-                                          " operations failed")
+            raise exceptions.CommandError(_("Command Failed: One or more of"
+                                          " the operations failed"))
 
 
 class ShowVolumeType(command.ShowOne):
@@ -263,6 +256,7 @@ class UnsetVolumeType(command.Command):
         parser.add_argument(
             '--property',
             metavar='<key>',
+            action='append',
             help=_('Remove a property from this volume type '
                    '(repeat option to remove multiple properties)'),
         )
@@ -285,11 +279,6 @@ class UnsetVolumeType(command.Command):
             parsed_args.volume_type,
         )
 
-        if (not parsed_args.property
-                and not parsed_args.project):
-            self.app.log.error(_("No changes requested\n"))
-            return
-
         result = 0
         if parsed_args.property:
             try:
@@ -311,9 +300,9 @@ class UnsetVolumeType(command.Command):
                     volume_type.id, project_info.id)
             except Exception as e:
                 self.app.log.error(_("Failed to remove volume type access from"
-                                   " project: ") + str(e))
+                                   " project: %s") % str(e))
                 result += 1
 
         if result > 0:
-            raise exceptions.CommandError("Command Failed: One or more of the"
-                                          " operations failed")
+            raise exceptions.CommandError(_("Command Failed: One or more of"
+                                          " the operations failed"))

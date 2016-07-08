@@ -96,6 +96,7 @@ referring to both Compute and Volume quotas.
 * ``hypervisor stats``: (**Compute**) hypervisor statistics over all compute nodes
 * ``identity provider``: (**Identity**) a source of users and authentication
 * ``image``: (**Image**) a disk image
+* ``ip availability``: (**Network**) - details of IP usage of a network
 * ``ip fixed``: (**Compute**, **Network**) - an internal IP address assigned to a server
 * ``ip floating``: (**Compute**, **Network**) - a public IP address that can be mapped to a server
 * ``ip floating pool``: (**Compute**, **Network**) - a pool of public IP addresses
@@ -104,6 +105,7 @@ referring to both Compute and Volume quotas.
 * ``mapping``: (**Identity**) a definition to translate identity provider attributes to Identity concepts
 * ``module``: (**Internal**) - installed Python modules in the OSC process
 * ``network``: (**Compute**, **Network**) - a virtual network for connecting servers and other resources
+* ``network segment``: (**Network**) - a segment of a virtual network
 * ``object``: (**Object Storage**) a single file in the Object Storage
 * ``object store account``: (**Object Storage**) owns a group of Object Storage resources
 * ``policy``: (**Identity**) determines authorization
@@ -118,6 +120,7 @@ referring to both Compute and Volume quotas.
 * ``security group``: (**Compute**, **Network**) - groups of network access rules
 * ``security group rule``: (**Compute**, **Network**) - the individual rules that define protocol/IP/port access
 * ``server``: (**Compute**) virtual machine instance
+* ``server backup``: (**Compute**) backup server disk image by using snapshot method
 * ``server dump``: (**Compute**) a dump file of a server created by features like kdump
 * ``server group``: (**Compute**) a grouping of servers
 * ``server image``: (**Compute**) saved server disk image
@@ -135,6 +138,7 @@ referring to both Compute and Volume quotas.
 * ``volume qos``: (**Volume**) quality-of-service (QoS) specification for volumes
 * ``volume type``: (**Volume**) deployment-specific types of volumes available
 * ``volume service``: (**Volume**) services to manage block storage operations
+* ``volume transfer request``: (**Volume**) volume owner transfer request
 
 
 Plugin Objects

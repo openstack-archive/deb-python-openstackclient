@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Add ``--project`` option to ``flavor set`` command to set project access
+    to a flavor
+    [:lpbug:`1575461`]
+  - |
+    Add ``--project`` option to ``flavor unset`` command to remove project access
+    to a flavor
+    [:lpbug:`1575461`]
