@@ -1,4 +1,4 @@
-python-openstackclient (2.6.0-2) UNRELEASED; urgency=medium
+python-openstackclient (2.6.0-1) experimental; urgency=medium
 
   [ Corey Bryant ]
   * New upstream release.
