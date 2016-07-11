@@ -6,6 +6,7 @@ python-openstackclient (2.6.0-1) experimental; urgency=medium
 
   [ Thomas Goirand ]
   * Make build reproducible applying Lamby's patch (Closes: #826676).
+  * Unblacklist tests (they all work now...).
 
  -- Thomas Goirand <zigo@debian.org>  Mon, 11 Jul 2016 14:58:15 +0200
 
