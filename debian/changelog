@@ -1,9 +1,13 @@
-python-openstackclient (2.6.0-1) UNRELEASED; urgency=medium
+python-openstackclient (2.6.0-2) UNRELEASED; urgency=medium
 
+  [ Corey Bryant ]
   * New upstream release.
   * Align (Build-)Depends with upstream.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Fri, 08 Jul 2016 09:25:37 -0400
+  [ Thomas Goirand ]
+  * Make build reproducible applying Lamby's patch (Closes: #826676).
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 11 Jul 2016 14:58:15 +0200
 
 python-openstackclient (2.5.0-1) experimental; urgency=medium
 
