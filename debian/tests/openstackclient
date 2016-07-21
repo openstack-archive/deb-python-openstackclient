@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+
+openstack-deploy --non-interactive controller
+cp openrc.sh /root/
+cp osinstallrc /root/
+
+source /root/openrc.sh
+
+# keystone
+openstack user list
+openstack role list
+openstack user create test
+openstack user list | grep test
+openstack user delete test
+openstack user list | grep -v test
+openstack service list
+openstack endpoint list
+openstack catalog list
+
+# glance
+openstack image list
+openstack image create --file /bin/bash bash
+openstack image list |grep bash
+openstack image delete bash
+openstack image list |grep -v bash
+
+# nova
+openstack server list
+openstack host list
+openstack flavor list
+openstack flavor create test
+openstack flavor list |grep test
+openstack flavor delete test
+openstack flavor list |grep -v test
+openstack hypervisor list
+
+# neutron
+openstack security group list
+openstack security group create test
+openstack security group list | grep test
+openstack security group delete test
+openstack security group list | grep -v test
+
+

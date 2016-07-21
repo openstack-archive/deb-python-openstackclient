@@ -1,3 +1,10 @@
+python-openstackclient (2.6.0-2) UNRELEASED; urgency=medium
+
+  [ gustavo panizzo ]
+  * Add autopkgtest tests
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Thu, 21 Jul 2016 20:36:56 +0800
+
 python-openstackclient (2.6.0-1) experimental; urgency=medium
 
   [ Corey Bryant ]

@@ -1,4 +1,5 @@
 Source: python-openstackclient
+Testsuite: autopkgtest
 Section: python
 Priority: optional
 Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
