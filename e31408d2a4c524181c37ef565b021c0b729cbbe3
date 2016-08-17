@@ -1,0 +1,9 @@
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Code-Review+2: Tang Chen <chen.tang@easystack.cn>
+Workflow+1: Tang Chen <chen.tang@easystack.cn>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 26 Jul 2016 10:53:40 +0000
+Reviewed-on: https://review.openstack.org/343472
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master

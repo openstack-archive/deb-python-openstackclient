@@ -1,0 +1,9 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Workflow+1: Richard Theis <rtheis@us.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 05 Aug 2016 13:38:32 +0000
+Reviewed-on: https://review.openstack.org/350946
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master

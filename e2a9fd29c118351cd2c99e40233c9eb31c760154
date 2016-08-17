@@ -1,0 +1,8 @@
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 18 Jul 2016 23:00:38 +0000
+Reviewed-on: https://review.openstack.org/343227
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
