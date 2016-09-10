@@ -1,0 +1,11 @@
+Code-Review+1: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Brandon Palm <bapalm@us.ibm.com>
+Code-Review+1: Dean Troyer <dtroyer@gmail.com>
+Code-Review+2: Davanum Srinivas (dims) <davanum@gmail.com>
+Workflow+1: Davanum Srinivas (dims) <davanum@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 16 May 2016 18:20:00 +0000
+Reviewed-on: https://review.openstack.org/316510
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/stable/liberty
