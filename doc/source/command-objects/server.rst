@@ -4,6 +4,46 @@ server
 
 Compute v2
 
+server add fixed ip
+-------------------
+
+Add fixed IP address to server
+
+.. program:: server add fixed ip
+.. code:: bash
+
+    os server add fixed ip
+        <server>
+        <network>
+
+.. describe:: <server>
+
+    Server (name or ID) to receive the fixed IP address
+
+.. describe:: <network>
+
+    Network (name or ID) to allocate the fixed IP address from
+
+server add floating ip
+----------------------
+
+Add floating IP address to server
+
+.. program:: server add floating ip
+.. code:: bash
+
+    os server add floating ip
+        <server>
+        <ip-address>
+
+.. describe:: <server>
+
+    Server (name or ID) to receive the floating IP address
+
+.. describe:: <ip-address>
+
+    Floating IP address (IP address only) to assign to server
+
 server add security group
 -------------------------
 
@@ -418,6 +458,46 @@ Rebuild server
 
     Server (name or ID)
 
+server remove fixed ip
+----------------------
+
+Remove fixed IP address from server
+
+.. program:: server remove fixed ip
+.. code:: bash
+
+    os server remove fixed ip
+        <server>
+        <ip-address>
+
+.. describe:: <server>
+
+    Server (name or ID) to remove the fixed IP address from
+
+.. describe:: <ip-address>
+
+    Fixed IP address (IP address only) to remove from the server
+
+server remove floating ip
+-------------------------
+
+Remove floating IP address from server
+
+.. program:: server remove floating ip
+.. code:: bash
+
+    os server remove floating ip
+        <server>
+        <ip-address>
+
+.. describe:: <server>
+
+    Server (name or ID) to remove the floating IP address from
+
+.. describe:: <ip-address>
+
+    Floating IP address (IP address only) to remove from server
+
 server remove security group
 ----------------------------
 
@@ -463,7 +543,7 @@ server rescue
 
 Put server in rescue mode
 
-.. program:: server rescure
+.. program:: server rescue
 .. code:: bash
 
     os server rescue

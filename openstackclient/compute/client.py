@@ -1,4 +1,4 @@
-#   Copyright 2012-2013 OpenStack, LLC.
+#   Copyright 2012-2013 OpenStack Foundation
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain
@@ -15,9 +15,11 @@
 
 import logging
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
+
 
 LOG = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ def make_client(instance):
                   if ext.name == "list_extensions"]
 
     # Remember interface only if it is set
-    kwargs = utils.build_kwargs_dict('endpoint_type', instance._interface)
+    kwargs = utils.build_kwargs_dict('endpoint_type', instance.interface)
 
     client = nova_client.Client(
         version,
@@ -70,7 +72,7 @@ def make_client(instance):
         extensions=extensions,
         http_log_debug=http_log_debug,
         timings=instance.timing,
-        region_name=instance._region_name,
+        region_name=instance.region_name,
         **kwargs
     )
 

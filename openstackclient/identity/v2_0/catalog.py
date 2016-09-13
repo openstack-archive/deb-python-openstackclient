@@ -13,11 +13,17 @@
 
 """Identity v2 Service Catalog action implementations"""
 
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _format_endpoints(eps=None):
@@ -41,13 +47,14 @@ class ListCatalog(command.Lister):
 
     def take_action(self, parsed_args):
 
-        # This is ugly because if auth hasn't happened yet we need
-        # to trigger it here.
-        sc = self.app.client_manager.session.auth.get_auth_ref(
-            self.app.client_manager.session,
-        ).service_catalog
+        # Trigger auth if it has not happened yet
+        auth_ref = self.app.client_manager.auth_ref
+        if not auth_ref:
+            raise exceptions.AuthorizationFailure(
+                "Only an authorized user may issue a new token."
+            )
 
-        data = sc.get_data()
+        data = auth_ref.service_catalog.catalog
         columns = ('Name', 'Type', 'Endpoints')
         return (columns,
                 (utils.get_dict_properties(
@@ -72,14 +79,15 @@ class ShowCatalog(command.ShowOne):
 
     def take_action(self, parsed_args):
 
-        # This is ugly because if auth hasn't happened yet we need
-        # to trigger it here.
-        sc = self.app.client_manager.session.auth.get_auth_ref(
-            self.app.client_manager.session,
-        ).service_catalog
+        # Trigger auth if it has not happened yet
+        auth_ref = self.app.client_manager.auth_ref
+        if not auth_ref:
+            raise exceptions.AuthorizationFailure(
+                "Only an authorized user may issue a new token."
+            )
 
         data = None
-        for service in sc.get_data():
+        for service in auth_ref.service_catalog.catalog:
             if (service.get('name') == parsed_args.service or
                     service.get('type') == parsed_args.service):
                 data = service
@@ -89,8 +97,7 @@ class ShowCatalog(command.ShowOne):
                 break
 
         if not data:
-            self.app.log.error(_('service %s not found\n') %
-                               parsed_args.service)
-            return ([], [])
+            LOG.error(_('service %s not found\n'), parsed_args.service)
+            return ((), ())
 
         return zip(*sorted(six.iteritems(data)))

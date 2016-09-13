@@ -15,15 +15,19 @@
 
 """Project action implementations"""
 
-import six
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateProject(command.ShowOne):
@@ -107,14 +111,14 @@ class CreateProject(command.ShowOne):
                 enabled=enabled,
                 **kwargs
             )
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 project = utils.find_resource(identity_client.projects,
                                               parsed_args.name,
                                               domain_id=domain)
-                self.log.info(_('Returning existing project %s'), project.name)
+                LOG.info(_('Returning existing project %s'), project.name)
             else:
-                raise e
+                raise
 
         project._info.pop('links')
         return zip(*sorted(six.iteritems(project._info)))
@@ -259,13 +263,6 @@ class SetProject(command.Command):
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
-        if (not parsed_args.name
-                and not parsed_args.domain
-                and not parsed_args.description
-                and not parsed_args.enable
-                and not parsed_args.property
-                and not parsed_args.disable):
-            return
         project = common.find_project(identity_client,
                                       parsed_args.project,
                                       parsed_args.domain)
@@ -317,18 +314,21 @@ class ShowProject(command.ShowOne):
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
+        project_str = common._get_token_resource(identity_client, 'project',
+                                                 parsed_args.project)
+
         if parsed_args.domain:
             domain = common.find_domain(identity_client, parsed_args.domain)
             project = utils.find_resource(
                 identity_client.projects,
-                parsed_args.project,
+                project_str,
                 domain_id=domain.id,
                 parents_as_list=parsed_args.parents,
                 subtree_as_list=parsed_args.children)
         else:
             project = utils.find_resource(
                 identity_client.projects,
-                parsed_args.project,
+                project_str,
                 parents_as_list=parsed_args.parents,
                 subtree_as_list=parsed_args.children)
 

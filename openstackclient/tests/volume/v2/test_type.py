@@ -12,10 +12,11 @@
 #   under the License.
 #
 
-import copy
+import mock
 
-from openstackclient.common import utils
-from openstackclient.tests import fakes
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
 from openstackclient.tests import utils as tests_utils
 from openstackclient.tests.volume.v2 import fakes as volume_fakes
@@ -40,9 +41,11 @@ class TestType(volume_fakes.TestVolume):
 
 class TestTypeCreate(TestType):
 
+    project = identity_fakes.FakeProject.create_one_project()
     columns = (
         'description',
         'id',
+        'is_public',
         'name',
     )
 
@@ -53,10 +56,12 @@ class TestTypeCreate(TestType):
         self.data = (
             self.new_volume_type.description,
             self.new_volume_type.id,
+            True,
             self.new_volume_type.name,
         )
 
         self.types_mock.create.return_value = self.new_volume_type
+        self.projects_mock.get.return_value = self.project
         # Get the command object to test
         self.cmd = volume_type.CreateVolumeType(self.app, None)
 
@@ -88,12 +93,14 @@ class TestTypeCreate(TestType):
         arglist = [
             "--description", self.new_volume_type.description,
             "--private",
+            "--project", self.project.id,
             self.new_volume_type.name,
         ]
         verifylist = [
             ("description", self.new_volume_type.description),
             ("public", False),
             ("private", True),
+            ("project", self.project.id),
             ("name", self.new_volume_type.name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -107,6 +114,21 @@ class TestTypeCreate(TestType):
 
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
+
+    def test_public_type_create_with_project(self):
+        arglist = [
+            '--project', self.project.id,
+            self.new_volume_type.name,
+        ]
+        verifylist = [
+            ('project', self.project.id),
+            ('name', self.new_volume_type.name),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action,
+                          parsed_args)
 
 
 class TestTypeDelete(TestType):
@@ -127,13 +149,13 @@ class TestTypeDelete(TestType):
             self.volume_type.id
         ]
         verifylist = [
-            ("volume_type", self.volume_type.id)
+            ("volume_types", [self.volume_type.id])
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
-        self.types_mock.delete.assert_called_with(self.volume_type.id)
+        self.types_mock.delete.assert_called_with(self.volume_type)
         self.assertIsNone(result)
 
 
@@ -175,26 +197,54 @@ class TestTypeList(TestType):
     def test_type_list_without_options(self):
         arglist = []
         verifylist = [
-            ("long", False)
+            ("long", False),
+            ("private", False),
+            ("public", False),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
+        self.types_mock.list.assert_called_once_with(is_public=None)
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, list(data))
 
     def test_type_list_with_options(self):
-        arglist = ["--long"]
-        verifylist = [("long", True)]
+        arglist = [
+            "--long",
+            "--public",
+        ]
+        verifylist = [
+            ("long", True),
+            ("private", False),
+            ("public", True),
+        ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
+        self.types_mock.list.assert_called_once_with(is_public=True)
         self.assertEqual(self.columns_long, columns)
         self.assertEqual(self.data_long, list(data))
+
+    def test_type_list_with_private_option(self):
+        arglist = [
+            "--private",
+        ]
+        verifylist = [
+            ("long", False),
+            ("private", True),
+            ("public", False),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+        self.types_mock.list.assert_called_once_with(is_public=False)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
 
 
 class TestTypeSet(TestType):
 
+    project = identity_fakes.FakeProject.create_one_project()
     volume_type = volume_fakes.FakeType.create_one_type(
         methods={'set_keys': None})
 
@@ -204,11 +254,7 @@ class TestTypeSet(TestType):
         self.types_mock.get.return_value = self.volume_type
 
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
         # Get the command object to test
         self.cmd = volume_type.SetVolumeType(self.app, None)
 
@@ -315,11 +361,11 @@ class TestTypeSet(TestType):
 
     def test_type_set_project_access(self):
         arglist = [
-            '--project', identity_fakes.project_id,
+            '--project', self.project.id,
             self.volume_type.id,
         ]
         verifylist = [
-            ('project', identity_fakes.project_id),
+            ('project', self.project.id),
             ('volume_type', self.volume_type.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -329,15 +375,17 @@ class TestTypeSet(TestType):
 
         self.types_access_mock.add_project_access.assert_called_with(
             self.volume_type.id,
-            identity_fakes.project_id,
+            self.project.id,
         )
 
 
 class TestTypeShow(TestType):
 
     columns = (
+        'access_project_ids',
         'description',
         'id',
+        'is_public',
         'name',
         'properties',
     )
@@ -347,8 +395,10 @@ class TestTypeShow(TestType):
 
         self.volume_type = volume_fakes.FakeType.create_one_type()
         self.data = (
+            None,
             self.volume_type.description,
             self.volume_type.id,
+            True,
             self.volume_type.name,
             utils.format_dict(self.volume_type.extra_specs)
         )
@@ -373,9 +423,75 @@ class TestTypeShow(TestType):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
 
+    def test_type_show_with_access(self):
+        arglist = [
+            self.volume_type.id
+        ]
+        verifylist = [
+            ("volume_type", self.volume_type.id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        private_type = volume_fakes.FakeType.create_one_type(
+            attrs={'is_public': False})
+        type_access_list = volume_fakes.FakeTypeAccess.create_one_type_access()
+        with mock.patch.object(self.types_mock, 'get',
+                               return_value=private_type):
+            with mock.patch.object(self.types_access_mock, 'list',
+                                   return_value=[type_access_list]):
+                columns, data = self.cmd.take_action(parsed_args)
+                self.types_mock.get.assert_called_once_with(
+                    self.volume_type.id)
+                self.types_access_mock.list.assert_called_once_with(
+                    private_type.id)
+
+        self.assertEqual(self.columns, columns)
+        private_type_data = (
+            utils.format_list([type_access_list.project_id]),
+            private_type.description,
+            private_type.id,
+            private_type.is_public,
+            private_type.name,
+            utils.format_dict(private_type.extra_specs)
+        )
+        self.assertEqual(private_type_data, data)
+
+    def test_type_show_with_list_access_exec(self):
+        arglist = [
+            self.volume_type.id
+        ]
+        verifylist = [
+            ("volume_type", self.volume_type.id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        private_type = volume_fakes.FakeType.create_one_type(
+            attrs={'is_public': False})
+        with mock.patch.object(self.types_mock, 'get',
+                               return_value=private_type):
+            with mock.patch.object(self.types_access_mock, 'list',
+                                   side_effect=Exception()):
+                columns, data = self.cmd.take_action(parsed_args)
+                self.types_mock.get.assert_called_once_with(
+                    self.volume_type.id)
+                self.types_access_mock.list.assert_called_once_with(
+                    private_type.id)
+
+        self.assertEqual(self.columns, columns)
+        private_type_data = (
+            None,
+            private_type.description,
+            private_type.id,
+            private_type.is_public,
+            private_type.name,
+            utils.format_dict(private_type.extra_specs)
+        )
+        self.assertEqual(private_type_data, data)
+
 
 class TestTypeUnset(TestType):
 
+    project = identity_fakes.FakeProject.create_one_project()
     volume_type = volume_fakes.FakeType.create_one_type(
         methods={'unset_keys': None})
 
@@ -385,11 +501,7 @@ class TestTypeUnset(TestType):
         self.types_mock.get.return_value = self.volume_type
 
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
 
         # Get the command object to test
         self.cmd = volume_type.UnsetVolumeType(self.app, None)
@@ -414,11 +526,11 @@ class TestTypeUnset(TestType):
 
     def test_type_unset_project_access(self):
         arglist = [
-            '--project', identity_fakes.project_id,
+            '--project', self.project.id,
             self.volume_type.id,
         ]
         verifylist = [
-            ('project', identity_fakes.project_id),
+            ('project', self.project.id),
             ('volume_type', self.volume_type.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -428,7 +540,7 @@ class TestTypeUnset(TestType):
 
         self.types_access_mock.remove_project_access.assert_called_with(
             self.volume_type.id,
-            identity_fakes.project_id,
+            self.project.id,
         )
 
     def test_type_unset_not_called_without_project_argument(self):

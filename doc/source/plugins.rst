@@ -12,8 +12,8 @@ Adoption
 
 OpenStackClient promises to provide first class support for the following
 OpenStack services: Compute, Identity, Image, Object Storage, Block Storage
-and Network. These services are considered essential to any OpenStack
-deployment.
+and Network (core objects). These services are considered essential
+to any OpenStack deployment.
 
 Other OpenStack services, such as Orchestration or Telemetry may create an
 OpenStackClient plugin. The source code will not be hosted by
@@ -21,6 +21,8 @@ OpenStackClient.
 
 The following is a list of projects that are an OpenStackClient plugin.
 
+- aodhclient
+- gnocchiclient\*\*
 - python-barbicanclient
 - python-congressclient
 - python-cueclient\*\*
@@ -30,18 +32,20 @@ The following is a list of projects that are an OpenStackClient plugin.
 - python-ironic-inspector-client
 - python-mistralclient
 - python-muranoclient
+- python-neutronclient\*\*\*
 - python-saharaclient
 - python-searchlightclient
 - python-senlinclient
 - python-tripleoclient\*\*
+- python-watcherclient\*\*
 - python-zaqarclient
 
-\*\* Note that some clients are not listed in global-requirements
+\*\* Note that some clients are not listed in global-requirements.
+
+\*\*\* Project contains advanced network services.
 
 The following is a list of projects that are not an OpenStackClient plugin.
 
-- aodhclient
-- gnocchiclient
 - python-troveclient
 - python-magnumclient
 - python-ceilometerclient
@@ -95,7 +99,7 @@ so the version should not contain the leading 'v' character.
 
 .. code-block:: python
 
-    from openstackclient.common import utils
+    from osc_lib import utils
 
 
     DEFAULT_API_VERSION = '1'
@@ -151,12 +155,12 @@ the plugin commands:
 
 .. code-block:: python
 
-    # OSC common interfaces available to plugins:
-    from openstackclient.common import command
-    from openstackclient.common import exceptions
-    from openstackclient.common import parseractions
-    from openstackclient.common import logs
-    from openstackclient.common import utils
+    # osc-lib interfaces available to plugins:
+    from osc_lib.cli import parseractions
+    from osc_lib.command import command
+    from osc_lib import exceptions
+    from osc_lib import logs
+    from osc_lib import utils
 
 
     class DeleteMypluginobject(command.Command):
@@ -165,7 +169,7 @@ the plugin commands:
         ...
 
         def take_action(self, parsed_args):
-            # Client manager interfaces are availble to plugins.
+            # Client manager interfaces are available to plugins.
             # This includes the OSC clients created.
             client_manager = self.app.client_manager
 

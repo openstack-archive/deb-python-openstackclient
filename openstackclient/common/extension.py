@@ -16,9 +16,15 @@
 """Extension action implementations"""
 
 import itertools
+import logging
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+
+from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class ListExtension(command.Lister):
@@ -30,27 +36,32 @@ class ListExtension(command.Lister):
             '--compute',
             action='store_true',
             default=False,
-            help='List extensions for the Compute API')
+            help=_('List extensions for the Compute API'),
+        )
         parser.add_argument(
             '--identity',
             action='store_true',
             default=False,
-            help='List extensions for the Identity API')
+            help=_('List extensions for the Identity API'),
+        )
         parser.add_argument(
             '--network',
             action='store_true',
             default=False,
-            help='List extensions for the Network API')
+            help=_('List extensions for the Network API'),
+        )
         parser.add_argument(
             '--volume',
             action='store_true',
             default=False,
-            help='List extensions for the Block Storage API')
+            help=_('List extensions for the Block Storage API'),
+        )
         parser.add_argument(
             '--long',
             action='store_true',
             default=False,
-            help='List additional fields in output')
+            help=_('List additional fields in output'),
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -73,24 +84,25 @@ class ListExtension(command.Lister):
             try:
                 data += identity_client.extensions.list()
             except Exception:
-                message = "Extensions list not supported by Identity API"
-                self.log.warning(message)
+                message = _("Extensions list not supported by Identity API")
+                LOG.warning(message)
 
         if parsed_args.compute or show_all:
             compute_client = self.app.client_manager.compute
             try:
                 data += compute_client.list_extensions.show_all()
             except Exception:
-                message = "Extensions list not supported by Compute API"
-                self.log.warning(message)
+                message = _("Extensions list not supported by Compute API")
+                LOG.warning(message)
 
         if parsed_args.volume or show_all:
             volume_client = self.app.client_manager.volume
             try:
                 data += volume_client.list_extensions.show_all()
             except Exception:
-                message = "Extensions list not supported by Block Storage API"
-                self.log.warning(message)
+                message = _("Extensions list not supported by "
+                            "Block Storage API")
+                LOG.warning(message)
 
         # Resource classes for the above
         extension_tuples = (
@@ -118,7 +130,7 @@ class ListExtension(command.Lister):
                     dict_tuples
                 )
             except Exception:
-                message = "Extensions list not supported by Network API"
-                self.log.warning(message)
+                message = _("Extensions list not supported by Network API")
+                LOG.warning(message)
 
         return (columns, extension_tuples)

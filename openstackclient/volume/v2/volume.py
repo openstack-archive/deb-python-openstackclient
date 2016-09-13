@@ -15,14 +15,19 @@
 """Volume V2 Volume action implementations"""
 
 import copy
+import logging
 
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateVolume(command.ShowOne):
@@ -161,25 +166,45 @@ class DeleteVolume(command.Command):
             nargs="+",
             help=_("Volume(s) to delete (name or ID)")
         )
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "--force",
-            dest="force",
             action="store_true",
-            default=False,
             help=_("Attempt forced removal of volume(s), regardless of state "
+                   "(defaults to False)")
+        )
+        group.add_argument(
+            "--purge",
+            action="store_true",
+            help=_("Remove any snapshots along with volume(s) "
                    "(defaults to False)")
         )
         return parser
 
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
-        for volume in parsed_args.volumes:
-            volume_obj = utils.find_resource(
-                volume_client.volumes, volume)
-            if parsed_args.force:
-                volume_client.volumes.force_delete(volume_obj.id)
-            else:
-                volume_client.volumes.delete(volume_obj.id)
+        result = 0
+
+        for i in parsed_args.volumes:
+            try:
+                volume_obj = utils.find_resource(
+                    volume_client.volumes, i)
+                if parsed_args.force:
+                    volume_client.volumes.force_delete(volume_obj.id)
+                else:
+                    volume_client.volumes.delete(volume_obj.id,
+                                                 cascade=parsed_args.purge)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete volume with "
+                            "name or ID '%(volume)s': %(e)s"),
+                          {'volume': i, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.volumes)
+            msg = (_("%(result)s of %(total)s volumes failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListVolume(command.Lister):
@@ -353,29 +378,58 @@ class SetVolume(command.Command):
             help=_('Set an image property on this volume '
                    '(repeat option to set multiple image properties)'),
         )
+        parser.add_argument(
+            "--state",
+            metavar="<state>",
+            choices=['available', 'error', 'creating', 'deleting',
+                     'in-use', 'attaching', 'detaching', 'error_deleting',
+                     'maintenance'],
+            help=_('New volume state ("available", "error", "creating", '
+                   '"deleting", "in-use", "attaching", "detaching", '
+                   '"error_deleting" or "maintenance")'),
+        )
         return parser
 
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
         volume = utils.find_resource(volume_client.volumes, parsed_args.volume)
 
+        result = 0
         if parsed_args.size:
-            if volume.status != 'available':
-                self.app.log.error(_("Volume is in %s state, it must be "
-                                   "available before size can be extended") %
-                                   volume.status)
-                return
-            if parsed_args.size <= volume.size:
-                self.app.log.error(_("New size must be greater than %s GB") %
-                                   volume.size)
-                return
-            volume_client.volumes.extend(volume.id, parsed_args.size)
+            try:
+                if volume.status != 'available':
+                    msg = (_("Volume is in %s state, it must be available "
+                           "before size can be extended"), volume.status)
+                    raise exceptions.CommandError(msg)
+                if parsed_args.size <= volume.size:
+                    msg = _("New size must be greater than %s GB"), volume.size
+                    raise exceptions.CommandError(msg)
+                volume_client.volumes.extend(volume.id, parsed_args.size)
+            except Exception as e:
+                LOG.error(_("Failed to set volume size: %s"), e)
+                result += 1
 
         if parsed_args.property:
-            volume_client.volumes.set_metadata(volume.id, parsed_args.property)
+            try:
+                volume_client.volumes.set_metadata(
+                    volume.id, parsed_args.property)
+            except Exception as e:
+                LOG.error(_("Failed to set volume property: %s"), e)
+                result += 1
         if parsed_args.image_property:
-            volume_client.volumes.set_image_metadata(
-                volume.id, parsed_args.image_property)
+            try:
+                volume_client.volumes.set_image_metadata(
+                    volume.id, parsed_args.image_property)
+            except Exception as e:
+                LOG.error(_("Failed to set image property: %s"), e)
+                result += 1
+        if parsed_args.state:
+            try:
+                volume_client.volumes.reset_state(
+                    volume.id, parsed_args.state)
+            except Exception as e:
+                LOG.error(_("Failed to set volume state: %s"), e)
+                result += 1
 
         kwargs = {}
         if parsed_args.name:
@@ -383,7 +437,16 @@ class SetVolume(command.Command):
         if parsed_args.description:
             kwargs['display_description'] = parsed_args.description
         if kwargs:
-            volume_client.volumes.update(volume.id, **kwargs)
+            try:
+                volume_client.volumes.update(volume.id, **kwargs)
+            except Exception as e:
+                LOG.error(_("Failed to update volume display name "
+                          "or display description: %s"), e)
+                result += 1
+
+        if result > 0:
+            raise exceptions.CommandError(_("One or more of the "
+                                          "set operations failed"))
 
 
 class ShowVolume(command.ShowOne):
@@ -454,6 +517,3 @@ class UnsetVolume(command.Command):
         if parsed_args.image_property:
             volume_client.volumes.delete_image_metadata(
                 volume.id, parsed_args.image_property)
-
-        if (not parsed_args.image_property and not parsed_args.property):
-            self.app.log.error(_("No changes requested\n"))

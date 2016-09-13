@@ -17,9 +17,9 @@ import mock
 
 from cinderclient.v1 import volume_snapshots
 from cinderclient.v1 import volumes
+from osc_lib import exceptions
+from osc_lib import utils
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils
 from openstackclient.tests import utils as test_utils
 from openstackclient.volume import client  # noqa
 
@@ -44,7 +44,9 @@ class TestFindResourceVolumes(test_utils.TestCase):
         api.client.get = mock.Mock()
         resp = mock.Mock()
         body = {"volumes": [{"id": ID, 'display_name': NAME}]}
-        api.client.get.side_effect = [Exception("Not found"), (resp, body)]
+        api.client.get.side_effect = [Exception("Not found"),
+                                      Exception("Not found"),
+                                      (resp, body)]
         self.manager = volumes.VolumeManager(api)
 
     def test_find(self):
@@ -66,7 +68,9 @@ class TestFindResourceVolumeSnapshots(test_utils.TestCase):
         api.client.get = mock.Mock()
         resp = mock.Mock()
         body = {"snapshots": [{"id": ID, 'display_name': NAME}]}
-        api.client.get.side_effect = [Exception("Not found"), (resp, body)]
+        api.client.get.side_effect = [Exception("Not found"),
+                                      Exception("Not found"),
+                                      (resp, body)]
         self.manager = volume_snapshots.SnapshotManager(api)
 
     def test_find(self):

@@ -16,11 +16,10 @@
 """Object v1 action implementations"""
 
 
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import utils
 import six
-
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 
 
 class CreateObject(command.Lister):

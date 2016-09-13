@@ -11,13 +11,13 @@
 #   under the License.
 #
 
-import copy
 import mock
+from mock import call
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.network.v2 import subnet as subnet_v2
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes_v3
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -30,14 +30,20 @@ class TestSubnet(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestCreateSubnet(TestSubnet):
 
+    project = identity_fakes_v3.FakeProject.create_one_project()
+    domain = identity_fakes_v3.FakeDomain.create_one_domain()
     # An IPv4 subnet to be created with mostly default values
     _subnet = network_fakes.FakeSubnet.create_one_subnet(
         attrs={
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': project.id,
         }
     )
 
@@ -47,7 +53,7 @@ class TestCreateSubnet(TestSubnet):
     # An IPv4 subnet to be created using a specific subnet pool
     _subnet_from_pool = network_fakes.FakeSubnet.create_one_subnet(
         attrs={
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': project.id,
             'subnetpool_id': _subnet_pool.id,
             'dns_nameservers': ['8.8.8.8',
                                 '8.8.4.4'],
@@ -61,7 +67,7 @@ class TestCreateSubnet(TestSubnet):
     # An IPv6 subnet to be created with most options specified
     _subnet_ipv6 = network_fakes.FakeSubnet.create_one_subnet(
         attrs={
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': project.id,
             'cidr': 'fe80:0:0:a00a::/64',
             'enable_dhcp': True,
             'dns_nameservers': ['fe80:27ff:a00a:f00f::ffff',
@@ -89,6 +95,14 @@ class TestCreateSubnet(TestSubnet):
         }
     )
 
+    # The network segment to be returned from find_segment
+    _network_segment = \
+        network_fakes.FakeNetworkSegment.create_one_network_segment(
+            attrs={
+                'network_id': _subnet.network_id,
+            }
+        )
+
     columns = (
         'allocation_pools',
         'cidr',
@@ -103,6 +117,7 @@ class TestCreateSubnet(TestSubnet):
         'name',
         'network_id',
         'project_id',
+        'segment_id',
         'subnetpool_id',
     )
 
@@ -120,6 +135,7 @@ class TestCreateSubnet(TestSubnet):
         _subnet.name,
         _subnet.network_id,
         _subnet.project_id,
+        _subnet.segment_id,
         _subnet.subnetpool_id,
     )
 
@@ -137,6 +153,7 @@ class TestCreateSubnet(TestSubnet):
         _subnet_from_pool.name,
         _subnet_from_pool.network_id,
         _subnet_from_pool.project_id,
+        _subnet_from_pool.segment_id,
         _subnet_from_pool.subnetpool_id,
     )
 
@@ -154,6 +171,7 @@ class TestCreateSubnet(TestSubnet):
         _subnet_ipv6.name,
         _subnet_ipv6.network_id,
         _subnet_ipv6.project_id,
+        _subnet_ipv6.segment_id,
         _subnet_ipv6.subnetpool_id,
     )
 
@@ -163,28 +181,16 @@ class TestCreateSubnet(TestSubnet):
         # Get the command object to test
         self.cmd = subnet_v2.CreateSubnet(self.app, self.namespace)
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes_v3.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.PROJECT),
-            loaded=True,
+        # Mock SDK calls for all tests.
+        self.network.find_network = mock.Mock(return_value=self._network)
+        self.network.find_segment = mock.Mock(
+            return_value=self._network_segment
         )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.DOMAIN),
-            loaded=True,
+        self.network.find_subnet_pool = mock.Mock(
+            return_value=self._subnet_pool
         )
 
     def test_create_no_options(self):
@@ -197,11 +203,9 @@ class TestCreateSubnet(TestSubnet):
                           self.check_parser, self.cmd, arglist, verifylist)
 
     def test_create_default_options(self):
-        # Mock create_subnet and find_network sdk calls to return the
-        # values we want for this test
+        # Mock SDK calls for this test.
         self.network.create_subnet = mock.Mock(return_value=self._subnet)
         self._network.id = self._subnet.network_id
-        self.network.find_network = mock.Mock(return_value=self._network)
 
         arglist = [
             "--subnet-range", self._subnet.cidr,
@@ -222,7 +226,6 @@ class TestCreateSubnet(TestSubnet):
 
         self.network.create_subnet.assert_called_once_with(**{
             'cidr': self._subnet.cidr,
-            'enable_dhcp': self._subnet.enable_dhcp,
             'ip_version': self._subnet.ip_version,
             'name': self._subnet.name,
             'network_id': self._subnet.network_id,
@@ -231,14 +234,10 @@ class TestCreateSubnet(TestSubnet):
         self.assertEqual(self.data, data)
 
     def test_create_from_subnet_pool_options(self):
-        # Mock create_subnet, find_subnet_pool, and find_network sdk calls
-        # to return the values we want for this test
+        # Mock SDK calls for this test.
         self.network.create_subnet = \
             mock.Mock(return_value=self._subnet_from_pool)
         self._network.id = self._subnet_from_pool.network_id
-        self.network.find_network = mock.Mock(return_value=self._network)
-        self.network.find_subnet_pool = \
-            mock.Mock(return_value=self._subnet_pool)
 
         arglist = [
             self._subnet_from_pool.name,
@@ -291,11 +290,9 @@ class TestCreateSubnet(TestSubnet):
         self.assertEqual(self.data_subnet_pool, data)
 
     def test_create_options_subnet_range_ipv6(self):
-        # Mock create_subnet and find_network sdk calls to return the
-        # values we want for this test
+        # Mock SDK calls for this test.
         self.network.create_subnet = mock.Mock(return_value=self._subnet_ipv6)
         self._network.id = self._subnet_ipv6.network_id
-        self.network.find_network = mock.Mock(return_value=self._network)
 
         arglist = [
             self._subnet_ipv6.name,
@@ -358,34 +355,136 @@ class TestCreateSubnet(TestSubnet):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data_ipv6, data)
 
+    def test_create_no_beta_command_options(self):
+        arglist = [
+            "--subnet-range", self._subnet.cidr,
+            "--network-segment", self._network_segment.id,
+            "--network", self._subnet.network_id,
+            self._subnet.name,
+        ]
+        verifylist = [
+            ('name', self._subnet.name),
+            ('subnet_range', self._subnet.cidr),
+            ('network-segment', self._network_segment.id),
+            ('network', self._subnet.network_id),
+        ]
+        self.app.options.os_beta_command = False
+        self.assertRaises(tests_utils.ParserException,
+                          self.check_parser, self.cmd, arglist, verifylist)
+
+    def test_create_with_network_segment(self):
+        # Mock SDK calls for this test.
+        self.network.create_subnet = mock.Mock(return_value=self._subnet)
+        self._network.id = self._subnet.network_id
+
+        arglist = [
+            "--subnet-range", self._subnet.cidr,
+            "--network-segment", self._network_segment.id,
+            "--network", self._subnet.network_id,
+            self._subnet.name,
+        ]
+        verifylist = [
+            ('name', self._subnet.name),
+            ('subnet_range', self._subnet.cidr),
+            ('network_segment', self._network_segment.id),
+            ('network', self._subnet.network_id),
+            ('ip_version', self._subnet.ip_version),
+            ('gateway', 'auto'),
+
+        ]
+
+        self.app.options.os_beta_command = True
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.network.create_subnet.assert_called_once_with(**{
+            'cidr': self._subnet.cidr,
+            'ip_version': self._subnet.ip_version,
+            'name': self._subnet.name,
+            'network_id': self._subnet.network_id,
+            'segment_id': self._network_segment.id,
+        })
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, data)
+
 
 class TestDeleteSubnet(TestSubnet):
 
-    # The subnet to delete.
-    _subnet = network_fakes.FakeSubnet.create_one_subnet()
+    # The subnets to delete.
+    _subnets = network_fakes.FakeSubnet.create_subnets(count=2)
 
     def setUp(self):
         super(TestDeleteSubnet, self).setUp()
 
         self.network.delete_subnet = mock.Mock(return_value=None)
 
-        self.network.find_subnet = mock.Mock(return_value=self._subnet)
+        self.network.find_subnet = (
+            network_fakes.FakeSubnet.get_subnets(self._subnets))
 
         # Get the command object to test
         self.cmd = subnet_v2.DeleteSubnet(self.app, self.namespace)
 
-    def test_delete(self):
+    def test_subnet_delete(self):
         arglist = [
-            self._subnet.name,
+            self._subnets[0].name,
         ]
         verifylist = [
-            ('subnet', self._subnet.name),
+            ('subnet', [self._subnets[0].name]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
-        self.network.delete_subnet.assert_called_once_with(self._subnet)
+        self.network.delete_subnet.assert_called_once_with(self._subnets[0])
         self.assertIsNone(result)
+
+    def test_multi_subnets_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._subnets:
+            arglist.append(s.name)
+        verifylist = [
+            ('subnet', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._subnets:
+            calls.append(call(s))
+        self.network.delete_subnet.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_subnets_delete_with_exception(self):
+        arglist = [
+            self._subnets[0].name,
+            'unexist_subnet',
+        ]
+        verifylist = [
+            ('subnet',
+             [self._subnets[0].name, 'unexist_subnet']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self._subnets[0], exceptions.CommandError]
+        self.network.find_subnet = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 subnets failed to delete.', str(e))
+
+        self.network.find_subnet.assert_any_call(
+            self._subnets[0].name, ignore_missing=False)
+        self.network.find_subnet.assert_any_call(
+            'unexist_subnet', ignore_missing=False)
+        self.network.delete_subnet.assert_called_once_with(
+            self._subnets[0]
+        )
 
 
 class TestListSubnet(TestSubnet):
@@ -485,6 +584,38 @@ class TestListSubnet(TestSubnet):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, list(data))
 
+    def test_subnet_list_dhcp(self):
+        arglist = [
+            '--dhcp',
+        ]
+        verifylist = [
+            ('dhcp', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+        filters = {'enable_dhcp': True}
+
+        self.network.subnets.assert_called_once_with(**filters)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
+
+    def test_subnet_list_no_dhcp(self):
+        arglist = [
+            '--no-dhcp',
+        ]
+        verifylist = [
+            ('no_dhcp', True),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+        filters = {'enable_dhcp': False}
+
+        self.network.subnets.assert_called_once_with(**filters)
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
+
 
 class TestSetSubnet(TestSubnet):
 
@@ -549,8 +680,11 @@ class TestSetSubnet(TestSubnet):
         verifylist = [('subnet', self._subnet.name)]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
-                          parsed_args)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_subnet.assert_called_with(self._subnet, **attrs)
+        self.assertIsNone(result)
 
     def test_append_options(self):
         _testsubnet = network_fakes.FakeSubnet.create_one_subnet(
@@ -591,6 +725,7 @@ class TestShowSubnet(TestSubnet):
         'name',
         'network_id',
         'project_id',
+        'segment_id',
         'subnetpool_id',
     )
 
@@ -608,6 +743,7 @@ class TestShowSubnet(TestSubnet):
         _subnet.name,
         _subnet.network_id,
         _subnet.tenant_id,
+        _subnet.segment_id,
         _subnet.subnetpool_id,
     )
 
@@ -644,3 +780,109 @@ class TestShowSubnet(TestSubnet):
 
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
+
+
+class TestUnsetSubnet(TestSubnet):
+
+    def setUp(self):
+        super(TestUnsetSubnet, self).setUp()
+        self._testsubnet = network_fakes.FakeSubnet.create_one_subnet(
+            {'dns_nameservers': ['8.8.8.8',
+                                 '8.8.8.4'],
+             'host_routes': [{'destination': '10.20.20.0/24',
+                              'nexthop': '10.20.20.1'},
+                             {'destination': '10.30.30.30/24',
+                              'nexthop': '10.30.30.1'}],
+             'allocation_pools': [{'start': '8.8.8.100',
+                                   'end': '8.8.8.150'},
+                                  {'start': '8.8.8.160',
+                                   'end': '8.8.8.170'}], })
+        self.network.find_subnet = mock.Mock(return_value=self._testsubnet)
+        self.network.update_subnet = mock.Mock(return_value=None)
+        # Get the command object to test
+        self.cmd = subnet_v2.UnsetSubnet(self.app, self.namespace)
+
+    def test_unset_subnet_params(self):
+        arglist = [
+            '--dns-nameserver', '8.8.8.8',
+            '--host-route', 'destination=10.30.30.30/24,gateway=10.30.30.1',
+            '--allocation-pool', 'start=8.8.8.100,end=8.8.8.150',
+            self._testsubnet.name,
+        ]
+        verifylist = [
+            ('dns_nameservers', ['8.8.8.8']),
+            ('host_routes', [{
+                "destination": "10.30.30.30/24", "gateway": "10.30.30.1"}]),
+            ('allocation_pools', [{
+                'start': '8.8.8.100', 'end': '8.8.8.150'}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'dns_nameservers': ['8.8.8.4'],
+            'host_routes': [{
+                "destination": "10.20.20.0/24", "nexthop": "10.20.20.1"}],
+            'allocation_pools': [{'start': '8.8.8.160', 'end': '8.8.8.170'}],
+        }
+        self.network.update_subnet.assert_called_once_with(
+            self._testsubnet, **attrs)
+        self.assertIsNone(result)
+
+    def test_unset_subnet_wrong_host_routes(self):
+        arglist = [
+            '--dns-nameserver', '8.8.8.8',
+            '--host-route', 'destination=10.30.30.30/24,gateway=10.30.30.2',
+            '--allocation-pool', 'start=8.8.8.100,end=8.8.8.150',
+            self._testsubnet.name,
+        ]
+        verifylist = [
+            ('dns_nameservers', ['8.8.8.8']),
+            ('host_routes', [{
+                "destination": "10.30.30.30/24", "gateway": "10.30.30.2"}]),
+            ('allocation_pools', [{
+                'start': '8.8.8.100', 'end': '8.8.8.150'}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action, parsed_args)
+
+    def test_unset_subnet_wrong_allocation_pool(self):
+        arglist = [
+            '--dns-nameserver', '8.8.8.8',
+            '--host-route', 'destination=10.30.30.30/24,gateway=10.30.30.1',
+            '--allocation-pool', 'start=8.8.8.100,end=8.8.8.156',
+            self._testsubnet.name,
+        ]
+        verifylist = [
+            ('dns_nameservers', ['8.8.8.8']),
+            ('host_routes', [{
+                "destination": "10.30.30.30/24", "gateway": "10.30.30.1"}]),
+            ('allocation_pools', [{
+                'start': '8.8.8.100', 'end': '8.8.8.156'}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action, parsed_args)
+
+    def test_unset_subnet_wrong_dns_nameservers(self):
+        arglist = [
+            '--dns-nameserver', '8.8.8.1',
+            '--host-route', 'destination=10.30.30.30/24,gateway=10.30.30.1',
+            '--allocation-pool', 'start=8.8.8.100,end=8.8.8.150',
+            self._testsubnet.name,
+        ]
+        verifylist = [
+            ('dns_nameservers', ['8.8.8.1']),
+            ('host_routes', [{
+                "destination": "10.30.30.30/24", "gateway": "10.30.30.1"}]),
+            ('allocation_pools', [{
+                'start': '8.8.8.100', 'end': '8.8.8.150'}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action, parsed_args)

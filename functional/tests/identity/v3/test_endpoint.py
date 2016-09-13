@@ -12,10 +12,10 @@
 
 from tempest.lib.common.utils import data_utils
 
-from functional.tests.identity.v3 import test_identity
+from functional.tests.identity.v3 import common
 
 
-class EndpointTests(test_identity.IdentityTests):
+class EndpointTests(common.IdentityTests):
 
     def test_endpoint_create(self):
         self._create_dummy_endpoint(interface='public')
@@ -26,6 +26,13 @@ class EndpointTests(test_identity.IdentityTests):
         endpoint_id = self._create_dummy_endpoint(add_clean_up=False)
         raw_output = self.openstack(
             'endpoint delete %s' % endpoint_id)
+        self.assertEqual(0, len(raw_output))
+
+    def test_endpoint_multi_delete(self):
+        endpoint_1 = self._create_dummy_endpoint(add_clean_up=False)
+        endpoint_2 = self._create_dummy_endpoint(add_clean_up=False)
+        raw_output = self.openstack(
+            'endpoint delete %s %s' % (endpoint_1, endpoint_2))
         self.assertEqual(0, len(raw_output))
 
     def test_endpoint_list(self):

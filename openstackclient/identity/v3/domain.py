@@ -15,14 +15,19 @@
 
 """Identity v3 Domain action implementations"""
 
-import six
-import sys
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
+from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateDomain(command.ShowOne):
@@ -71,35 +76,49 @@ class CreateDomain(command.ShowOne):
                 description=parsed_args.description,
                 enabled=enabled,
             )
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 domain = utils.find_resource(identity_client.domains,
                                              parsed_args.name)
-                self.log.info(_('Returning existing domain %s'), domain.name)
+                LOG.info(_('Returning existing domain %s'), domain.name)
             else:
-                raise e
+                raise
 
         domain._info.pop('links')
         return zip(*sorted(six.iteritems(domain._info)))
 
 
 class DeleteDomain(command.Command):
-    """Delete domain"""
+    """Delete domain(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteDomain, self).get_parser(prog_name)
         parser.add_argument(
             'domain',
             metavar='<domain>',
-            help=_('Domain to delete (name or ID)'),
+            nargs='+',
+            help=_('Domain(s) to delete (name or ID)'),
         )
         return parser
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
-        domain = utils.find_resource(identity_client.domains,
-                                     parsed_args.domain)
-        identity_client.domains.delete(domain.id)
+        result = 0
+        for i in parsed_args.domain:
+            try:
+                domain = utils.find_resource(identity_client.domains, i)
+                identity_client.domains.delete(domain.id)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete domain with name or "
+                          "ID '%(domain)s': %(e)s")
+                          % {'domain': i, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.domain)
+            msg = (_("%(result)s of %(total)s domains failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListDomain(command.Lister):
@@ -163,9 +182,6 @@ class SetDomain(command.Command):
         if parsed_args.disable:
             kwargs['enabled'] = False
 
-        if not kwargs:
-            sys.stdout.write(_("Domain not updated, no arguments present\n"))
-            return
         identity_client.domains.update(domain.id, **kwargs)
 
 
@@ -183,8 +199,12 @@ class ShowDomain(command.ShowOne):
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
+
+        domain_str = common._get_token_resource(identity_client, 'domain',
+                                                parsed_args.domain)
+
         domain = utils.find_resource(identity_client.domains,
-                                     parsed_args.domain)
+                                     domain_str)
 
         domain._info.pop('links')
         return zip(*sorted(six.iteritems(domain._info)))

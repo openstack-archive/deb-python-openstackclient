@@ -21,13 +21,15 @@ from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
 
 class TestToken(identity_fakes.TestIdentityv2):
 
+    fake_user = identity_fakes.FakeUser.create_one_user()
+    fake_project = identity_fakes.FakeProject.create_one_project()
+
     def setUp(self):
         super(TestToken, self).setUp()
 
-        # Get a shortcut to the Service Catalog Mock
-        self.sc_mock = mock.Mock()
-        self.app.client_manager.auth_ref = mock.Mock()
-        self.app.client_manager.auth_ref.service_catalog = self.sc_mock
+        # Get a shortcut to the Auth Ref Mock
+        self.ar_mock = mock.PropertyMock()
+        type(self.app.client_manager).auth_ref = self.ar_mock
 
 
 class TestTokenIssue(TestToken):
@@ -35,10 +37,15 @@ class TestTokenIssue(TestToken):
     def setUp(self):
         super(TestTokenIssue, self).setUp()
 
-        self.sc_mock.get_token.return_value = identity_fakes.TOKEN
         self.cmd = token.IssueToken(self.app, None)
 
     def test_token_issue(self):
+        auth_ref = identity_fakes.fake_auth_ref(
+            identity_fakes.TOKEN,
+        )
+        self.ar_mock = mock.PropertyMock(return_value=auth_ref)
+        type(self.app.client_manager).auth_ref = self.ar_mock
+
         arglist = []
         verifylist = []
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -48,21 +55,22 @@ class TestTokenIssue(TestToken):
         # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.sc_mock.get_token.assert_called_with()
-
         collist = ('expires', 'id', 'project_id', 'user_id')
         self.assertEqual(collist, columns)
         datalist = (
-            identity_fakes.token_expires,
+            auth_ref.expires,
             identity_fakes.token_id,
-            identity_fakes.project_id,
-            identity_fakes.user_id,
+            'project-id',
+            'user-id',
         )
         self.assertEqual(datalist, data)
 
     def test_token_issue_with_unscoped_token(self):
-        # make sure we return an unscoped token
-        self.sc_mock.get_token.return_value = identity_fakes.UNSCOPED_TOKEN
+        auth_ref = identity_fakes.fake_auth_ref(
+            identity_fakes.UNSCOPED_TOKEN,
+        )
+        self.ar_mock = mock.PropertyMock(return_value=auth_ref)
+        type(self.app.client_manager).auth_ref = self.ar_mock
 
         arglist = []
         verifylist = []
@@ -71,14 +79,16 @@ class TestTokenIssue(TestToken):
         # DisplayCommandBase.take_action() returns two tuples
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.sc_mock.get_token.assert_called_with()
-
-        collist = ('expires', 'id', 'user_id')
+        collist = (
+            'expires',
+            'id',
+            'user_id',
+        )
         self.assertEqual(collist, columns)
         datalist = (
-            identity_fakes.token_expires,
+            auth_ref.expires,
             identity_fakes.token_id,
-            identity_fakes.user_id,
+            'user-id',
         )
         self.assertEqual(datalist, data)
 

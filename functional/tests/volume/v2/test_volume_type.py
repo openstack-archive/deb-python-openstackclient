@@ -10,12 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
 import uuid
 
-from functional.common import test
+from functional.tests.volume.v2 import common
 
 
-class VolumeTypeTests(test.TestCase):
+class VolumeTypeTests(common.BaseVolumeTests):
     """Functional tests for volume type. """
 
     NAME = uuid.uuid4().hex
@@ -24,7 +25,8 @@ class VolumeTypeTests(test.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        opts = cls.get_show_opts(cls.FIELDS)
+        super(VolumeTypeTests, cls).setUpClass()
+        opts = cls.get_opts(cls.FIELDS)
         raw_output = cls.openstack(
             'volume type create --private ' + cls.NAME + opts)
         expected = cls.NAME + '\n'
@@ -36,12 +38,12 @@ class VolumeTypeTests(test.TestCase):
         cls.assertOutput('', raw_output)
 
     def test_volume_type_list(self):
-        opts = self.get_list_opts(self.HEADERS)
+        opts = self.get_opts(self.HEADERS)
         raw_output = self.openstack('volume type list' + opts)
         self.assertIn(self.NAME, raw_output)
 
     def test_volume_type_show(self):
-        opts = self.get_show_opts(self.FIELDS)
+        opts = self.get_opts(self.FIELDS)
         raw_output = self.openstack('volume type show ' + self.NAME + opts)
         self.assertEqual(self.NAME + "\n", raw_output)
 
@@ -50,7 +52,7 @@ class VolumeTypeTests(test.TestCase):
             'volume type set --property a=b --property c=d ' + self.NAME)
         self.assertEqual("", raw_output)
 
-        opts = self.get_show_opts(["properties"])
+        opts = self.get_opts(["properties"])
         raw_output = self.openstack('volume type show ' + self.NAME + opts)
         self.assertEqual("a='b', c='d'\n", raw_output)
 
@@ -68,3 +70,15 @@ class VolumeTypeTests(test.TestCase):
         raw_output = self.openstack(
             'volume type unset --project admin ' + self.NAME)
         self.assertEqual("", raw_output)
+
+    def test_multi_delete(self):
+        vol_type1 = uuid.uuid4().hex
+        vol_type2 = uuid.uuid4().hex
+        self.openstack('volume type create ' + vol_type1)
+        time.sleep(5)
+        self.openstack('volume type create ' + vol_type2)
+        time.sleep(5)
+        cmd = 'volume type delete %s %s' % (vol_type1, vol_type2)
+        time.sleep(5)
+        raw_output = self.openstack(cmd)
+        self.assertOutput('', raw_output)

@@ -10,10 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from functional.tests.identity.v2 import test_identity
+from functional.tests.identity.v2 import common
 
 
-class EndpointTests(test_identity.IdentityTests):
+class EndpointTests(common.IdentityTests):
 
     def test_endpoint_create(self):
         self._create_dummy_endpoint()
@@ -22,6 +22,13 @@ class EndpointTests(test_identity.IdentityTests):
         endpoint_id = self._create_dummy_endpoint(add_clean_up=False)
         raw_output = self.openstack(
             'endpoint delete %s' % endpoint_id)
+        self.assertEqual(0, len(raw_output))
+
+    def test_endpoint_multi_delete(self):
+        endpoint_id_1 = self._create_dummy_endpoint(add_clean_up=False)
+        endpoint_id_2 = self._create_dummy_endpoint(add_clean_up=False)
+        raw_output = self.openstack(
+            'endpoint delete ' + endpoint_id_1 + ' ' + endpoint_id_2)
         self.assertEqual(0, len(raw_output))
 
     def test_endpoint_list(self):

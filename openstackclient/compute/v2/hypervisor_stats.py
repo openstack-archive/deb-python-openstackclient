@@ -14,9 +14,8 @@
 
 """Hypervisor Stats action implementations"""
 
+from osc_lib.command import command
 import six
-
-from openstackclient.common import command
 
 
 class ShowHypervisorStats(command.ShowOne):

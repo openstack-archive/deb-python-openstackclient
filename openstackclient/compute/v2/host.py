@@ -1,4 +1,4 @@
-#   Copyright 2013 OpenStack, LLC.
+#   Copyright 2012-2013 OpenStack Foundation
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain
@@ -15,13 +15,14 @@
 
 """Host action implementations"""
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+
 from openstackclient.i18n import _
 
 
 class ListHost(command.Lister):
-    """List host command"""
+    """List hosts"""
 
     def get_parser(self, prog_name):
         parser = super(ListHost, self).get_parser(prog_name)
@@ -53,7 +54,7 @@ class SetHost(command.Command):
         parser.add_argument(
             "host",
             metavar="<host>",
-            help=_("The host to modify (name or ID)")
+            help=_("Host to modify (name only)")
         )
         status = parser.add_mutually_exclusive_group()
         status.add_argument(
@@ -83,28 +84,30 @@ class SetHost(command.Command):
         kwargs = {}
 
         if parsed_args.enable:
-            kwargs['status'] = True
+            kwargs['status'] = 'enable'
         if parsed_args.disable:
-            kwargs['status'] = False
+            kwargs['status'] = 'disable'
         if parsed_args.enable_maintenance:
-            kwargs['maintenance_mode'] = True
+            kwargs['maintenance_mode'] = 'enable'
         if parsed_args.disable_maintenance:
-            kwargs['maintenance_mode'] = False
+            kwargs['maintenance_mode'] = 'disable'
 
         compute_client = self.app.client_manager.compute
-        foundhost = utils.find_resource(
-            compute_client.hosts,
-            parsed_args.host
-        )
+
+        # More than one hosts will be returned by using find_resource()
+        # so that the return value cannot be used in host update() method.
+        # find_resource() is just used for checking existence of host and
+        # keeping the exception message consistent with other commands.
+        utils.find_resource(compute_client.hosts, parsed_args.host)
 
         compute_client.hosts.update(
-            foundhost.id,
+            parsed_args.host,
             kwargs
         )
 
 
 class ShowHost(command.Lister):
-    """Show host command"""
+    """Display host details"""
 
     def get_parser(self, prog_name):
         parser = super(ShowHost, self).get_parser(prog_name)

@@ -185,7 +185,7 @@ class TestServiceProviderDelete(TestServiceProvider):
             service_fakes.sp_id,
         ]
         verifylist = [
-            ('service_provider', service_fakes.sp_id),
+            ('service_provider', [service_fakes.sp_id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -289,7 +289,7 @@ class TestServiceProviderSet(TestServiceProvider):
             ('disable', True),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.service_providers_mock.update.assert_called_with(
             service_fakes.sp_id,
             enabled=False,
@@ -297,9 +297,6 @@ class TestServiceProviderSet(TestServiceProvider):
             auth_url=None,
             sp_url=None
         )
-
-        self.assertEqual(self.columns, columns)
-        self.assertEqual(self.datalist, data)
 
     def test_service_provider_enable(self):
         """Enable Service Provider.
@@ -327,19 +324,10 @@ class TestServiceProviderSet(TestServiceProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.service_providers_mock.update.assert_called_with(
             service_fakes.sp_id, enabled=True, description=None,
             auth_url=None, sp_url=None)
-        self.assertEqual(self.columns, columns)
-        datalist = (
-            service_fakes.sp_auth_url,
-            service_fakes.sp_description,
-            True,
-            service_fakes.sp_id,
-            service_fakes.service_provider_url
-        )
-        self.assertEqual(datalist, data)
 
     def test_service_provider_no_options(self):
         def prepare(self):
@@ -372,13 +360,7 @@ class TestServiceProviderSet(TestServiceProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # expect take_action() to return (None, None) as none of --disabled,
-        # --enabled, --description, --service-provider-url, --auth_url option
-        # was set.
-        self.assertIsNone(columns)
-        self.assertIsNone(data)
+        self.cmd.take_action(parsed_args)
 
 
 class TestServiceProviderShow(TestServiceProvider):
@@ -391,7 +373,10 @@ class TestServiceProviderShow(TestServiceProvider):
             copy.deepcopy(service_fakes.SERVICE_PROVIDER),
             loaded=True,
         )
+        self.service_providers_mock.get.side_effect = [Exception("Not found"),
+                                                       ret]
         self.service_providers_mock.get.return_value = ret
+
         # Get the command object to test
         self.cmd = service_provider.ShowServiceProvider(self.app, None)
 

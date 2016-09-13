@@ -13,6 +13,9 @@
 #   under the License.
 #
 
+# NOTE(dtroyer): This file is deprecated in Jun 2016, remove after 4.x release
+#                or Jun 2017.
+
 import argparse
 
 from openstackclient.common import parseractions
@@ -46,19 +49,16 @@ class TestKeyValueAction(utils.TestCase):
         actual = getattr(results, 'property', {})
         # All should pass through unmolested
         expect = {'red': '', 'green': '100%', 'blue': '50%', 'format': '#rgb'}
-        self.assertDictEqual(expect, actual)
+        self.assertEqual(expect, actual)
 
     def test_error_values(self):
-        results = self.parser.parse_args([
-            '--property', 'red',
-            '--property', 'green=100%',
-            '--property', 'blue',
-        ])
-
-        actual = getattr(results, 'property', {})
-        # There should be no red or blue
-        expect = {'green': '100%', 'format': '#rgb'}
-        self.assertDictEqual(expect, actual)
+        self.assertRaises(
+            argparse.ArgumentTypeError,
+            self.parser.parse_args,
+            [
+                '--property', 'red',
+            ]
+        )
 
 
 class TestMultiKeyValueAction(utils.TestCase):

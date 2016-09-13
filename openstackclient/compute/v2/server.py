@@ -18,22 +18,26 @@
 import argparse
 import getpass
 import io
+import logging
 import os
-import six
 import sys
 
-from openstackclient.common import command
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+import six
 
 try:
     from novaclient.v2 import servers
 except ImportError:
     from novaclient.v1_1 import servers
 
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _format_servers_list_networks(networks):
@@ -164,27 +168,67 @@ def _prep_server_detail(compute_client, server):
     return info
 
 
-def _prep_image_detail(image_client, image_id):
-    """Prepare the detailed image dict for printing
-
-    :param image_client: an image client instance
-    :param image_id: id of image created
-    :rtype: a dict of image details
-    """
-
-    info = utils.find_resource(
-        image_client.images,
-        image_id,
-    )
-    # Glance client V2 doesn't have _info attribute
-    # The following condition deals with it.
-    return getattr(info, "_info", info)
-
-
 def _show_progress(progress):
     if progress:
         sys.stdout.write('\rProgress: %s' % progress)
         sys.stdout.flush()
+
+
+class AddFixedIP(command.Command):
+    """Add fixed IP address to server"""
+
+    def get_parser(self, prog_name):
+        parser = super(AddFixedIP, self).get_parser(prog_name)
+        parser.add_argument(
+            "server",
+            metavar="<server>",
+            help=_("Server (name or ID) to receive the fixed IP address"),
+        )
+        parser.add_argument(
+            "network",
+            metavar="<network>",
+            help=_("Network (name or ID) to allocate "
+                   "the fixed IP address from"),
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+
+        server = utils.find_resource(
+            compute_client.servers, parsed_args.server)
+
+        network = utils.find_resource(
+            compute_client.networks, parsed_args.network)
+
+        server.add_fixed_ip(network.id)
+
+
+class AddFloatingIP(command.Command):
+    """Add floating IP address to server"""
+
+    def get_parser(self, prog_name):
+        parser = super(AddFloatingIP, self).get_parser(prog_name)
+        parser.add_argument(
+            "server",
+            metavar="<server>",
+            help=_("Server (name or ID) to receive the floating IP address"),
+        )
+        parser.add_argument(
+            "ip_address",
+            metavar="<ip-address>",
+            help=_("Floating IP address (IP address only) to assign "
+                   "to server"),
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+
+        server = utils.find_resource(
+            compute_client.servers, parsed_args.server)
+
+        server.add_floating_ip(parsed_args.ip_address)
 
 
 class AddServerSecurityGroup(command.Command):
@@ -216,7 +260,7 @@ class AddServerSecurityGroup(command.Command):
             parsed_args.group,
         )
 
-        server.add_security_group(security_group.name)
+        server.add_security_group(security_group.id)
 
 
 class AddServerVolume(command.Command):
@@ -538,8 +582,8 @@ class CreateServer(command.ShowOne):
             scheduler_hints=hints,
             config_drive=config_drive)
 
-        self.log.debug('boot_args: %s', boot_args)
-        self.log.debug('boot_kwargs: %s', boot_kwargs)
+        LOG.debug('boot_args: %s', boot_args)
+        LOG.debug('boot_kwargs: %s', boot_kwargs)
 
         # Wrap the call to catch exceptions in order to close files
         try:
@@ -560,8 +604,8 @@ class CreateServer(command.ShowOne):
             ):
                 sys.stdout.write('\n')
             else:
-                self.log.error(_('Error creating server: %s'),
-                               parsed_args.server_name)
+                LOG.error(_('Error creating server: %s'),
+                          parsed_args.server_name)
                 sys.stdout.write(_('Error creating server\n'))
                 raise SystemExit
 
@@ -597,63 +641,6 @@ class CreateServerDump(command.Command):
             ).trigger_crash_dump()
 
 
-class CreateServerImage(command.ShowOne):
-    """Create a new disk image from a running server"""
-
-    def get_parser(self, prog_name):
-        parser = super(CreateServerImage, self).get_parser(prog_name)
-        parser.add_argument(
-            'server',
-            metavar='<server>',
-            help=_('Server (name or ID)'),
-        )
-        parser.add_argument(
-            '--name',
-            metavar='<image-name>',
-            help=_('Name of new image (default is server name)'),
-        )
-        parser.add_argument(
-            '--wait',
-            action='store_true',
-            help=_('Wait for image create to complete'),
-        )
-        return parser
-
-    def take_action(self, parsed_args):
-        compute_client = self.app.client_manager.compute
-        image_client = self.app.client_manager.image
-        server = utils.find_resource(
-            compute_client.servers,
-            parsed_args.server,
-        )
-        if parsed_args.name:
-            name = parsed_args.name
-        else:
-            name = server.name
-
-        image_id = compute_client.servers.create_image(
-            server,
-            name,
-        )
-
-        if parsed_args.wait:
-            if utils.wait_for_status(
-                image_client.images.get,
-                image_id,
-                callback=_show_progress,
-            ):
-                sys.stdout.write('\n')
-            else:
-                self.log.error(_('Error creating snapshot of server: %s'),
-                               parsed_args.server)
-                sys.stdout.write(_('Error creating server snapshot\n'))
-                raise SystemExit
-
-        image = _prep_image_detail(image_client, image_id)
-
-        return zip(*sorted(six.iteritems(image)))
-
-
 class DeleteServer(command.Command):
     """Delete server(s)"""
 
@@ -686,8 +673,8 @@ class DeleteServer(command.Command):
                 ):
                     sys.stdout.write('\n')
                 else:
-                    self.log.error(_('Error deleting server: %s'),
-                                   server_obj.id)
+                    LOG.error(_('Error deleting server: %s'),
+                              server_obj.id)
                     sys.stdout.write(_('Error deleting server\n'))
                     raise SystemExit
 
@@ -836,7 +823,7 @@ class ListServer(command.Lister):
             'all_tenants': parsed_args.all_projects,
             'user_id': user_id,
         }
-        self.log.debug('search options: %s', search_opts)
+        LOG.debug('search options: %s', search_opts)
 
         if parsed_args.long:
             columns = (
@@ -846,6 +833,8 @@ class ListServer(command.Lister):
                 'OS-EXT-STS:task_state',
                 'OS-EXT-STS:power_state',
                 'Networks',
+                'Image Name',
+                'Image ID',
                 'OS-EXT-AZ:availability_zone',
                 'OS-EXT-SRV-ATTR:host',
                 'Metadata',
@@ -857,6 +846,8 @@ class ListServer(command.Lister):
                 'Task State',
                 'Power State',
                 'Networks',
+                'Image Name',
+                'Image ID',
                 'Availability Zone',
                 'Host',
                 'Properties',
@@ -873,12 +864,14 @@ class ListServer(command.Lister):
                 'Name',
                 'Status',
                 'Networks',
+                'Image Name',
             )
             column_headers = (
                 'ID',
                 'Name',
                 'Status',
                 'Networks',
+                'Image Name',
             )
             mixed_case_fields = []
 
@@ -890,17 +883,42 @@ class ListServer(command.Lister):
         data = compute_client.servers.list(search_opts=search_opts,
                                            marker=marker_id,
                                            limit=parsed_args.limit)
-        return (column_headers,
-                (utils.get_item_properties(
-                    s, columns,
-                    mixed_case_fields=mixed_case_fields,
-                    formatters={
-                        'OS-EXT-STS:power_state':
-                            _format_servers_list_power_state,
-                        'Networks': _format_servers_list_networks,
-                        'Metadata': utils.format_dict,
-                    },
-                ) for s in data))
+
+        images = {}
+        # Create a dict that maps image_id to image object.
+        # Needed so that we can display the "Image Name" column.
+        # "Image Name" is not crucial, so we swallow any exceptions.
+        try:
+            images_list = self.app.client_manager.image.images.list()
+            for i in images_list:
+                images[i.id] = i
+        except Exception:
+            pass
+
+        # Populate image_name and image_id attributes of server objects
+        # so that we can display "Image Name" and "Image ID" columns.
+        for s in data:
+            if 'id' in s.image:
+                image = images.get(s.image['id'])
+                if image:
+                    s.image_name = image.name
+                s.image_id = s.image['id']
+            else:
+                s.image_name = ''
+                s.image_id = ''
+
+        table = (column_headers,
+                 (utils.get_item_properties(
+                     s, columns,
+                     mixed_case_fields=mixed_case_fields,
+                     formatters={
+                         'OS-EXT-STS:power_state':
+                             _format_servers_list_power_state,
+                         'Networks': _format_servers_list_networks,
+                         'Metadata': utils.format_dict,
+                     },
+                 ) for s in data))
+        return table
 
 
 class LockServer(command.Command):
@@ -1013,8 +1031,8 @@ class MigrateServer(command.Command):
             ):
                 sys.stdout.write(_('Complete\n'))
             else:
-                self.log.error(_('Error migrating server: %s'),
-                               server.id)
+                LOG.error(_('Error migrating server: %s'),
+                          server.id)
                 sys.stdout.write(_('Error migrating server\n'))
                 raise SystemExit
 
@@ -1089,8 +1107,8 @@ class RebootServer(command.Command):
             ):
                 sys.stdout.write(_('Complete\n'))
             else:
-                self.log.error(_('Error rebooting server: %s'),
-                               server.id)
+                LOG.error(_('Error rebooting server: %s'),
+                          server.id)
                 sys.stdout.write(_('Error rebooting server\n'))
                 raise SystemExit
 
@@ -1142,13 +1160,68 @@ class RebuildServer(command.ShowOne):
             ):
                 sys.stdout.write(_('Complete\n'))
             else:
-                self.log.error(_('Error rebuilding server: %s'),
-                               server.id)
+                LOG.error(_('Error rebuilding server: %s'),
+                          server.id)
                 sys.stdout.write(_('Error rebuilding server\n'))
                 raise SystemExit
 
         details = _prep_server_detail(compute_client, server)
         return zip(*sorted(six.iteritems(details)))
+
+
+class RemoveFixedIP(command.Command):
+    """Remove fixed IP address from server"""
+
+    def get_parser(self, prog_name):
+        parser = super(RemoveFixedIP, self).get_parser(prog_name)
+        parser.add_argument(
+            "server",
+            metavar="<server>",
+            help=_("Server (name or ID) to remove the fixed IP address from"),
+        )
+        parser.add_argument(
+            "ip_address",
+            metavar="<ip-address>",
+            help=_("Fixed IP address (IP address only) to remove from the "
+                   "server"),
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+
+        server = utils.find_resource(
+            compute_client.servers, parsed_args.server)
+
+        server.remove_fixed_ip(parsed_args.ip_address)
+
+
+class RemoveFloatingIP(command.Command):
+    """Remove floating IP address from server"""
+
+    def get_parser(self, prog_name):
+        parser = super(RemoveFloatingIP, self).get_parser(prog_name)
+        parser.add_argument(
+            "server",
+            metavar="<server>",
+            help=_("Server (name or ID) to remove the "
+                   "floating IP address from"),
+        )
+        parser.add_argument(
+            "ip_address",
+            metavar="<ip-address>",
+            help=_("Floating IP address (IP address only) "
+                   "to remove from server"),
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        compute_client = self.app.client_manager.compute
+
+        server = utils.find_resource(
+            compute_client.servers, parsed_args.server)
+
+        server.remove_floating_ip(parsed_args.ip_address)
 
 
 class RemoveServerSecurityGroup(command.Command):
@@ -1180,7 +1253,7 @@ class RemoveServerSecurityGroup(command.Command):
             parsed_args.group,
         )
 
-        server.remove_security_group(security_group)
+        server.remove_security_group(security_group.id)
 
 
 class RemoveServerVolume(command.Command):
@@ -1296,8 +1369,8 @@ class ResizeServer(command.Command):
                 ):
                     sys.stdout.write(_('Complete\n'))
                 else:
-                    self.log.error(_('Error resizing server: %s'),
-                                   server.id)
+                    LOG.error(_('Error resizing server: %s'),
+                              server.id)
                     sys.stdout.write(_('Error resizing server\n'))
                     raise SystemExit
         elif parsed_args.confirm:
@@ -1612,7 +1685,7 @@ class SshServer(command.Command):
         ip_address = _get_ip_address(server.addresses,
                                      parsed_args.address_type,
                                      ip_address_family)
-        self.log.debug("ssh command: %s", (cmd % (login, ip_address)))
+        LOG.debug("ssh command: %s", (cmd % (login, ip_address)))
         os.system(cmd % (login, ip_address))
 
 

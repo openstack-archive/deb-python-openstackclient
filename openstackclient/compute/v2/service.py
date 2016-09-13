@@ -1,4 +1,4 @@
-#   Copyright 2013 OpenStack, LLC.
+#   Copyright 2012-2013 OpenStack Foundation
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain
@@ -15,32 +15,53 @@
 
 """Service action implementations"""
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
+from openstackclient.i18n import _LE
+
+
+LOG = logging.getLogger(__name__)
 
 
 class DeleteService(command.Command):
-    """Delete service command"""
+    """Delete compute service(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteService, self).get_parser(prog_name)
         parser.add_argument(
             "service",
             metavar="<service>",
-            help=_("Compute service to delete (ID only)")
+            nargs='+',
+            help=_("Compute service(s) to delete (ID only)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
+        result = 0
+        for s in parsed_args.service:
+            try:
+                compute_client.services.delete(s)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete compute service with "
+                          "ID '%(service)s': %(e)s")
+                          % {'service': s, 'e': e})
 
-        compute_client.services.delete(parsed_args.service)
+        if result > 0:
+            total = len(parsed_args.service)
+            msg = (_("%(result)s of %(total)s compute services failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListService(command.Lister):
-    """List service command"""
+    """List compute services"""
 
     def get_parser(self, prog_name):
         parser = super(ListService, self).get_parser(prog_name)
@@ -66,7 +87,7 @@ class ListService(command.Lister):
         compute_client = self.app.client_manager.compute
         if parsed_args.long:
             columns = (
-                "Id",
+                "ID",
                 "Binary",
                 "Host",
                 "Zone",
@@ -77,7 +98,7 @@ class ListService(command.Lister):
             )
         else:
             columns = (
-                "Id",
+                "ID",
                 "Binary",
                 "Host",
                 "Zone",
@@ -94,7 +115,7 @@ class ListService(command.Lister):
 
 
 class SetService(command.Command):
-    """Set service command"""
+    """Set compute service properties"""
 
     def get_parser(self, prog_name):
         parser = super(SetService, self).get_parser(prog_name)
@@ -106,7 +127,7 @@ class SetService(command.Command):
         parser.add_argument(
             "service",
             metavar="<service>",
-            help=_("Name of service")
+            help=_("Name of service (Binary name)")
         )
         enabled_group = parser.add_mutually_exclusive_group()
         enabled_group.add_argument(
@@ -126,6 +147,17 @@ class SetService(command.Command):
             help=_("Reason for disabling the service (in quotas). "
                    "Should be used with --disable option.")
         )
+        up_down_group = parser.add_mutually_exclusive_group()
+        up_down_group.add_argument(
+            '--up',
+            action='store_true',
+            help=_('Force up service'),
+        )
+        up_down_group.add_argument(
+            '--down',
+            action='store_true',
+            help=_('Force down service'),
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -138,20 +170,45 @@ class SetService(command.Command):
                     "--disable specified.")
             raise exceptions.CommandError(msg)
 
+        result = 0
         enabled = None
-        if parsed_args.enable:
-            enabled = True
-        if parsed_args.disable:
-            enabled = False
+        try:
+            if parsed_args.enable:
+                enabled = True
+            if parsed_args.disable:
+                enabled = False
 
-        if enabled is None:
-            return
-        elif enabled:
-            cs.enable(parsed_args.host, parsed_args.service)
-        else:
-            if parsed_args.disable_reason:
-                cs.disable_log_reason(parsed_args.host,
-                                      parsed_args.service,
-                                      parsed_args.disable_reason)
-            else:
-                cs.disable(parsed_args.host, parsed_args.service)
+            if enabled is not None:
+                if enabled:
+                    cs.enable(parsed_args.host, parsed_args.service)
+                else:
+                    if parsed_args.disable_reason:
+                        cs.disable_log_reason(parsed_args.host,
+                                              parsed_args.service,
+                                              parsed_args.disable_reason)
+                    else:
+                        cs.disable(parsed_args.host, parsed_args.service)
+        except Exception:
+            status = "enabled" if enabled else "disabled"
+            LOG.error(_LE("Failed to set service status to %s"), status)
+            result += 1
+
+        force_down = None
+        try:
+            if parsed_args.down:
+                force_down = True
+            if parsed_args.up:
+                force_down = False
+            if force_down is not None:
+                cs.force_down(parsed_args.host, parsed_args.service,
+                              force_down=force_down)
+        except Exception:
+            state = "down" if force_down else "up"
+            LOG.error(_LE("Failed to set service state to %s"), state)
+            result += 1
+
+        if result > 0:
+            msg = _("Compute service %(service)s of host %(host)s failed to "
+                    "set.") % {"service": parsed_args.service,
+                               "host": parsed_args.host}
+            raise exceptions.CommandError(msg)

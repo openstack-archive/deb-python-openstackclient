@@ -11,14 +11,18 @@
 #   under the License.
 #
 
-import copy
-
 from openstackclient.identity.v2_0 import endpoint
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
 
 
 class TestEndpoint(identity_fakes.TestIdentityv2):
+
+    fake_service = identity_fakes.FakeService.create_one_service()
+    attr = {
+        'service_name': fake_service.name,
+        'service_id': fake_service.id,
+    }
+    fake_endpoint = identity_fakes.FakeEndpoint.create_one_endpoint(attr)
 
     def setUp(self):
         super(TestEndpoint, self).setUp()
@@ -37,35 +41,27 @@ class TestEndpointCreate(TestEndpoint):
     def setUp(self):
         super(TestEndpointCreate, self).setUp()
 
-        self.endpoints_mock.create.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.ENDPOINT),
-            loaded=True,
-        )
+        self.endpoints_mock.create.return_value = self.fake_endpoint
 
-        self.services_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.SERVICE),
-            loaded=True,
-        )
+        self.services_mock.get.return_value = self.fake_service
 
         # Get the command object to test
         self.cmd = endpoint.CreateEndpoint(self.app, None)
 
     def test_endpoint_create(self):
         arglist = [
-            '--publicurl', identity_fakes.endpoint_publicurl,
-            '--internalurl', identity_fakes.endpoint_internalurl,
-            '--adminurl', identity_fakes.endpoint_adminurl,
-            '--region', identity_fakes.endpoint_region,
-            identity_fakes.endpoint_name,
+            '--publicurl', self.fake_endpoint.publicurl,
+            '--internalurl', self.fake_endpoint.internalurl,
+            '--adminurl', self.fake_endpoint.adminurl,
+            '--region', self.fake_endpoint.region,
+            self.fake_service.id,
         ]
         verifylist = [
-            ('adminurl', identity_fakes.endpoint_adminurl),
-            ('internalurl', identity_fakes.endpoint_internalurl),
-            ('publicurl', identity_fakes.endpoint_publicurl),
-            ('region', identity_fakes.endpoint_region),
-            ('service', identity_fakes.service_name),
+            ('adminurl', self.fake_endpoint.adminurl),
+            ('internalurl', self.fake_endpoint.internalurl),
+            ('publicurl', self.fake_endpoint.publicurl),
+            ('region', self.fake_endpoint.region),
+            ('service', self.fake_service.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -77,25 +73,25 @@ class TestEndpointCreate(TestEndpoint):
         # EndpointManager.create(region, service_id, publicurl, adminurl,
         #  internalurl)
         self.endpoints_mock.create.assert_called_with(
-            identity_fakes.endpoint_region,
-            identity_fakes.service_id,
-            identity_fakes.endpoint_publicurl,
-            identity_fakes.endpoint_adminurl,
-            identity_fakes.endpoint_internalurl,
+            self.fake_endpoint.region,
+            self.fake_service.id,
+            self.fake_endpoint.publicurl,
+            self.fake_endpoint.adminurl,
+            self.fake_endpoint.internalurl,
         )
 
         collist = ('adminurl', 'id', 'internalurl', 'publicurl',
                    'region', 'service_id', 'service_name', 'service_type')
         self.assertEqual(collist, columns)
         datalist = (
-            identity_fakes.endpoint_adminurl,
-            identity_fakes.endpoint_id,
-            identity_fakes.endpoint_internalurl,
-            identity_fakes.endpoint_publicurl,
-            identity_fakes.endpoint_region,
-            identity_fakes.service_id,
-            identity_fakes.service_name,
-            identity_fakes.service_type,
+            self.fake_endpoint.adminurl,
+            self.fake_endpoint.id,
+            self.fake_endpoint.internalurl,
+            self.fake_endpoint.publicurl,
+            self.fake_endpoint.region,
+            self.fake_endpoint.service_id,
+            self.fake_endpoint.service_name,
+            self.fake_endpoint.service_type,
         )
 
         self.assertEqual(datalist, data)
@@ -106,18 +102,7 @@ class TestEndpointDelete(TestEndpoint):
     def setUp(self):
         super(TestEndpointDelete, self).setUp()
 
-        self.endpoints_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.ENDPOINT),
-            loaded=True,
-        )
-
-        self.services_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.SERVICE),
-            loaded=True,
-        )
-
+        self.endpoints_mock.get.return_value = self.fake_endpoint
         self.endpoints_mock.delete.return_value = None
 
         # Get the command object to test
@@ -125,17 +110,17 @@ class TestEndpointDelete(TestEndpoint):
 
     def test_endpoint_delete_no_options(self):
         arglist = [
-            identity_fakes.endpoint_id,
+            self.fake_endpoint.id,
         ]
         verifylist = [
-            ('endpoint', identity_fakes.endpoint_id),
+            ('endpoints', [self.fake_endpoint.id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.endpoints_mock.delete.assert_called_with(
-            identity_fakes.endpoint_id,
+            self.fake_endpoint.id,
         )
         self.assertIsNone(result)
 
@@ -145,19 +130,9 @@ class TestEndpointList(TestEndpoint):
     def setUp(self):
         super(TestEndpointList, self).setUp()
 
-        self.endpoints_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.ENDPOINT),
-                loaded=True,
-            ),
-        ]
+        self.endpoints_mock.list.return_value = [self.fake_endpoint]
 
-        self.services_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.SERVICE),
-            loaded=True,
-        )
+        self.services_mock.get.return_value = self.fake_service
 
         # Get the command object to test
         self.cmd = endpoint.ListEndpoint(self.app, None)
@@ -177,10 +152,10 @@ class TestEndpointList(TestEndpoint):
         collist = ('ID', 'Region', 'Service Name', 'Service Type')
         self.assertEqual(collist, columns)
         datalist = ((
-            identity_fakes.endpoint_id,
-            identity_fakes.endpoint_region,
-            identity_fakes.service_name,
-            identity_fakes.service_type,
+            self.fake_endpoint.id,
+            self.fake_endpoint.region,
+            self.fake_endpoint.service_name,
+            self.fake_endpoint.service_type,
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -204,13 +179,13 @@ class TestEndpointList(TestEndpoint):
                    'PublicURL', 'AdminURL', 'InternalURL')
         self.assertEqual(collist, columns)
         datalist = ((
-            identity_fakes.endpoint_id,
-            identity_fakes.endpoint_region,
-            identity_fakes.service_name,
-            identity_fakes.service_type,
-            identity_fakes.endpoint_publicurl,
-            identity_fakes.endpoint_adminurl,
-            identity_fakes.endpoint_internalurl,
+            self.fake_endpoint.id,
+            self.fake_endpoint.region,
+            self.fake_endpoint.service_name,
+            self.fake_endpoint.service_type,
+            self.fake_endpoint.publicurl,
+            self.fake_endpoint.adminurl,
+            self.fake_endpoint.internalurl,
         ), )
         self.assertEqual(datalist, tuple(data))
 
@@ -220,29 +195,19 @@ class TestEndpointShow(TestEndpoint):
     def setUp(self):
         super(TestEndpointShow, self).setUp()
 
-        self.endpoints_mock.list.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.ENDPOINT),
-                loaded=True,
-            ),
-        ]
+        self.endpoints_mock.list.return_value = [self.fake_endpoint]
 
-        self.services_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.SERVICE),
-            loaded=True,
-        )
+        self.services_mock.get.return_value = self.fake_service
 
         # Get the command object to test
         self.cmd = endpoint.ShowEndpoint(self.app, None)
 
     def test_endpoint_show(self):
         arglist = [
-            identity_fakes.endpoint_name,
+            self.fake_endpoint.id,
         ]
         verifylist = [
-            ('endpoint_or_service', identity_fakes.endpoint_name),
+            ('endpoint_or_service', self.fake_endpoint.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -255,20 +220,20 @@ class TestEndpointShow(TestEndpoint):
         self.endpoints_mock.list.assert_called_with()
         # ServiceManager.get(name)
         self.services_mock.get.assert_called_with(
-            identity_fakes.service_name,
+            self.fake_endpoint.service_id,
         )
 
         collist = ('adminurl', 'id', 'internalurl', 'publicurl',
                    'region', 'service_id', 'service_name', 'service_type')
         self.assertEqual(collist, columns)
         datalist = (
-            identity_fakes.endpoint_adminurl,
-            identity_fakes.endpoint_id,
-            identity_fakes.endpoint_internalurl,
-            identity_fakes.endpoint_publicurl,
-            identity_fakes.endpoint_region,
-            identity_fakes.service_id,
-            identity_fakes.service_name,
-            identity_fakes.service_type,
+            self.fake_endpoint.adminurl,
+            self.fake_endpoint.id,
+            self.fake_endpoint.internalurl,
+            self.fake_endpoint.publicurl,
+            self.fake_endpoint.region,
+            self.fake_endpoint.service_id,
+            self.fake_endpoint.service_name,
+            self.fake_endpoint.service_type,
         )
         self.assertEqual(datalist, data)

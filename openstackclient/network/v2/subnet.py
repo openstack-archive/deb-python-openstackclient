@@ -12,14 +12,25 @@
 #
 
 """Subnet action implementations"""
-import copy
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
+import copy
+import logging
+
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
+
+
+def _update_arguments(obj_list, parsed_args_list):
+    for item in parsed_args_list:
+        obj_list.remove(item)
 
 
 def _format_allocation_pools(data):
@@ -136,6 +147,9 @@ def _get_attrs(client_manager, parsed_args, is_create=True):
             attrs['ipv6_ra_mode'] = parsed_args.ipv6_ra_mode
         if parsed_args.ipv6_address_mode is not None:
             attrs['ipv6_address_mode'] = parsed_args.ipv6_address_mode
+        if 'network_segment' in parsed_args:
+            attrs['segment_id'] = client.find_segment(
+                parsed_args.network_segment, ignore_missing=False).id
 
     if 'gateway' in parsed_args and parsed_args.gateway is not None:
         gateway = parsed_args.gateway.lower()
@@ -154,7 +168,7 @@ def _get_attrs(client_manager, parsed_args, is_create=True):
         attrs['allocation_pools'] = parsed_args.allocation_pools
     if parsed_args.dhcp:
         attrs['enable_dhcp'] = True
-    elif parsed_args.no_dhcp:
+    if parsed_args.no_dhcp:
         attrs['enable_dhcp'] = False
     if ('dns_nameservers' in parsed_args and
        parsed_args.dns_nameservers is not None):
@@ -209,7 +223,6 @@ class CreateSubnet(command.ShowOne):
         dhcp_enable_group.add_argument(
             '--dhcp',
             action='store_true',
-            default=True,
             help=_("Enable DHCP (default)")
         )
         dhcp_enable_group.add_argument(
@@ -226,7 +239,7 @@ class CreateSubnet(command.ShowOne):
                    "'auto': Gateway address should automatically be chosen "
                    "from within the subnet itself, 'none': This subnet will "
                    "not use a gateway, e.g.: --gateway 192.168.9.1, "
-                   "--gateway auto, --gateway none (default is 'auto')")
+                   "--gateway auto, --gateway none (default is 'auto').")
         )
         parser.add_argument(
             '--ip-version',
@@ -235,7 +248,7 @@ class CreateSubnet(command.ShowOne):
             choices=[4, 6],
             help=_("IP version (default is 4).  Note that when subnet pool is "
                    "specified, IP version is determined from the subnet pool "
-                   "and this option is ignored")
+                   "and this option is ignored.")
         )
         parser.add_argument(
             '--ipv6-ra-mode',
@@ -249,6 +262,13 @@ class CreateSubnet(command.ShowOne):
             help=_("IPv6 address mode, "
                    "valid modes: [dhcpv6-stateful, dhcpv6-stateless, slaac]")
         )
+        if self.app.options.os_beta_command:
+            parser.add_argument(
+                '--network-segment',
+                metavar='<network-segment>',
+                help=_("Network segment to associate with this subnet "
+                       "(ID only)")
+            )
         parser.add_argument(
             '--network',
             required=True,
@@ -268,21 +288,37 @@ class CreateSubnet(command.ShowOne):
 
 
 class DeleteSubnet(command.Command):
-    """Delete subnet"""
+    """Delete subnet(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteSubnet, self).get_parser(prog_name)
         parser.add_argument(
             'subnet',
             metavar="<subnet>",
-            help=_("Subnet to delete (name or ID)")
+            nargs='+',
+            help=_("Subnet(s) to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         client = self.app.client_manager.network
-        client.delete_subnet(
-            client.find_subnet(parsed_args.subnet))
+        result = 0
+
+        for subnet in parsed_args.subnet:
+            try:
+                obj = client.find_subnet(subnet, ignore_missing=False)
+                client.delete_subnet(obj)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete subnet with "
+                          "name or ID '%(subnet)s': %(e)s")
+                          % {'subnet': subnet, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.subnet)
+            msg = (_("%(result)s of %(total)s subnets failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListSubnet(command.Lister):
@@ -302,8 +338,19 @@ class ListSubnet(command.Lister):
             choices=[4, 6],
             metavar='<ip-version>',
             dest='ip_version',
-            help=_("List only subnets of given IP version in output"
+            help=_("List only subnets of given IP version in output."
                    "Allowed values for IP version are 4 and 6."),
+        )
+        dhcp_enable_group = parser.add_mutually_exclusive_group()
+        dhcp_enable_group.add_argument(
+            '--dhcp',
+            action='store_true',
+            help=_("List subnets which have DHCP enabled")
+        )
+        dhcp_enable_group.add_argument(
+            '--no-dhcp',
+            action='store_true',
+            help=_("List subnets which have DHCP disabled")
         )
         return parser
 
@@ -311,6 +358,10 @@ class ListSubnet(command.Lister):
         filters = {}
         if parsed_args.ip_version:
             filters['ip_version'] = parsed_args.ip_version
+        if parsed_args.dhcp:
+            filters['enable_dhcp'] = True
+        elif parsed_args.no_dhcp:
+            filters['enable_dhcp'] = False
         data = self.app.client_manager.network.subnets(**filters)
 
         headers = ('ID', 'Name', 'Network', 'Subnet')
@@ -363,7 +414,7 @@ class SetSubnet(command.Command):
             help=_("Specify a gateway for the subnet. The options are: "
                    "<ip-address>: Specific IP address to use as the gateway, "
                    "'none': This subnet will not use a gateway, "
-                   "e.g.: --gateway 192.168.9.1, --gateway none")
+                   "e.g.: --gateway 192.168.9.1, --gateway none.")
         )
         _get_common_parse_arguments(parser)
         return parser
@@ -373,9 +424,6 @@ class SetSubnet(command.Command):
         obj = client.find_subnet(parsed_args.subnet, ignore_missing=False)
         attrs = _get_attrs(self.app.client_manager, parsed_args,
                            is_create=False)
-        if not attrs:
-            msg = "Nothing specified to be set"
-            raise exceptions.CommandError(msg)
         if 'dns_nameservers' in attrs:
             attrs['dns_nameservers'] += obj.dns_nameservers
         if 'host_routes' in attrs:
@@ -404,3 +452,81 @@ class ShowSubnet(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
         return (columns, data)
+
+
+class UnsetSubnet(command.Command):
+    """Unset subnet properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetSubnet, self).get_parser(prog_name)
+        parser.add_argument(
+            '--allocation-pool',
+            metavar='start=<ip-address>,end=<ip-address>',
+            dest='allocation_pools',
+            action=parseractions.MultiKeyValueAction,
+            required_keys=['start', 'end'],
+            help=_('Allocation pool to be removed from this subnet '
+                   'e.g.: start=192.168.199.2,end=192.168.199.254 '
+                   '(repeat option to unset multiple Allocation pools)')
+        )
+        parser.add_argument(
+            '--dns-nameserver',
+            metavar='<dns-nameserver>',
+            action='append',
+            dest='dns_nameservers',
+            help=_('DNS server to be removed from this subnet '
+                   '(repeat option to set multiple DNS servers)')
+        )
+        parser.add_argument(
+            '--host-route',
+            metavar='destination=<subnet>,gateway=<ip-address>',
+            dest='host_routes',
+            action=parseractions.MultiKeyValueAction,
+            required_keys=['destination', 'gateway'],
+            help=_('Route to be removed from this subnet '
+                   'e.g.: destination=10.10.0.0/16,gateway=192.168.71.254 '
+                   'destination: destination subnet (in CIDR notation) '
+                   'gateway: nexthop IP address '
+                   '(repeat option to unset multiple host routes)')
+        )
+        parser.add_argument(
+            'subnet',
+            metavar="<subnet>",
+            help=_("Subnet to modify (name or ID)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        client = self.app.client_manager.network
+        obj = client.find_subnet(parsed_args.subnet, ignore_missing=False)
+        tmp_obj = copy.deepcopy(obj)
+        attrs = {}
+        if parsed_args.dns_nameservers:
+            try:
+                _update_arguments(tmp_obj.dns_nameservers,
+                                  parsed_args.dns_nameservers)
+            except ValueError as error:
+                msg = (_("%s not in dns-nameservers") % str(error))
+                raise exceptions.CommandError(msg)
+            attrs['dns_nameservers'] = tmp_obj.dns_nameservers
+        if parsed_args.host_routes:
+            try:
+                _update_arguments(
+                    tmp_obj.host_routes,
+                    convert_entries_to_nexthop(parsed_args.host_routes))
+            except ValueError as error:
+                msg = (_("Subnet does not have %s in host-routes") %
+                       str(error))
+                raise exceptions.CommandError(msg)
+            attrs['host_routes'] = tmp_obj.host_routes
+        if parsed_args.allocation_pools:
+            try:
+                _update_arguments(tmp_obj.allocation_pools,
+                                  parsed_args.allocation_pools)
+            except ValueError as error:
+                msg = (_("Subnet does not have %s in allocation-pools") %
+                       str(error))
+                raise exceptions.CommandError(msg)
+            attrs['allocation_pools'] = tmp_obj.allocation_pools
+        if attrs:
+            client.update_subnet(obj, **attrs)

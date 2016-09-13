@@ -13,8 +13,25 @@ deprecation warnings that indicate the new commands (or options) to use.
 Commands labeled as a beta according to :doc:`command-beta` are exempt from
 this backwards incompatible change handling.
 
-List of Backwards Incompatible Changes
-======================================
+Backwards Incompatible Changes
+==============================
+
+Release 3.0
+-----------
+
+1. Remove the ``osc_password`` authentication plugin.
+
+  This was the 'last-resort' plugin default that worked around an old default
+  Keystone configuration for the ``admin_endpoint`` and ``public_endpoint``.
+
+  * In favor of: ``password``
+  * As of: 3.0
+  * Removed in: n/a
+  * Bug: n/a
+  * Commit: https://review.openstack.org/332938
+
+Releases Before 3.0
+-------------------
 
 1. Rename command `openstack project usage list`
 
@@ -107,7 +124,7 @@ List of Backwards Incompatible Changes
 
 8. `region` commands no longer support `url`
 
-  The Keystone team removed support for thr `url` attribute from the client
+  The Keystone team removed support for the `url` attribute from the client
   and server side. Changes to the `create`, `set` and `list` commands for
   regions have been affected.
 
@@ -153,6 +170,19 @@ List of Backwards Incompatible Changes
   * Bug: https://bugs.launchpad.net/python-openstackclient/+bug/1546065
   * Commit: https://review.openstack.org/#/c/281088/
 
+12. <version> <url> <md5hash> should be optional for command `openstack compute agent set`
+
+  Previously, the command was `openstack compute agent set <id> <version> <url> <md5hash>`,
+  whereas now it is: `openstack compute agent set <id> --version <version>
+                                                       --url <url>
+                                                       --md5hash <md5hash>`.
+
+  * In favor of: making <version> <url> <md5hash> optional.
+  * As of: NA
+  * Removed in: NA
+  * Bug: NA
+  * Commit: https://review.openstack.org/#/c/328819/
+
 13. `aggregate set` commands will no longer return the modified resource
 
   Previously, modifying an aggregate would result in the new aggregate being
@@ -167,27 +197,41 @@ List of Backwards Incompatible Changes
 
 14. Output of `ip floating list` command has changed.
 
-  When using Compute v2, the original output of `ip floating list` command is:
-  +----+--------+------------+----------+-------------+
-  | ID | Pool   | IP         | Fixed IP | Instance ID |
-  +----+--------+-----------------------+-------------+
-  |  1 | public | 172.24.4.1 | None     | None        |
-  +----+--------+------------+----------+-------------+
+  When using Compute v2, the original output is:
+
+  .. code-block:: bash
+
+      # ip floating list
+
+      +----+--------+------------+----------+-------------+
+      | ID | Pool   | IP         | Fixed IP | Instance ID |
+      +----+--------+-----------------------+-------------+
+      |  1 | public | 172.24.4.1 | None     | None        |
+      +----+--------+------------+----------+-------------+
 
   Now it changes to:
-  +----+---------------------+------------------+-----------+--------+
-  | ID | Floating IP Address | Fixed IP Address | Server ID | Pool   |
-  +----+---------------------+------------------+-----------+--------+
-  |  1 | 172.24.4.1          | None             | None      | public |
-  +----+---------------------+------------------+-----------+--------+
 
-  When using Network v2, the output of `ip floating list` command is:
-  +--------------------------------------+---------------------+------------------+------+
-  | ID                                   | Floating IP Address | Fixed IP Address | Port |
-  +--------------------------------------+---------------------+------------------+------+
-  | 1976df86-e66a-4f96-81bd-c6ffee6407f1 | 172.24.4.3          | None             | None |
-  +--------------------------------------+---------------------+------------------+------+
-  which is different from Compute v2.
+  .. code-block:: bash
+
+      # ip floating list
+
+      +----+---------------------+------------------+-----------+--------+
+      | ID | Floating IP Address | Fixed IP Address | Server ID | Pool   |
+      +----+---------------------+------------------+-----------+--------+
+      |  1 | 172.24.4.1          | None             | None      | public |
+      +----+---------------------+------------------+-----------+--------+
+
+  When using Network v2, which is different from Compute v2. The output is:
+
+  .. code-block:: bash
+
+      # ip floating list
+
+      +--------------------------------------+---------------------+------------------+------+
+      | ID                                   | Floating IP Address | Fixed IP Address | Port |
+      +--------------------------------------+---------------------+------------------+------+
+      | 1976df86-e66a-4f96-81bd-c6ffee6407f1 | 172.24.4.3          | None             | None |
+      +--------------------------------------+---------------------+------------------+------+
 
   * In favor of: Use `ip floating list` command
   * As of: NA

@@ -40,7 +40,7 @@ Create new endpoint
 .. _endpoint_create-endpoint:
 .. describe:: <service>
 
-    New endpoint service (name or ID)
+    Service to be associated with new endpoint (name or ID)
 
 *Identity version 3 only*
 
@@ -68,7 +68,7 @@ Create new endpoint
 
 .. describe:: <service>
 
-    New endpoint service (name or ID)
+    Service to be associated with new endpoint(name or ID)
 
 .. describe:: <interface>
 
@@ -81,18 +81,18 @@ Create new endpoint
 endpoint delete
 ---------------
 
-Delete endpoint
+Delete endpoint(s)
 
 .. program:: endpoint delete
 .. code:: bash
 
     os endpoint delete
-        <endpoint-id>
+        <endpoint-id> [<endpoint-id> ...]
 
 .. _endpoint_delete-endpoint:
 .. describe:: <endpoint-id>
 
-    Endpoint ID to delete
+    Endpoint(s) to delete (ID only)
 
 endpoint list
 -------------
@@ -110,7 +110,7 @@ List endpoints
 
 .. option:: --service <service>
 
-    Filter by service
+    Filter by service (name or ID)
 
     *Identity version 3 only*
 
@@ -177,7 +177,7 @@ Set endpoint properties
 .. _endpoint_set-endpoint:
 .. describe:: <endpoint-id>
 
-    Endpoint ID to modify
+    Endpoint to modify (ID only)
 
 endpoint show
 -------------

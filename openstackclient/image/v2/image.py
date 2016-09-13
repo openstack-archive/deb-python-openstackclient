@@ -16,21 +16,25 @@
 """Image V2 Action Implementations"""
 
 import argparse
-import six
+import logging
 
 from glanceclient.common import utils as gc_utils
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+import six
 
 from openstackclient.api import utils as api_utils
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common
 
 
 DEFAULT_CONTAINER_FORMAT = 'bare'
 DEFAULT_DISK_FORMAT = 'raw'
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _format_image(image):
@@ -280,10 +284,8 @@ class CreateImage(command.ShowOne):
         project_arg = parsed_args.project
         if parsed_args.owner:
             project_arg = parsed_args.owner
-            self.log.warning(_(
-                'The --owner option is deprecated, '
-                'please use --project instead.'
-            ))
+            LOG.warning(_('The --owner option is deprecated, '
+                          'please use --project instead.'))
         if project_arg:
             kwargs['owner'] = common.find_project(
                 identity_client,
@@ -301,7 +303,7 @@ class CreateImage(command.ShowOne):
                                             "the same time"))
 
         if fp is None and parsed_args.file:
-            self.log.warning(_("Failed to get an image file."))
+            LOG.warning(_("Failed to get an image file."))
             return {}, {}
 
         if parsed_args.owner:
@@ -337,7 +339,7 @@ class CreateImage(command.ShowOne):
             with fp:
                 try:
                     image_client.images.upload(image.id, fp)
-                except Exception as e:
+                except Exception:
                     # If the upload fails for some reason attempt to remove the
                     # dangling queued image made by the create() call above but
                     # only if the user did not specify an id which indicates
@@ -347,7 +349,7 @@ class CreateImage(command.ShowOne):
                             image_client.images.delete(image.id)
                     except Exception:
                         pass  # we don't care about this one
-                    raise e  # now, throw the upload exception again
+                    raise  # now, throw the upload exception again
 
                 # update the image after the data has been uploaded
                 image = image_client.images.get(image.id)
@@ -372,13 +374,27 @@ class DeleteImage(command.Command):
         return parser
 
     def take_action(self, parsed_args):
+
+        del_result = 0
         image_client = self.app.client_manager.image
         for image in parsed_args.images:
-            image_obj = utils.find_resource(
-                image_client.images,
-                image,
-            )
-            image_client.images.delete(image_obj.id)
+            try:
+                image_obj = utils.find_resource(
+                    image_client.images,
+                    image,
+                )
+                image_client.images.delete(image_obj.id)
+            except Exception as e:
+                del_result += 1
+                LOG.error(_("Failed to delete image with name or "
+                            "ID '%(image)s': %(e)s"),
+                          {'image': image, 'e': e})
+
+        total = len(parsed_args.images)
+        if (del_result > 0):
+            msg = (_("Failed to delete %(dresult)s of %(total)s images.")
+                   % {'dresult': del_result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListImage(command.Lister):
@@ -474,6 +490,7 @@ class ListImage(command.Lister):
                 'Disk Format',
                 'Container Format',
                 'Size',
+                'Checksum',
                 'Status',
                 'visibility',
                 'protected',
@@ -486,6 +503,7 @@ class ListImage(command.Lister):
                 'Disk Format',
                 'Container Format',
                 'Size',
+                'Checksum',
                 'Status',
                 'Visibility',
                 'Protected',
@@ -792,21 +810,14 @@ class SetImage(command.Command):
         project_arg = parsed_args.project
         if parsed_args.owner:
             project_arg = parsed_args.owner
-            self.log.warning(_(
-                'The --owner option is deprecated, '
-                'please use --project instead.'
-            ))
+            LOG.warning(_('The --owner option is deprecated, '
+                          'please use --project instead.'))
         if project_arg:
             kwargs['owner'] = common.find_project(
                 identity_client,
                 project_arg,
                 parsed_args.project_domain,
             ).id
-
-        # Checks if anything that requires getting the image
-        if not (kwargs or parsed_args.deactivate or parsed_args.activate):
-            msg = _("No arguments specified")
-            raise exceptions.CommandError(msg)
 
         image = utils.find_resource(
             image_client.images, parsed_args.image)
@@ -819,20 +830,17 @@ class SetImage(command.Command):
             image_client.images.reactivate(image.id)
             activation_status = "activated"
 
-        # Check if need to do the actual update
-        if not kwargs:
-            return {}, {}
-
         if parsed_args.tags:
             # Tags should be extended, but duplicates removed
             kwargs['tags'] = list(set(image.tags).union(set(parsed_args.tags)))
 
         try:
             image = image_client.images.update(image.id, **kwargs)
-        except Exception as e:
+        except Exception:
             if activation_status is not None:
-                print("Image %s was %s." % (image.id, activation_status))
-            raise e
+                LOG.info(_("Image %(id)s was %(status)s."),
+                         {'id': image.id, 'status': activation_status})
+            raise
 
 
 class ShowImage(command.ShowOne):
@@ -895,10 +903,6 @@ class UnsetImage(command.Command):
             parsed_args.image,
         )
 
-        if not (parsed_args.tags or parsed_args.properties):
-            msg = _("No arguments specified")
-            raise exceptions.CommandError(msg)
-
         kwargs = {}
         tagret = 0
         propret = 0
@@ -907,8 +911,8 @@ class UnsetImage(command.Command):
                 try:
                     image_client.image_tags.delete(image.id, k)
                 except Exception:
-                    self.log.error(_("tag unset failed,"
-                                   " '%s' is a nonexistent tag ") % k)
+                    LOG.error(_("tag unset failed, '%s' is a "
+                                "nonexistent tag "), k)
                     tagret += 1
 
         if parsed_args.properties:
@@ -916,8 +920,8 @@ class UnsetImage(command.Command):
                 try:
                     assert(k in image.keys())
                 except AssertionError:
-                    self.log.error(_("property unset failed,"
-                                   " '%s' is a nonexistent property ") % k)
+                    LOG.error(_("property unset failed, '%s' is a "
+                                "nonexistent property "), k)
                     propret += 1
             image_client.images.update(
                 image.id,

@@ -11,12 +11,12 @@
 #   under the License.
 #
 
-import copy
 import mock
-
 from mock import call
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.network.v2 import network
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
 from openstackclient.tests import fakes
@@ -35,14 +35,20 @@ class TestNetwork(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestCreateNetworkIdentityV3(TestNetwork):
 
+    project = identity_fakes_v3.FakeProject.create_one_project()
+    domain = identity_fakes_v3.FakeDomain.create_one_domain()
     # The new network created.
     _network = network_fakes.FakeNetwork.create_one_network(
         attrs={
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': project.id,
             'availability_zone_hints': ["nova"],
         }
     )
@@ -54,6 +60,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
         'id',
         'is_default',
         'name',
+        'port_security_enabled',
         'project_id',
         'provider_network_type',
         'router:external',
@@ -69,6 +76,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
         _network.id,
         _network.is_default,
         _network.name,
+        _network.is_port_security_enabled,
         _network.project_id,
         _network.provider_network_type,
         network._format_router_external(_network.is_router_external),
@@ -85,29 +93,8 @@ class TestCreateNetworkIdentityV3(TestNetwork):
         # Get the command object to test
         self.cmd = network.CreateNetwork(self.app, self.namespace)
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes_v3.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.PROJECT),
-            loaded=True,
-        )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.DOMAIN),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
     def test_create_no_options(self):
         arglist = []
@@ -142,21 +129,22 @@ class TestCreateNetworkIdentityV3(TestNetwork):
         arglist = [
             "--disable",
             "--share",
-            "--project", identity_fakes_v3.project_name,
-            "--project-domain", identity_fakes_v3.domain_name,
+            "--project", self.project.name,
+            "--project-domain", self.domain.name,
             "--availability-zone-hint", "nova",
             "--external", "--default",
             "--provider-network-type", "vlan",
             "--provider-physical-network", "physnet1",
             "--provider-segment", "400",
             "--transparent-vlan",
+            "--enable-port-security",
             self._network.name,
         ]
         verifylist = [
             ('disable', True),
             ('share', True),
-            ('project', identity_fakes_v3.project_name),
-            ('project_domain', identity_fakes_v3.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.domain.name),
             ('availability_zone_hints', ["nova"]),
             ('external', True),
             ('default', True),
@@ -164,6 +152,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
             ('physical_network', 'physnet1'),
             ('segmentation_id', '400'),
             ('transparent_vlan', True),
+            ('enable_port_security', True),
             ('name', self._network.name),
         ]
 
@@ -175,13 +164,14 @@ class TestCreateNetworkIdentityV3(TestNetwork):
             'availability_zone_hints': ["nova"],
             'name': self._network.name,
             'shared': True,
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': self.project.id,
             'is_default': True,
             'router:external': True,
             'provider:network_type': 'vlan',
             'provider:physical_network': 'physnet1',
             'provider:segmentation_id': '400',
             'vlan_transparent': True,
+            'port_security_enabled': True,
         })
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
@@ -190,6 +180,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
         arglist = [
             "--enable",
             "--no-share",
+            "--disable-port-security",
             self._network.name,
         ]
         verifylist = [
@@ -197,6 +188,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
             ('no_share', True),
             ('name', self._network.name),
             ('external', False),
+            ('disable_port_security', True),
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -206,6 +198,7 @@ class TestCreateNetworkIdentityV3(TestNetwork):
             'admin_state_up': True,
             'name': self._network.name,
             'shared': False,
+            'port_security_enabled': False,
         })
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
@@ -213,9 +206,10 @@ class TestCreateNetworkIdentityV3(TestNetwork):
 
 class TestCreateNetworkIdentityV2(TestNetwork):
 
+    project = identity_fakes_v2.FakeProject.create_one_project()
     # The new network created.
     _network = network_fakes.FakeNetwork.create_one_network(
-        attrs={'tenant_id': identity_fakes_v2.project_id}
+        attrs={'tenant_id': project.id}
     )
 
     columns = (
@@ -225,6 +219,7 @@ class TestCreateNetworkIdentityV2(TestNetwork):
         'id',
         'is_default',
         'name',
+        'port_security_enabled',
         'project_id',
         'provider_network_type',
         'router:external',
@@ -240,6 +235,7 @@ class TestCreateNetworkIdentityV2(TestNetwork):
         _network.id,
         _network.is_default,
         _network.name,
+        _network.is_port_security_enabled,
         _network.project_id,
         _network.provider_network_type,
         network._format_router_external(_network.is_router_external),
@@ -266,24 +262,20 @@ class TestCreateNetworkIdentityV2(TestNetwork):
 
         # Get a shortcut to the ProjectManager Mock
         self.projects_mock = self.identity.tenants
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v2.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
 
         # There is no DomainManager Mock in fake identity v2.
 
     def test_create_with_project_identityv2(self):
         arglist = [
-            "--project", identity_fakes_v2.project_name,
+            "--project", self.project.name,
             self._network.name,
         ]
         verifylist = [
             ('enable', True),
             ('share', None),
             ('name', self._network.name),
-            ('project', identity_fakes_v2.project_name),
+            ('project', self.project.name),
             ('external', False),
         ]
 
@@ -293,22 +285,22 @@ class TestCreateNetworkIdentityV2(TestNetwork):
         self.network.create_network.assert_called_once_with(**{
             'admin_state_up': True,
             'name': self._network.name,
-            'tenant_id': identity_fakes_v2.project_id,
+            'tenant_id': self.project.id,
         })
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
 
     def test_create_with_domain_identityv2(self):
         arglist = [
-            "--project", identity_fakes_v3.project_name,
-            "--project-domain", identity_fakes_v3.domain_name,
+            "--project", self.project.name,
+            "--project-domain", "domain-name",
             self._network.name,
         ]
         verifylist = [
             ('enable', True),
             ('share', None),
-            ('project', identity_fakes_v3.project_name),
-            ('project_domain', identity_fakes_v3.domain_name),
+            ('project', self.project.name),
+            ('project_domain', "domain-name"),
             ('name', self._network.name),
             ('external', False),
         ]
@@ -546,6 +538,7 @@ class TestSetNetwork(TestNetwork):
             '--provider-physical-network', 'physnet1',
             '--provider-segment', '400',
             '--no-transparent-vlan',
+            '--enable-port-security',
         ]
         verifylist = [
             ('network', self._network.name),
@@ -558,6 +551,7 @@ class TestSetNetwork(TestNetwork):
             ('physical_network', 'physnet1'),
             ('segmentation_id', '400'),
             ('no_transparent_vlan', True),
+            ('enable_port_security', True),
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -573,6 +567,7 @@ class TestSetNetwork(TestNetwork):
             'provider:physical_network': 'physnet1',
             'provider:segmentation_id': '400',
             'vlan_transparent': False,
+            'port_security_enabled': True,
         }
         self.network.update_network.assert_called_once_with(
             self._network, **attrs)
@@ -584,12 +579,14 @@ class TestSetNetwork(TestNetwork):
             '--disable',
             '--no-share',
             '--internal',
+            '--disable-port-security',
         ]
         verifylist = [
             ('network', self._network.name),
             ('disable', True),
             ('no_share', True),
             ('internal', True),
+            ('disable_port_security', True),
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -599,6 +596,7 @@ class TestSetNetwork(TestNetwork):
             'admin_state_up': False,
             'shared': False,
             'router:external': False,
+            'port_security_enabled': False,
         }
         self.network.update_network.assert_called_once_with(
             self._network, **attrs)
@@ -609,8 +607,12 @@ class TestSetNetwork(TestNetwork):
         verifylist = [('network', self._network.name), ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
-                          parsed_args)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_network.assert_called_once_with(
+            self._network, **attrs)
+        self.assertIsNone(result)
 
 
 class TestShowNetwork(TestNetwork):
@@ -625,6 +627,7 @@ class TestShowNetwork(TestNetwork):
         'id',
         'is_default',
         'name',
+        'port_security_enabled',
         'project_id',
         'provider_network_type',
         'router:external',
@@ -640,6 +643,7 @@ class TestShowNetwork(TestNetwork):
         _network.id,
         _network.is_default,
         _network.name,
+        _network.is_port_security_enabled,
         _network.project_id,
         _network.provider_network_type,
         network._format_router_external(_network.is_router_external),

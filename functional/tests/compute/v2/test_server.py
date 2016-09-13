@@ -23,19 +23,27 @@ class ServerTests(test.TestCase):
 
     @classmethod
     def get_flavor(cls):
-        # NOTE(rtheis): Get m1.tiny flavor since functional tests may
-        # create other flavors.
-        raw_output = cls.openstack('flavor show m1.tiny -c id -f value')
-        return raw_output.strip('\n')
+        # NOTE(rtheis): Get cirros256 or m1.tiny flavors since functional
+        # tests may create other flavors.
+        flavors = cls.openstack('flavor list -c Name -f value').split('\n')
+        server_flavor = None
+        for flavor in flavors:
+            if flavor in ['m1.tiny', 'cirros256']:
+                server_flavor = flavor
+                break
+        return server_flavor
 
     @classmethod
     def get_image(cls):
-        # NOTE(rtheis): Get public images since functional tests may
-        # create private images.
-        raw_output = cls.openstack('image list --public -f value -c ID')
-        ray = raw_output.split('\n')
-        idx = int(len(ray) / 2)
-        return ray[idx]
+        # NOTE(rtheis): Get cirros image since functional tests may
+        # create other images.
+        images = cls.openstack('image list -c Name -f value').split('\n')
+        server_image = None
+        for image in images:
+            if image.startswith('cirros-') and image.endswith('-uec'):
+                server_image = image
+                break
+        return server_image
 
     @classmethod
     def get_network(cls):
@@ -50,7 +58,7 @@ class ServerTests(test.TestCase):
     def server_create(self, name=None):
         """Create server. Add cleanup."""
         name = name or data_utils.rand_uuid()
-        opts = self.get_show_opts(self.FIELDS)
+        opts = self.get_opts(self.FIELDS)
         flavor = self.get_flavor()
         image = self.get_image()
         network = self.get_network()
@@ -64,7 +72,7 @@ class ServerTests(test.TestCase):
 
     def server_list(self, params=[]):
         """List servers."""
-        opts = self.get_list_opts(params)
+        opts = self.get_opts(params)
         return self.openstack('server list' + opts)
 
     def server_delete(self, name):
@@ -106,7 +114,7 @@ class ServerTests(test.TestCase):
         2) List servers
         3) Check output
         """
-        opts = self.get_list_opts(self.HEADERS)
+        opts = self.get_opts(self.HEADERS)
         raw_output = self.openstack('server list' + opts)
         self.assertIn(self.NAME, raw_output)
 
@@ -118,7 +126,7 @@ class ServerTests(test.TestCase):
         2) Show server
         3) Check output
         """
-        opts = self.get_show_opts(self.FIELDS)
+        opts = self.get_opts(self.FIELDS)
         raw_output = self.openstack('server show ' + self.NAME + opts)
         self.assertEqual(self.NAME + "\n", raw_output)
 
@@ -136,13 +144,13 @@ class ServerTests(test.TestCase):
         # metadata
         raw_output = self.openstack(
             'server set --property a=b --property c=d ' + self.NAME)
-        opts = self.get_show_opts(["name", "properties"])
+        opts = self.get_opts(["name", "properties"])
         raw_output = self.openstack('server show ' + self.NAME + opts)
         self.assertEqual(self.NAME + "\na='b', c='d'\n", raw_output)
 
         raw_output = self.openstack(
             'server unset --property a ' + self.NAME)
-        opts = self.get_show_opts(["name", "properties"])
+        opts = self.get_opts(["name", "properties"])
         raw_output = self.openstack('server show ' + self.NAME + opts)
         self.assertEqual(self.NAME + "\nc='d'\n", raw_output)
 
@@ -216,7 +224,7 @@ class ServerTests(test.TestCase):
         """
         self.wait_for_status("ACTIVE")
         # rescue
-        opts = self.get_show_opts(["adminPass"])
+        opts = self.get_opts(["adminPass"])
         raw_output = self.openstack('server rescue ' + self.NAME + opts)
         self.assertNotEqual("", raw_output)
         self.wait_for_status("RESCUE")
@@ -240,25 +248,26 @@ class ServerTests(test.TestCase):
         """
         self.wait_for_status("ACTIVE")
         # attach ip
-        opts = self.get_show_opts(["id", "floating_ip_address"])
-        raw_output = self.openstack('ip floating create ' +
+        opts = self.get_opts(["id", "floating_ip_address"])
+        raw_output = self.openstack('floating ip create ' +
                                     self.IP_POOL +
                                     opts)
         ip, ipid, rol = tuple(raw_output.split('\n'))
         self.assertNotEqual("", ipid)
         self.assertNotEqual("", ip)
-        raw_output = self.openstack('ip floating add ' + ip + ' ' + self.NAME)
+        raw_output = self.openstack('server add floating ip ' + self.NAME +
+                                    ' ' + ip)
         self.assertEqual("", raw_output)
         raw_output = self.openstack('server show ' + self.NAME)
         self.assertIn(ip, raw_output)
 
         # detach ip
-        raw_output = self.openstack('ip floating remove ' + ip + ' ' +
-                                    self.NAME)
+        raw_output = self.openstack('server remove floating ip ' + self.NAME +
+                                    ' ' + ip)
         self.assertEqual("", raw_output)
         raw_output = self.openstack('server show ' + self.NAME)
         self.assertNotIn(ip, raw_output)
-        raw_output = self.openstack('ip floating delete ' + ipid)
+        raw_output = self.openstack('floating ip delete ' + ipid)
         self.assertEqual("", raw_output)
 
     def test_server_reboot(self):
@@ -280,7 +289,7 @@ class ServerTests(test.TestCase):
         # TODO(thowe): Add a server wait command to osc
         failures = ['ERROR']
         total_sleep = 0
-        opts = self.get_show_opts(['status'])
+        opts = self.get_opts(['status'])
         while total_sleep < wait:
             status = self.openstack('server show ' + self.NAME + opts)
             status = status.rstrip()

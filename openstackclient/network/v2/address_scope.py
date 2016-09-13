@@ -13,11 +13,17 @@
 
 """Address scope action implementations"""
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _get_columns(item):
@@ -94,7 +100,7 @@ class CreateAddressScope(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters={})
 
-        return columns, data
+        return (columns, data)
 
 
 class DeleteAddressScope(command.Command):
@@ -121,9 +127,9 @@ class DeleteAddressScope(command.Command):
                 client.delete_address_scope(obj)
             except Exception as e:
                 result += 1
-                self.app.log.error(_("Failed to delete address scope with "
-                                   "name or ID '%(scope)s': %(e)s")
-                                   % {'scope': scope, 'e': e})
+                LOG.error(_("Failed to delete address scope with "
+                            "name or ID '%(scope)s': %(e)s"),
+                          {'scope': scope, 'e': e})
 
         if result > 0:
             total = len(parsed_args.address_scope)
@@ -200,9 +206,6 @@ class SetAddressScope(command.Command):
             attrs['shared'] = True
         if parsed_args.no_share:
             attrs['shared'] = False
-        if attrs == {}:
-            msg = _("Nothing specified to be set.")
-            raise exceptions.CommandError(msg)
         client.update_address_scope(obj, **attrs)
 
 
@@ -227,4 +230,4 @@ class ShowAddressScope(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters={})
 
-        return columns, data
+        return (columns, data)

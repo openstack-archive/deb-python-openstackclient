@@ -10,10 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from functional.tests.identity.v2 import test_identity
+from functional.tests.identity.v2 import common
 
 
-class EC2CredentialsTests(test_identity.IdentityTests):
+class EC2CredentialsTests(common.IdentityTests):
 
     def test_ec2_credentials_create(self):
         self._create_dummy_ec2_credentials()
@@ -22,6 +22,14 @@ class EC2CredentialsTests(test_identity.IdentityTests):
         access_key = self._create_dummy_ec2_credentials(add_clean_up=False)
         raw_output = self.openstack(
             'ec2 credentials delete %s' % access_key,
+        )
+        self.assertEqual(0, len(raw_output))
+
+    def test_ec2_credentials_multi_delete(self):
+        access_key_1 = self._create_dummy_ec2_credentials(add_clean_up=False)
+        access_key_2 = self._create_dummy_ec2_credentials(add_clean_up=False)
+        raw_output = self.openstack(
+            'ec2 credentials delete ' + access_key_1 + ' ' + access_key_2
         )
         self.assertEqual(0, len(raw_output))
 

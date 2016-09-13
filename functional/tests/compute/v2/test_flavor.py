@@ -16,7 +16,7 @@ from functional.common import test
 
 
 class FlavorTests(test.TestCase):
-    """Functional tests for flavor. """
+    """Functional tests for flavor."""
 
     NAME = uuid.uuid4().hex
     HEADERS = ['Name']
@@ -24,8 +24,9 @@ class FlavorTests(test.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        opts = cls.get_show_opts(cls.FIELDS)
-        raw_output = cls.openstack('flavor create ' + cls.NAME + opts)
+        opts = cls.get_opts(cls.FIELDS)
+        raw_output = cls.openstack(
+            'flavor create --property a=b --property c=d ' + cls.NAME + opts)
         expected = cls.NAME + '\n'
         cls.assertOutput(expected, raw_output)
 
@@ -35,31 +36,34 @@ class FlavorTests(test.TestCase):
         cls.assertOutput('', raw_output)
 
     def test_flavor_list(self):
-        opts = self.get_list_opts(self.HEADERS)
+        opts = self.get_opts(self.HEADERS)
         raw_output = self.openstack('flavor list' + opts)
         self.assertIn("small", raw_output)
         self.assertIn(self.NAME, raw_output)
 
     def test_flavor_show(self):
-        opts = self.get_show_opts(self.FIELDS)
+        opts = self.get_opts(self.FIELDS)
         raw_output = self.openstack('flavor show ' + self.NAME + opts)
         self.assertEqual(self.NAME + "\n", raw_output)
 
     def test_flavor_properties(self):
-        opts = self.get_show_opts(['properties'])
-
-        raw_output = self.openstack(
-            'flavor set --property a=b --property c=d ' + self.NAME
-        )
-        self.assertEqual('', raw_output)
-
+        opts = self.get_opts(['properties'])
+        # check the properties we added in create command.
         raw_output = self.openstack('flavor show ' + self.NAME + opts)
         self.assertEqual("a='b', c='d'\n", raw_output)
 
         raw_output = self.openstack(
-            'flavor unset --property a ' + self.NAME
+            'flavor set --property e=f --property g=h ' + self.NAME
         )
         self.assertEqual('', raw_output)
 
         raw_output = self.openstack('flavor show ' + self.NAME + opts)
-        self.assertEqual("c='d'\n", raw_output)
+        self.assertEqual("a='b', c='d', e='f', g='h'\n", raw_output)
+
+        raw_output = self.openstack(
+            'flavor unset --property a --property c ' + self.NAME
+        )
+        self.assertEqual('', raw_output)
+
+        raw_output = self.openstack('flavor show ' + self.NAME + opts)
+        self.assertEqual("e='f', g='h'\n", raw_output)

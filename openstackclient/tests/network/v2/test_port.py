@@ -11,11 +11,13 @@
 #   under the License.
 #
 
+import argparse
 import mock
 
 from mock import call
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.network.v2 import port
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -173,6 +175,58 @@ class TestCreatePort(TestPort):
         self.assertEqual(ref_columns, columns)
         self.assertEqual(ref_data, data)
 
+    def test_create_invalid_json_binding_profile(self):
+        arglist = [
+            '--network', self._port.network_id,
+            '--binding-profile', '{"parent_name":"fake_parent"',
+            'test-port',
+        ]
+        self.assertRaises(argparse.ArgumentTypeError,
+                          self.check_parser,
+                          self.cmd,
+                          arglist,
+                          None)
+
+    def test_create_invalid_key_value_binding_profile(self):
+        arglist = [
+            '--network', self._port.network_id,
+            '--binding-profile', 'key',
+            'test-port',
+        ]
+        self.assertRaises(argparse.ArgumentTypeError,
+                          self.check_parser,
+                          self.cmd,
+                          arglist,
+                          None)
+
+    def test_create_json_binding_profile(self):
+        arglist = [
+            '--network', self._port.network_id,
+            '--binding-profile', '{"parent_name":"fake_parent"}',
+            '--binding-profile', '{"tag":42}',
+            'test-port',
+        ]
+        verifylist = [
+            ('network', self._port.network_id,),
+            ('enable', True),
+            ('binding_profile', {'parent_name': 'fake_parent', 'tag': 42}),
+            ('name', 'test-port'),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = (self.cmd.take_action(parsed_args))
+
+        self.network.create_port.assert_called_once_with(**{
+            'admin_state_up': True,
+            'network_id': self._port.network_id,
+            'binding:profile': {'parent_name': 'fake_parent', 'tag': 42},
+            'name': 'test-port',
+        })
+
+        ref_columns, ref_data = self._get_common_cols_data(self._port)
+        self.assertEqual(ref_columns, columns)
+        self.assertEqual(ref_data, data)
+
 
 class TestDeletePort(TestPort):
 
@@ -315,6 +369,47 @@ class TestListPort(TestPort):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, list(data))
 
+    def test_port_list_device_owner_opt(self):
+        arglist = [
+            '--device-owner', self._ports[0].device_owner,
+        ]
+
+        verifylist = [
+            ('device_owner', self._ports[0].device_owner)
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.network.ports.assert_called_once_with(**{
+            'device_owner': self._ports[0].device_owner
+        })
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
+
+    def test_port_list_all_opt(self):
+        arglist = [
+            '--device-owner', self._ports[0].device_owner,
+            '--router', 'fake-router-name',
+        ]
+
+        verifylist = [
+            ('device_owner', self._ports[0].device_owner),
+            ('router', 'fake-router-name')
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        columns, data = self.cmd.take_action(parsed_args)
+
+        self.network.ports.assert_called_once_with(**{
+            'device_owner': self._ports[0].device_owner,
+            'device_id': 'fake-router-id'
+        })
+        self.assertEqual(self.columns, columns)
+        self.assertEqual(self.data, list(data))
+
 
 class TestSetPort(TestPort):
 
@@ -426,6 +521,63 @@ class TestSetPort(TestPort):
         self.network.update_port.assert_called_once_with(self._port, **attrs)
         self.assertIsNone(result)
 
+    def test_set_nothing(self):
+        arglist = [
+            self._port.name,
+        ]
+        verifylist = [
+            ('port', self._port.name),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_port.assert_called_once_with(self._port, **attrs)
+        self.assertIsNone(result)
+
+    def test_set_invalid_json_binding_profile(self):
+        arglist = [
+            '--binding-profile', '{"parent_name"}',
+            'test-port',
+        ]
+        self.assertRaises(argparse.ArgumentTypeError,
+                          self.check_parser,
+                          self.cmd,
+                          arglist,
+                          None)
+
+    def test_set_invalid_key_value_binding_profile(self):
+        arglist = [
+            '--binding-profile', 'key',
+            'test-port',
+        ]
+        self.assertRaises(argparse.ArgumentTypeError,
+                          self.check_parser,
+                          self.cmd,
+                          arglist,
+                          None)
+
+    def test_set_mixed_binding_profile(self):
+        arglist = [
+            '--binding-profile', 'foo=bar',
+            '--binding-profile', '{"foo2": "bar2"}',
+            self._port.name,
+        ]
+        verifylist = [
+            ('binding_profile', {'foo': 'bar', 'foo2': 'bar2'}),
+            ('port', self._port.name),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'binding:profile': {'foo': 'bar', 'foo2': 'bar2'},
+        }
+        self.network.update_port.assert_called_once_with(self._port, **attrs)
+        self.assertIsNone(result)
+
 
 class TestShowPort(TestPort):
 
@@ -464,3 +616,81 @@ class TestShowPort(TestPort):
         ref_columns, ref_data = self._get_common_cols_data(self._port)
         self.assertEqual(ref_columns, columns)
         self.assertEqual(ref_data, data)
+
+
+class TestUnsetPort(TestPort):
+
+    def setUp(self):
+        super(TestUnsetPort, self).setUp()
+        self._testport = network_fakes.FakePort.create_one_port(
+            {'fixed_ips': [{'subnet_id': '042eb10a-3a18-4658-ab-cf47c8d03152',
+                            'ip_address': '0.0.0.1'},
+                           {'subnet_id': '042eb10a-3a18-4658-ab-cf47c8d03152',
+                            'ip_address': '1.0.0.0'}],
+             'binding:profile': {'batman': 'Joker', 'Superman': 'LexLuthor'}})
+        self.fake_subnet = network_fakes.FakeSubnet.create_one_subnet(
+            {'id': '042eb10a-3a18-4658-ab-cf47c8d03152'})
+        self.network.find_subnet = mock.Mock(return_value=self.fake_subnet)
+        self.network.find_port = mock.Mock(return_value=self._testport)
+        self.network.update_port = mock.Mock(return_value=None)
+        # Get the command object to test
+        self.cmd = port.UnsetPort(self.app, self.namespace)
+
+    def test_unset_port_parameters(self):
+        arglist = [
+            '--fixed-ip',
+            'subnet=042eb10a-3a18-4658-ab-cf47c8d03152,ip-address=1.0.0.0',
+            '--binding-profile', 'Superman',
+            self._testport.name,
+        ]
+        verifylist = [
+            ('fixed_ip', [{
+                'subnet': '042eb10a-3a18-4658-ab-cf47c8d03152',
+                'ip-address': '1.0.0.0'}]),
+            ('binding_profile', ['Superman']),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'fixed_ips': [{
+                'subnet_id': '042eb10a-3a18-4658-ab-cf47c8d03152',
+                'ip_address': '0.0.0.1'}],
+            'binding:profile': {'batman': 'Joker'}
+        }
+        self.network.update_port.assert_called_once_with(
+            self._testport, **attrs)
+        self.assertIsNone(result)
+
+    def test_unset_port_fixed_ip_not_existent(self):
+        arglist = [
+            '--fixed-ip', 'ip-address=1.0.0.1',
+            '--binding-profile', 'Superman',
+            self._testport.name,
+        ]
+        verifylist = [
+            ('fixed_ip', [{'ip-address': '1.0.0.1'}]),
+            ('binding_profile', ['Superman']),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action,
+                          parsed_args)
+
+    def test_unset_port_binding_profile_not_existent(self):
+        arglist = [
+            '--fixed-ip', 'ip-address=1.0.0.0',
+            '--binding-profile', 'Neo',
+            self._testport.name,
+        ]
+        verifylist = [
+            ('fixed_ip', [{'ip-address': '1.0.0.0'}]),
+            ('binding_profile', ['Neo']),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action,
+                          parsed_args)

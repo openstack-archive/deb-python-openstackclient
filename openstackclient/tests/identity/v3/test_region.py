@@ -153,7 +153,7 @@ class TestRegionDelete(TestRegion):
             identity_fakes.region_id,
         ]
         verifylist = [
-            ('region', identity_fakes.region_id),
+            ('region', [identity_fakes.region_id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -253,7 +253,11 @@ class TestRegionSet(TestRegion):
 
         result = self.cmd.take_action(parsed_args)
 
-        self.assertNotCalled(self.regions_mock.update)
+        kwargs = {}
+        self.regions_mock.update.assert_called_with(
+            identity_fakes.region_id,
+            **kwargs
+        )
         self.assertIsNone(result)
 
     def test_region_set_description(self):

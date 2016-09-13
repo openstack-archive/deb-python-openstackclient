@@ -12,13 +12,19 @@
 #
 
 """Subnet pool action implementations"""
+import copy
+import logging
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _get_columns(item):
@@ -176,21 +182,37 @@ class CreateSubnetPool(command.ShowOne):
 
 
 class DeleteSubnetPool(command.Command):
-    """Delete subnet pool"""
+    """Delete subnet pool(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteSubnetPool, self).get_parser(prog_name)
         parser.add_argument(
             'subnet_pool',
             metavar='<subnet-pool>',
-            help=_("Subnet pool to delete (name or ID)")
+            nargs='+',
+            help=_("Subnet pool(s) to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         client = self.app.client_manager.network
-        obj = client.find_subnet_pool(parsed_args.subnet_pool)
-        client.delete_subnet_pool(obj)
+        result = 0
+
+        for pool in parsed_args.subnet_pool:
+            try:
+                obj = client.find_subnet_pool(pool, ignore_missing=False)
+                client.delete_subnet_pool(obj)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete subnet pool with "
+                          "name or ID '%(pool)s': %(e)s")
+                          % {'pool': pool, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.subnet_pool)
+            msg = (_("%(result)s of %(total)s subnet pools failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListSubnetPool(command.Lister):
@@ -286,9 +308,6 @@ class SetSubnetPool(command.Command):
                                       ignore_missing=False)
 
         attrs = _get_attrs(self.app.client_manager, parsed_args)
-        if attrs == {}:
-            msg = _("Nothing specified to be set")
-            raise exceptions.CommandError(msg)
 
         # Existing prefixes must be a subset of the new prefixes.
         if 'prefixes' in attrs:
@@ -318,3 +337,43 @@ class ShowSubnetPool(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
         return (columns, data)
+
+
+class UnsetSubnetPool(command.Command):
+    """Unset subnet pool properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetSubnetPool, self).get_parser(prog_name)
+        parser.add_argument(
+            '--pool-prefix',
+            metavar='<pool-prefix>',
+            action='append',
+            dest='prefixes',
+            help=_('Remove subnet pool prefixes (in CIDR notation). '
+                   '(repeat option to unset multiple prefixes).'),
+        )
+        parser.add_argument(
+            'subnet_pool',
+            metavar="<subnet-pool>",
+            help=_("Subnet pool to modify (name or ID)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        client = self.app.client_manager.network
+        obj = client.find_subnet_pool(
+            parsed_args.subnet_pool, ignore_missing=False)
+        tmp_prefixes = copy.deepcopy(obj.prefixes)
+        attrs = {}
+        if parsed_args.prefixes:
+            for prefix in parsed_args.prefixes:
+                try:
+                    tmp_prefixes.remove(prefix)
+                except ValueError:
+                    msg = _(
+                        "Subnet pool does not "
+                        "contain prefix %s") % prefix
+                    raise exceptions.CommandError(msg)
+            attrs['prefixes'] = tmp_prefixes
+        if attrs:
+            client.update_subnet_pool(obj, **attrs)

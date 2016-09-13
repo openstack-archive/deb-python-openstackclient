@@ -16,13 +16,18 @@
 """Service action implementations"""
 
 import argparse
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateService(command.ShowOne):
@@ -68,8 +73,8 @@ class CreateService(command.ShowOne):
         # display deprecation message.
         elif type:
             name = type_or_name
-            self.log.warning(_('The argument --type is deprecated, use service'
-                               ' create --name <service-name> type instead.'))
+            LOG.warning(_('The argument --type is deprecated, use service'
+                          ' create --name <service-name> type instead.'))
         # If --name option is present the positional is handled as <type>.
         # Making --type optional is new, but back-compatible
         elif name:
@@ -86,21 +91,37 @@ class CreateService(command.ShowOne):
 
 
 class DeleteService(command.Command):
-    """Delete service"""
+    """Delete service(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteService, self).get_parser(prog_name)
         parser.add_argument(
-            'service',
+            'services',
             metavar='<service>',
-            help=_('Service to delete (name or ID)'),
+            nargs='+',
+            help=_('Service(s) to delete (type, name or ID)'),
         )
         return parser
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
-        service = common.find_service(identity_client, parsed_args.service)
-        identity_client.services.delete(service.id)
+
+        result = 0
+        for service in parsed_args.services:
+            try:
+                service = common.find_service(identity_client, service)
+                identity_client.services.delete(service.id)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete service with "
+                          "name or ID '%(service)s': %(e)s")
+                          % {'service': service, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.services)
+            msg = (_("%(result)s of %(total)s services failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListService(command.Lister):

@@ -17,11 +17,11 @@ import io
 import logging
 import os
 
+from osc_lib import utils
 import six
 from six.moves import urllib
 
 from openstackclient.api import api
-from openstackclient.common import utils
 
 
 class APIv1(api.BaseAPI):

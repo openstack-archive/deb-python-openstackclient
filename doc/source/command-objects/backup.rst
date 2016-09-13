@@ -2,12 +2,13 @@
 backup
 ======
 
-Block Storage v1
+Block Storage v1, v2
 
 backup create
 -------------
 
 Create new backup
+(Deprecated, please use ``volume backup create`` instead)
 
 .. program:: backup create
 .. code:: bash
@@ -16,6 +17,9 @@ Create new backup
         [--container <container>]
         [--name <name>]
         [--description <description>]
+        [--snapshot <snapshot>]
+        [--force]
+        [--incremental]
         <volume>
 
 .. option:: --container <container>
@@ -30,6 +34,24 @@ Create new backup
 
     Description of the backup
 
+.. option:: --snapshot <snapshot>
+
+    Snapshot to backup (name or ID)
+
+    *Volume version 2 only*
+
+.. option:: --force
+
+    Allow to back up an in-use volume
+
+    *Volume version 2 only*
+
+.. option:: --incremental
+
+    Perform an incremental backup
+
+    *Volume version 2 only*
+
 .. _backup_create-backup:
 .. describe:: <volume>
 
@@ -39,22 +61,31 @@ backup delete
 -------------
 
 Delete backup(s)
+(Deprecated, please use ``volume backup delete`` instead)
 
 .. program:: backup delete
 .. code:: bash
 
     os backup delete
+        [--force]
         <backup> [<backup> ...]
+
+.. option:: --force
+
+    Allow delete in state other than error or available
+
+    *Volume version 2 only*
 
 .. _backup_delete-backup:
 .. describe:: <backup>
 
-    Backup(s) to delete (ID only)
+    Backup(s) to delete (name or ID)
 
 backup list
 -----------
 
 List backups
+(Deprecated, please use ``volume backup list`` instead)
 
 .. program:: backup list
 .. code:: bash
@@ -70,6 +101,7 @@ backup restore
 --------------
 
 Restore backup
+(Deprecated, please use ``volume backup restore`` instead)
 
 .. program:: backup restore
 .. code:: bash
@@ -81,7 +113,7 @@ Restore backup
 .. _backup_restore-backup:
 .. describe:: <backup>
 
-    Backup to restore (ID only)
+    Backup to restore (name or ID)
 
 .. describe:: <volume>
 
@@ -91,6 +123,7 @@ backup show
 -----------
 
 Display backup details
+(Deprecated, please use ``volume backup show`` instead)
 
 .. program:: backup show
 .. code:: bash
@@ -101,4 +134,4 @@ Display backup details
 .. _backup_show-backup:
 .. describe:: <backup>
 
-    Backup to display (ID only)
+    Backup to display (name or ID)

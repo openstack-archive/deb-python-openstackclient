@@ -11,12 +11,13 @@
 #   under the License.
 #
 
-import copy
 import mock
+from mock import call
+
+from osc_lib import exceptions
 
 from openstackclient.network.v2 import security_group
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -29,6 +30,10 @@ class TestSecurityGroupNetwork(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestSecurityGroupCompute(compute_fakes.TestComputev2):
@@ -42,6 +47,8 @@ class TestSecurityGroupCompute(compute_fakes.TestComputev2):
 
 class TestCreateSecurityGroupNetwork(TestSecurityGroupNetwork):
 
+    project = identity_fakes.FakeProject.create_one_project()
+    domain = identity_fakes.FakeDomain.create_one_domain()
     # The security group to be created.
     _security_group = \
         network_fakes.FakeSecurityGroup.create_one_security_group()
@@ -68,29 +75,8 @@ class TestCreateSecurityGroupNetwork(TestSecurityGroupNetwork):
         self.network.create_security_group = mock.Mock(
             return_value=self._security_group)
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.DOMAIN),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
         # Get the command object to test
         self.cmd = security_group.CreateSecurityGroup(self.app, self.namespace)
@@ -120,15 +106,15 @@ class TestCreateSecurityGroupNetwork(TestSecurityGroupNetwork):
     def test_create_all_options(self):
         arglist = [
             '--description', self._security_group.description,
-            '--project', identity_fakes.project_name,
-            '--project-domain', identity_fakes.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.domain.name,
             self._security_group.name,
         ]
         verifylist = [
             ('description', self._security_group.description),
             ('name', self._security_group.name),
-            ('project', identity_fakes.project_name),
-            ('project_domain', identity_fakes.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.domain.name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -137,7 +123,7 @@ class TestCreateSecurityGroupNetwork(TestSecurityGroupNetwork):
         self.network.create_security_group.assert_called_once_with(**{
             'description': self._security_group.description,
             'name': self._security_group.name,
-            'tenant_id': identity_fakes.project_id,
+            'tenant_id': self.project.id,
         })
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
@@ -145,6 +131,8 @@ class TestCreateSecurityGroupNetwork(TestSecurityGroupNetwork):
 
 class TestCreateSecurityGroupCompute(TestSecurityGroupCompute):
 
+    project = identity_fakes.FakeProject.create_one_project()
+    domain = identity_fakes.FakeDomain.create_one_domain()
     # The security group to be shown.
     _security_group = \
         compute_fakes.FakeSecurityGroup.create_one_security_group()
@@ -181,8 +169,8 @@ class TestCreateSecurityGroupCompute(TestSecurityGroupCompute):
 
     def test_create_network_options(self):
         arglist = [
-            '--project', identity_fakes.project_name,
-            '--project-domain', identity_fakes.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.domain.name,
             self._security_group.name,
         ]
         self.assertRaises(tests_utils.ParserException,
@@ -227,42 +215,93 @@ class TestCreateSecurityGroupCompute(TestSecurityGroupCompute):
 
 class TestDeleteSecurityGroupNetwork(TestSecurityGroupNetwork):
 
-    # The security group to be deleted.
-    _security_group = \
-        network_fakes.FakeSecurityGroup.create_one_security_group()
+    # The security groups to be deleted.
+    _security_groups = \
+        network_fakes.FakeSecurityGroup.create_security_groups()
 
     def setUp(self):
         super(TestDeleteSecurityGroupNetwork, self).setUp()
 
         self.network.delete_security_group = mock.Mock(return_value=None)
 
-        self.network.find_security_group = mock.Mock(
-            return_value=self._security_group)
+        self.network.find_security_group = (
+            network_fakes.FakeSecurityGroup.get_security_groups(
+                self._security_groups)
+        )
 
         # Get the command object to test
         self.cmd = security_group.DeleteSecurityGroup(self.app, self.namespace)
 
     def test_security_group_delete(self):
         arglist = [
-            self._security_group.name,
+            self._security_groups[0].name,
         ]
         verifylist = [
-            ('group', self._security_group.name),
+            ('group', [self._security_groups[0].name]),
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
         result = self.cmd.take_action(parsed_args)
 
         self.network.delete_security_group.assert_called_once_with(
-            self._security_group)
+            self._security_groups[0])
         self.assertIsNone(result)
+
+    def test_multi_security_groups_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._security_groups:
+            arglist.append(s.name)
+        verifylist = [
+            ('group', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._security_groups:
+            calls.append(call(s))
+        self.network.delete_security_group.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_security_groups_delete_with_exception(self):
+        arglist = [
+            self._security_groups[0].name,
+            'unexist_security_group',
+        ]
+        verifylist = [
+            ('group',
+             [self._security_groups[0].name, 'unexist_security_group']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self._security_groups[0], exceptions.CommandError]
+        self.network.find_security_group = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 groups failed to delete.', str(e))
+
+        self.network.find_security_group.assert_any_call(
+            self._security_groups[0].name, ignore_missing=False)
+        self.network.find_security_group.assert_any_call(
+            'unexist_security_group', ignore_missing=False)
+        self.network.delete_security_group.assert_called_once_with(
+            self._security_groups[0]
+        )
 
 
 class TestDeleteSecurityGroupCompute(TestSecurityGroupCompute):
 
-    # The security group to be deleted.
-    _security_group = \
-        compute_fakes.FakeSecurityGroup.create_one_security_group()
+    # The security groups to be deleted.
+    _security_groups = \
+        compute_fakes.FakeSecurityGroup.create_security_groups()
 
     def setUp(self):
         super(TestDeleteSecurityGroupCompute, self).setUp()
@@ -271,26 +310,79 @@ class TestDeleteSecurityGroupCompute(TestSecurityGroupCompute):
 
         self.compute.security_groups.delete = mock.Mock(return_value=None)
 
-        self.compute.security_groups.get = mock.Mock(
-            return_value=self._security_group)
+        self.compute.security_groups.get = (
+            compute_fakes.FakeSecurityGroup.get_security_groups(
+                self._security_groups)
+        )
 
         # Get the command object to test
         self.cmd = security_group.DeleteSecurityGroup(self.app, None)
 
     def test_security_group_delete(self):
         arglist = [
-            self._security_group.name,
+            self._security_groups[0].id,
         ]
         verifylist = [
-            ('group', self._security_group.name),
+            ('group', [self._security_groups[0].id]),
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
         result = self.cmd.take_action(parsed_args)
 
         self.compute.security_groups.delete.assert_called_once_with(
-            self._security_group.id)
+            self._security_groups[0].id)
         self.assertIsNone(result)
+
+    def test_multi_security_groups_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._security_groups:
+            arglist.append(s.id)
+        verifylist = [
+            ('group', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._security_groups:
+            calls.append(call(s.id))
+        self.compute.security_groups.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_security_groups_delete_with_exception(self):
+        arglist = [
+            self._security_groups[0].id,
+            'unexist_security_group',
+        ]
+        verifylist = [
+            ('group',
+             [self._security_groups[0].id, 'unexist_security_group']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self._security_groups[0], exceptions.CommandError]
+        self.compute.security_groups.get = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+        self.compute.security_groups.find.side_effect = (
+            exceptions.NotFound(None))
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 groups failed to delete.', str(e))
+
+        self.compute.security_groups.get.assert_any_call(
+            self._security_groups[0].id)
+        self.compute.security_groups.get.assert_any_call(
+            'unexist_security_group')
+        self.compute.security_groups.delete.assert_called_once_with(
+            self._security_groups[0].id
+        )
 
 
 class TestListSecurityGroupNetwork(TestSecurityGroupNetwork):

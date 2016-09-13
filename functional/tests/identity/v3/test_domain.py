@@ -13,10 +13,10 @@
 from tempest.lib.common.utils import data_utils
 from tempest.lib import exceptions
 
-from functional.tests.identity.v3 import test_identity
+from functional.tests.identity.v3 import common
 
 
-class DomainTests(test_identity.IdentityTests):
+class DomainTests(common.IdentityTests):
 
     def test_domain_create(self):
         domain_name = data_utils.rand_name('TestDomain')
@@ -33,7 +33,7 @@ class DomainTests(test_identity.IdentityTests):
         self._create_dummy_domain()
         raw_output = self.openstack('domain list')
         items = self.parse_listing(raw_output)
-        self.assert_table_structure(items, test_identity.BASIC_LIST_HEADERS)
+        self.assert_table_structure(items, common.BASIC_LIST_HEADERS)
 
     def test_domain_delete(self):
         domain_name = self._create_dummy_domain(add_clean_up=False)
@@ -41,6 +41,18 @@ class DomainTests(test_identity.IdentityTests):
         raw_output = self.openstack('domain set --disable %s' % domain_name)
         self.assertEqual(0, len(raw_output))
         raw_output = self.openstack('domain delete %s' % domain_name)
+        self.assertEqual(0, len(raw_output))
+
+    def test_domain_multi_delete(self):
+        domain_1 = self._create_dummy_domain(add_clean_up=False)
+        domain_2 = self._create_dummy_domain(add_clean_up=False)
+        # cannot delete enabled domain, disable it first
+        raw_output = self.openstack('domain set --disable %s' % domain_1)
+        self.assertEqual(0, len(raw_output))
+        raw_output = self.openstack('domain set --disable %s' % domain_2)
+        self.assertEqual(0, len(raw_output))
+        raw_output = self.openstack(
+            'domain delete %s %s' % (domain_1, domain_2))
         self.assertEqual(0, len(raw_output))
 
     def test_domain_delete_failure(self):

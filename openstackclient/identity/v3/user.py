@@ -16,15 +16,18 @@
 """Identity v3 User action implementations"""
 
 import copy
-import six
-import sys
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.command import command
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateUser(command.ShowOne):
@@ -117,14 +120,14 @@ class CreateUser(command.ShowOne):
                 description=parsed_args.description,
                 enabled=enabled
             )
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 user = utils.find_resource(identity_client.users,
                                            parsed_args.name,
                                            domain_id=domain_id)
-                self.log.info(_('Returning existing user %s'), user.name)
+                LOG.info(_('Returning existing user %s'), user.name)
             else:
-                raise e
+                raise
 
         user._info.pop('links')
         return zip(*sorted(six.iteritems(user._info)))
@@ -273,7 +276,7 @@ class SetUser(command.Command):
         parser.add_argument(
             'user',
             metavar='<user>',
-            help=_('User to change (name or ID)'),
+            help=_('User to modify (name or ID)'),
         )
         parser.add_argument(
             '--name',
@@ -325,18 +328,6 @@ class SetUser(command.Command):
 
         if parsed_args.password_prompt:
             parsed_args.password = utils.get_password(self.app.stdin)
-
-        if (not parsed_args.name
-                and not parsed_args.name
-                and not parsed_args.password
-                and not parsed_args.email
-                and not parsed_args.project
-                and not parsed_args.description
-                and not parsed_args.enable
-                and not parsed_args.disable):
-            sys.stderr.write(_("Incorrect set of arguments provided. "
-                               "See openstack --help for more details\n"))
-            return
 
         user = utils.find_resource(
             identity_client.users,
@@ -440,14 +431,16 @@ class ShowUser(command.ShowOne):
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
+        user_str = common._get_token_resource(identity_client, 'user',
+                                              parsed_args.user)
         if parsed_args.domain:
             domain = common.find_domain(identity_client, parsed_args.domain)
             user = utils.find_resource(identity_client.users,
-                                       parsed_args.user,
+                                       user_str,
                                        domain_id=domain.id)
         else:
             user = utils.find_resource(identity_client.users,
-                                       parsed_args.user)
+                                       user_str)
 
         user._info.pop('links')
         return zip(*sorted(six.iteritems(user._info)))

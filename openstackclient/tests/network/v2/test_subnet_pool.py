@@ -12,13 +12,13 @@
 #
 
 import argparse
-import copy
 import mock
+from mock import call
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.network.v2 import subnet_pool
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes_v3
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -31,10 +31,16 @@ class TestSubnetPool(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestCreateSubnetPool(TestSubnetPool):
 
+    project = identity_fakes_v3.FakeProject.create_one_project()
+    domain = identity_fakes_v3.FakeDomain.create_one_domain()
     # The new subnet pool to create.
     _subnet_pool = network_fakes.FakeSubnetPool.create_one_subnet_pool()
 
@@ -81,29 +87,8 @@ class TestCreateSubnetPool(TestSubnetPool):
         self.network.find_address_scope = mock.Mock(
             return_value=self._address_scope)
 
-        # Set identity client. And get a shortcut to Identity client.
-        identity_client = identity_fakes_v3.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.PROJECT),
-            loaded=True,
-        )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.DOMAIN),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
     def test_create_no_options(self):
         arglist = []
@@ -189,14 +174,14 @@ class TestCreateSubnetPool(TestSubnetPool):
     def test_create_project_domain(self):
         arglist = [
             '--pool-prefix', '10.0.10.0/24',
-            "--project", identity_fakes_v3.project_name,
-            "--project-domain", identity_fakes_v3.domain_name,
+            "--project", self.project.name,
+            "--project-domain", self.domain.name,
             self._subnet_pool.name,
         ]
         verifylist = [
             ('prefixes', ['10.0.10.0/24']),
-            ('project', identity_fakes_v3.project_name),
-            ('project_domain', identity_fakes_v3.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.domain.name),
             ('name', self._subnet_pool.name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -205,7 +190,7 @@ class TestCreateSubnetPool(TestSubnetPool):
 
         self.network.create_subnet_pool.assert_called_once_with(**{
             'prefixes': ['10.0.10.0/24'],
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': self.project.id,
             'name': self._subnet_pool.name,
         })
         self.assertEqual(self.columns, columns)
@@ -263,35 +248,84 @@ class TestCreateSubnetPool(TestSubnetPool):
 
 class TestDeleteSubnetPool(TestSubnetPool):
 
-    # The subnet pool to delete.
-    _subnet_pool = network_fakes.FakeSubnetPool.create_one_subnet_pool()
+    # The subnet pools to delete.
+    _subnet_pools = network_fakes.FakeSubnetPool.create_subnet_pools(count=2)
 
     def setUp(self):
         super(TestDeleteSubnetPool, self).setUp()
 
         self.network.delete_subnet_pool = mock.Mock(return_value=None)
 
-        self.network.find_subnet_pool = mock.Mock(
-            return_value=self._subnet_pool
+        self.network.find_subnet_pool = (
+            network_fakes.FakeSubnetPool.get_subnet_pools(self._subnet_pools)
         )
 
         # Get the command object to test
         self.cmd = subnet_pool.DeleteSubnetPool(self.app, self.namespace)
 
-    def test_delete(self):
+    def test_subnet_pool_delete(self):
         arglist = [
-            self._subnet_pool.name,
+            self._subnet_pools[0].name,
         ]
         verifylist = [
-            ('subnet_pool', self._subnet_pool.name),
+            ('subnet_pool', [self._subnet_pools[0].name]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.network.delete_subnet_pool.assert_called_once_with(
-            self._subnet_pool)
+            self._subnet_pools[0])
         self.assertIsNone(result)
+
+    def test_multi_subnet_pools_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._subnet_pools:
+            arglist.append(s.name)
+        verifylist = [
+            ('subnet_pool', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._subnet_pools:
+            calls.append(call(s))
+        self.network.delete_subnet_pool.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_subnet_pools_delete_with_exception(self):
+        arglist = [
+            self._subnet_pools[0].name,
+            'unexist_subnet_pool',
+        ]
+        verifylist = [
+            ('subnet_pool',
+             [self._subnet_pools[0].name, 'unexist_subnet_pool']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self._subnet_pools[0], exceptions.CommandError]
+        self.network.find_subnet_pool = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 subnet pools failed to delete.', str(e))
+
+        self.network.find_subnet_pool.assert_any_call(
+            self._subnet_pools[0].name, ignore_missing=False)
+        self.network.find_subnet_pool.assert_any_call(
+            'unexist_subnet_pool', ignore_missing=False)
+        self.network.delete_subnet_pool.assert_called_once_with(
+            self._subnet_pools[0]
+        )
 
 
 class TestListSubnetPool(TestSubnetPool):
@@ -443,10 +477,14 @@ class TestSetSubnetPool(TestSubnetPool):
     def test_set_nothing(self):
         arglist = [self._subnet_pool.name, ]
         verifylist = [('subnet_pool', self._subnet_pool.name), ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
-                          parsed_args)
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_subnet_pool.assert_called_once_with(
+            self._subnet_pool, **attrs)
+        self.assertIsNone(result)
 
     def test_set_len_negative(self):
         arglist = [
@@ -643,3 +681,42 @@ class TestShowSubnetPool(TestSubnetPool):
         )
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
+
+
+class TestUnsetSubnetPool(TestSubnetPool):
+
+    def setUp(self):
+        super(TestUnsetSubnetPool, self).setUp()
+        self._subnetpool = network_fakes.FakeSubnetPool.create_one_subnet_pool(
+            {'prefixes': ['10.0.10.0/24', '10.1.10.0/24',
+                          '10.2.10.0/24'], })
+        self.network.find_subnet_pool = mock.Mock(
+            return_value=self._subnetpool)
+        self.network.update_subnet_pool = mock.Mock(return_value=None)
+        # Get the command object to test
+        self.cmd = subnet_pool.UnsetSubnetPool(self.app, self.namespace)
+
+    def test_unset_subnet_pool(self):
+        arglist = [
+            '--pool-prefix', '10.0.10.0/24',
+            '--pool-prefix', '10.1.10.0/24',
+            self._subnetpool.name,
+        ]
+        verifylist = [('prefixes', ['10.0.10.0/24', '10.1.10.0/24'])]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+        attrs = {'prefixes': ['10.2.10.0/24']}
+        self.network.update_subnet_pool.assert_called_once_with(
+            self._subnetpool, **attrs)
+        self.assertIsNone(result)
+
+    def test_unset_subnet_pool_prefix_not_existent(self):
+        arglist = [
+            '--pool-prefix', '10.100.1.1/25',
+            self._subnetpool.name,
+        ]
+        verifylist = [('prefixes', ['10.100.1.1/25'])]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action,
+                          parsed_args)

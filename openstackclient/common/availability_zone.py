@@ -14,13 +14,17 @@
 """Availability Zone action implementations"""
 
 import copy
+import logging
 
 from novaclient import exceptions as nova_exceptions
+from osc_lib.command import command
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _xform_common_availability_zone(az, zone_info):
@@ -92,17 +96,20 @@ class ListAvailabilityZone(command.Lister):
             '--compute',
             action='store_true',
             default=False,
-            help='List compute availability zones')
+            help=_('List compute availability zones'),
+        )
         parser.add_argument(
             '--network',
             action='store_true',
             default=False,
-            help='List network availability zones')
+            help=_('List network availability zones'),
+        )
         parser.add_argument(
             '--volume',
             action='store_true',
             default=False,
-            help='List volume availability zones')
+            help=_('List volume availability zones'),
+        )
         parser.add_argument(
             '--long',
             action='store_true',
@@ -115,11 +122,11 @@ class ListAvailabilityZone(command.Lister):
         compute_client = self.app.client_manager.compute
         try:
             data = compute_client.availability_zones.list()
-        except nova_exceptions.Forbidden as e:  # policy doesn't allow
+        except nova_exceptions.Forbidden:  # policy doesn't allow
             try:
                 data = compute_client.availability_zones.list(detailed=False)
             except Exception:
-                raise e
+                raise
 
         # Argh, the availability zones are not iterable...
         result = []
@@ -133,11 +140,11 @@ class ListAvailabilityZone(command.Lister):
         try:
             data = volume_client.availability_zones.list()
         except Exception as e:
-            self.log.debug('Volume availability zone exception: ' + str(e))
+            LOG.debug('Volume availability zone exception: %s', e)
             if parsed_args.volume:
-                message = "Availability zones list not supported by " \
-                          "Block Storage API"
-                self.log.warning(message)
+                message = _("Availability zones list not supported by "
+                            "Block Storage API")
+                LOG.warning(message)
 
         result = []
         for zone in data:
@@ -151,11 +158,11 @@ class ListAvailabilityZone(command.Lister):
             network_client.find_extension('Availability Zone',
                                           ignore_missing=False)
         except Exception as e:
-            self.log.debug('Network availability zone exception: ' + str(e))
+            LOG.debug('Network availability zone exception: ', e)
             if parsed_args.network:
-                message = "Availability zones list not supported by " \
-                          "Network API"
-                self.log.warning(message)
+                message = _("Availability zones list not supported by "
+                            "Network API")
+                LOG.warning(message)
             return []
 
         result = []

@@ -16,6 +16,7 @@ Create new snapshot
         [--name <name>]
         [--description <description>]
         [--force]
+        [--property <key=value> [...] ]
         <volume>
 
 .. option:: --name <name>
@@ -29,6 +30,12 @@ Create new snapshot
 .. option:: --force
 
     Create a snapshot attached to an instance. Default is False
+
+.. option:: --property <key=value>
+
+    Set a property to this snapshot (repeat option to set multiple properties)
+
+    *Volume version 2 only*
 
 .. _snapshot_create-snapshot:
 .. describe:: <volume>
@@ -61,6 +68,9 @@ List snapshots
 
     os snapshot list
         [--all-projects]
+        [--long]
+        [--limit <limit>]
+        [--marker <marker>]
 
 .. option:: --all-projects
 
@@ -69,6 +79,18 @@ List snapshots
 .. option:: --long
 
     List additional fields in output
+
+.. option:: --limit <limit>
+
+    Maximum number of snapshots to display
+
+    *Volume version 2 only*
+
+.. option:: --marker <marker>
+
+    The last snapshot ID of the previous page
+
+    *Volume version 2 only*
 
 snapshot set
 ------------

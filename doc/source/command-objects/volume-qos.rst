@@ -58,7 +58,12 @@ Delete QoS specification
 .. code:: bash
 
     os volume qos delete
+         [--force]
          <qos-spec> [<qos-spec> ...]
+
+.. option:: --force
+
+    Allow to delete in-use QoS specification(s)
 
 .. describe:: <qos-spec>
 
@@ -69,7 +74,7 @@ volume qos disassociate
 
 Disassociate a QoS specification from a volume type
 
-.. program:: volume qos disassoiate
+.. program:: volume qos disassociate
 .. code:: bash
 
     os volume qos disassociate

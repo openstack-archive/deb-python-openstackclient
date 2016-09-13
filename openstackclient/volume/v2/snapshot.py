@@ -15,13 +15,18 @@
 """Volume v2 snapshot action implementations"""
 
 import copy
+import logging
 
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateSnapshot(command.ShowOne):
@@ -46,11 +51,17 @@ class CreateSnapshot(command.ShowOne):
         )
         parser.add_argument(
             "--force",
-            dest="force",
             action="store_true",
             default=False,
             help=_("Create a snapshot attached to an instance. "
                    "Default is False")
+        )
+        parser.add_argument(
+            "--property",
+            metavar="<key=value>",
+            action=parseractions.KeyValueAction,
+            help=_("Set a property to this snapshot "
+                   "(repeat option to set multiple properties)"),
         )
         return parser
 
@@ -62,7 +73,8 @@ class CreateSnapshot(command.ShowOne):
             volume_id,
             force=parsed_args.force,
             name=parsed_args.name,
-            description=parsed_args.description
+            description=parsed_args.description,
+            metadata=parsed_args.property,
         )
         snapshot._info.update(
             {'properties': utils.format_dict(snapshot._info.pop('metadata'))}
@@ -85,10 +97,24 @@ class DeleteSnapshot(command.Command):
 
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
-        for snapshot in parsed_args.snapshots:
-            snapshot_id = utils.find_resource(
-                volume_client.volume_snapshots, snapshot).id
-            volume_client.volume_snapshots.delete(snapshot_id)
+        result = 0
+
+        for i in parsed_args.snapshots:
+            try:
+                snapshot_id = utils.find_resource(
+                    volume_client.volume_snapshots, i).id
+                volume_client.volume_snapshots.delete(snapshot_id)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete snapshot with "
+                            "name or ID '%(snapshot)s': %(e)s")
+                          % {'snapshot': i, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.snapshots)
+            msg = (_("%(result)s of %(total)s snapshots failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListSnapshot(command.Lister):
@@ -107,6 +133,18 @@ class ListSnapshot(command.Lister):
             action='store_true',
             default=False,
             help=_('List additional fields in output'),
+        )
+        parser.add_argument(
+            '--marker',
+            metavar='<marker>',
+            help=_('The last snapshot ID of the previous page'),
+        )
+        parser.add_argument(
+            '--limit',
+            type=int,
+            action=parseractions.NonNegativeAction,
+            metavar='<limit>',
+            help=_('Maximum number of snapshots to display'),
         )
         return parser
 
@@ -148,7 +186,10 @@ class ListSnapshot(command.Lister):
         }
 
         data = self.app.client_manager.volume.volume_snapshots.list(
-            search_opts=search_opts)
+            search_opts=search_opts,
+            marker=parsed_args.marker,
+            limit=parsed_args.limit,
+        )
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,

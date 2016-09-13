@@ -16,7 +16,7 @@ from functional.common import test
 
 
 class ComputeAgentTests(test.TestCase):
-    """Functional tests for compute agent. """
+    """Functional tests for compute agent."""
 
     ID = None
     MD5HASH = hashlib.md5().hexdigest()
@@ -31,12 +31,12 @@ class ComputeAgentTests(test.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        opts = cls.get_show_opts(cls.HEADERS)
-        raw_output = cls.openstack('compute agent create '
-                                   + cls.OS + ' ' + cls.ARCH + ' '
-                                   + cls.VER + ' ' + cls.URL + ' '
-                                   + cls.MD5HASH + ' ' + cls.HYPER + ' '
-                                   + opts)
+        opts = cls.get_opts(cls.HEADERS)
+        raw_output = cls.openstack('compute agent create ' +
+                                   cls.OS + ' ' + cls.ARCH + ' ' +
+                                   cls.VER + ' ' + cls.URL + ' ' +
+                                   cls.MD5HASH + ' ' + cls.HYPER + ' ' +
+                                   opts)
 
         # Get agent id because agent can only be deleted by ID
         output_list = raw_output.split('\n', 1)
@@ -64,10 +64,11 @@ class ComputeAgentTests(test.TestCase):
         url = "http://openstack"
         md5hash = hashlib.md5().hexdigest()
 
-        raw_output = self.openstack('compute agent set '
-                                    + self.ID + ' ' + ver + ' '
-                                    + url + ' ' + md5hash)
-        self.assertEqual('', raw_output)
+        self.openstack('compute agent set '
+                       + self.ID
+                       + ' --agent-version ' + ver
+                       + ' --url ' + url
+                       + ' --md5hash ' + md5hash)
 
         raw_output = self.openstack('compute agent list')
         self.assertIn(self.ID, raw_output)

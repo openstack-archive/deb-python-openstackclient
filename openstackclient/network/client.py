@@ -15,8 +15,8 @@ import logging
 
 from openstack import connection
 from openstack import profile
+from osc_lib import utils
 
-from openstackclient.common import utils
 from openstackclient.i18n import _
 
 
@@ -34,8 +34,9 @@ API_VERSIONS = {
 def make_client(instance):
     """Returns a network proxy"""
     prof = profile.Profile()
-    prof.set_region(API_NAME, instance._region_name)
+    prof.set_region(API_NAME, instance.region_name)
     prof.set_version(API_NAME, instance._api_version[API_NAME])
+    prof.set_interface(API_NAME, instance.interface)
     conn = connection.Connection(authenticator=instance.session.auth,
                                  verify=instance.session.verify,
                                  cert=instance.session.cert,

@@ -12,9 +12,11 @@
 #
 
 import mock
+from mock import call
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils as osc_utils
+from osc_lib import exceptions
+from osc_lib import utils as osc_utils
+
 from openstackclient.network.v2 import router
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -202,31 +204,81 @@ class TestCreateRouter(TestRouter):
 
 class TestDeleteRouter(TestRouter):
 
-    # The router to delete.
-    _router = network_fakes.FakeRouter.create_one_router()
+    # The routers to delete.
+    _routers = network_fakes.FakeRouter.create_routers(count=2)
 
     def setUp(self):
         super(TestDeleteRouter, self).setUp()
 
         self.network.delete_router = mock.Mock(return_value=None)
 
-        self.network.find_router = mock.Mock(return_value=self._router)
+        self.network.find_router = (
+            network_fakes.FakeRouter.get_routers(self._routers))
 
         # Get the command object to test
         self.cmd = router.DeleteRouter(self.app, self.namespace)
 
-    def test_delete(self):
+    def test_router_delete(self):
         arglist = [
-            self._router.name,
+            self._routers[0].name,
         ]
         verifylist = [
-            ('router', [self._router.name]),
+            ('router', [self._routers[0].name]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
-        self.network.delete_router.assert_called_once_with(self._router)
+        self.network.delete_router.assert_called_once_with(self._routers[0])
         self.assertIsNone(result)
+
+    def test_multi_routers_delete(self):
+        arglist = []
+        verifylist = []
+
+        for r in self._routers:
+            arglist.append(r.name)
+        verifylist = [
+            ('router', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for r in self._routers:
+            calls.append(call(r))
+        self.network.delete_router.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_routers_delete_with_exception(self):
+        arglist = [
+            self._routers[0].name,
+            'unexist_router',
+        ]
+        verifylist = [
+            ('router',
+             [self._routers[0].name, 'unexist_router']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self._routers[0], exceptions.CommandError]
+        self.network.find_router = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 routers failed to delete.', str(e))
+
+        self.network.find_router.assert_any_call(
+            self._routers[0].name, ignore_missing=False)
+        self.network.find_router.assert_any_call(
+            'unexist_router', ignore_missing=False)
+        self.network.delete_router.assert_called_once_with(
+            self._routers[0]
+        )
 
 
 class TestListRouter(TestRouter):
@@ -568,12 +620,20 @@ class TestSetRouter(TestRouter):
                           self.cmd, arglist, verifylist)
 
     def test_set_nothing(self):
-        arglist = [self._router.name, ]
-        verifylist = [('router', self._router.name), ]
+        arglist = [
+            self._router.name,
+        ]
+        verifylist = [
+            ('router', self._router.name),
+        ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
-                          parsed_args)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_router.assert_called_once_with(
+            self._router, **attrs)
+        self.assertIsNone(result)
 
 
 class TestShowRouter(TestRouter):
@@ -638,3 +698,54 @@ class TestShowRouter(TestRouter):
             self._router.name, ignore_missing=False)
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
+
+
+class TestUnsetRouter(TestRouter):
+
+    def setUp(self):
+        super(TestUnsetRouter, self).setUp()
+        self._testrouter = network_fakes.FakeRouter.create_one_router(
+            {'routes': [{"destination": "192.168.101.1/24",
+                         "gateway": "172.24.4.3"},
+                        {"destination": "192.168.101.2/24",
+                         "gateway": "172.24.4.3"}], })
+        self.fake_subnet = network_fakes.FakeSubnet.create_one_subnet()
+        self.network.find_router = mock.Mock(return_value=self._testrouter)
+        self.network.update_router = mock.Mock(return_value=None)
+        # Get the command object to test
+        self.cmd = router.UnsetRouter(self.app, self.namespace)
+
+    def test_unset_router_params(self):
+        arglist = [
+            '--route', 'destination=192.168.101.1/24,gateway=172.24.4.3',
+            self._testrouter.name,
+        ]
+        verifylist = [
+            ('routes', [
+                {"destination": "192.168.101.1/24", "gateway": "172.24.4.3"}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {
+            'routes': [{"destination": "192.168.101.2/24",
+                        "nexthop": "172.24.4.3"}],
+        }
+        self.network.update_router.assert_called_once_with(
+            self._testrouter, **attrs)
+        self.assertIsNone(result)
+
+    def test_unset_router_wrong_routes(self):
+        arglist = [
+            '--route', 'destination=192.168.101.1/24,gateway=172.24.4.2',
+            self._testrouter.name,
+        ]
+        verifylist = [
+            ('routes', [
+                {"destination": "192.168.101.1/24", "gateway": "172.24.4.2"}]),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        self.assertRaises(exceptions.CommandError,
+                          self.cmd.take_action, parsed_args)

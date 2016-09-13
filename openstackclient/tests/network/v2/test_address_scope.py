@@ -11,13 +11,12 @@
 #   under the License.
 #
 
-import copy
 import mock
-
 from mock import call
-from openstackclient.common import exceptions
+
+from osc_lib import exceptions
+
 from openstackclient.network.v2 import address_scope
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes_v3
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -30,15 +29,21 @@ class TestAddressScope(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestCreateAddressScope(TestAddressScope):
 
+    project = identity_fakes_v3.FakeProject.create_one_project()
+    domain = identity_fakes_v3.FakeDomain.create_one_domain()
     # The new address scope created.
     new_address_scope = (
         network_fakes.FakeAddressScope.create_one_address_scope(
             attrs={
-                'tenant_id': identity_fakes_v3.project_id,
+                'tenant_id': project.id,
             }
         ))
     columns = (
@@ -64,29 +69,8 @@ class TestCreateAddressScope(TestAddressScope):
         # Get the command object to test
         self.cmd = address_scope.CreateAddressScope(self.app, self.namespace)
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes_v3.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.PROJECT),
-            loaded=True,
-        )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes_v3.DOMAIN),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
     def test_create_no_options(self):
         arglist = []
@@ -120,15 +104,15 @@ class TestCreateAddressScope(TestAddressScope):
         arglist = [
             '--ip-version', str(self.new_address_scope.ip_version),
             '--share',
-            '--project', identity_fakes_v3.project_name,
-            '--project-domain', identity_fakes_v3.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.domain.name,
             self.new_address_scope.name,
         ]
         verifylist = [
             ('ip_version', self.new_address_scope.ip_version),
             ('share', True),
-            ('project', identity_fakes_v3.project_name),
-            ('project_domain', identity_fakes_v3.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.domain.name),
             ('name', self.new_address_scope.name),
         ]
 
@@ -138,7 +122,7 @@ class TestCreateAddressScope(TestAddressScope):
         self.network.create_address_scope.assert_called_once_with(**{
             'ip_version': self.new_address_scope.ip_version,
             'shared': True,
-            'tenant_id': identity_fakes_v3.project_id,
+            'tenant_id': self.project.id,
             'name': self.new_address_scope.name,
         })
         self.assertEqual(self.columns, columns)
@@ -313,8 +297,12 @@ class TestSetAddressScope(TestAddressScope):
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        self.assertRaises(exceptions.CommandError, self.cmd.take_action,
-                          parsed_args)
+        result = self.cmd.take_action(parsed_args)
+
+        attrs = {}
+        self.network.update_address_scope.assert_called_with(
+            self._address_scope, **attrs)
+        self.assertIsNone(result)
 
     def test_set_name_and_share(self):
         arglist = [

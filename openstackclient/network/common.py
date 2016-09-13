@@ -12,11 +12,16 @@
 #
 
 import abc
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
 import six
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -38,10 +43,10 @@ class NetworkAndComputeCommand(command.Command):
                                             parsed_args)
 
     def get_parser(self, prog_name):
-        self.log.debug('get_parser(%s)', prog_name)
+        LOG.debug('get_parser(%s)', prog_name)
         parser = super(NetworkAndComputeCommand, self).get_parser(prog_name)
         parser = self.update_parser_common(parser)
-        self.log.debug('common parser: %s', parser)
+        LOG.debug('common parser: %s', parser)
         if self.app.client_manager.is_network_endpoint_enabled():
             return self.update_parser_network(parser)
         else:
@@ -101,12 +106,12 @@ class NetworkAndComputeDelete(NetworkAndComputeCommand):
                             "name_or_id": r,
                             "e": e,
                 }
-                self.app.log.error(msg)
+                LOG.error(msg)
                 ret += 1
 
         if ret:
             total = len(resources)
-            msg = _("%(num)s of %(total)s %(resource)s failed to delete.") % {
+            msg = _("%(num)s of %(total)s %(resource)ss failed to delete.") % {
                 "num": ret,
                 "total": total,
                 "resource": self.resource,
@@ -133,10 +138,10 @@ class NetworkAndComputeLister(command.Lister):
                                             parsed_args)
 
     def get_parser(self, prog_name):
-        self.log.debug('get_parser(%s)', prog_name)
+        LOG.debug('get_parser(%s)', prog_name)
         parser = super(NetworkAndComputeLister, self).get_parser(prog_name)
         parser = self.update_parser_common(parser)
-        self.log.debug('common parser: %s', parser)
+        LOG.debug('common parser: %s', parser)
         if self.app.client_manager.is_network_endpoint_enabled():
             return self.update_parser_network(parser)
         else:
@@ -184,10 +189,10 @@ class NetworkAndComputeShowOne(command.ShowOne):
                                             parsed_args)
 
     def get_parser(self, prog_name):
-        self.log.debug('get_parser(%s)', prog_name)
+        LOG.debug('get_parser(%s)', prog_name)
         parser = super(NetworkAndComputeShowOne, self).get_parser(prog_name)
         parser = self.update_parser_common(parser)
-        self.log.debug('common parser: %s', parser)
+        LOG.debug('common parser: %s', parser)
         if self.app.client_manager.is_network_endpoint_enabled():
             return self.update_parser_network(parser)
         else:

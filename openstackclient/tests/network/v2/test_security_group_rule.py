@@ -13,8 +13,10 @@
 
 import copy
 import mock
+from mock import call
 
-from openstackclient.common import exceptions
+from osc_lib import exceptions
+
 from openstackclient.network import utils as network_utils
 from openstackclient.network.v2 import security_group_rule
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
@@ -31,6 +33,10 @@ class TestSecurityGroupRuleNetwork(network_fakes.TestNetworkV2):
 
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
+        # Get a shortcut to the ProjectManager Mock
+        self.projects_mock = self.app.client_manager.identity.projects
+        # Get a shortcut to the DomainManager Mock
+        self.domains_mock = self.app.client_manager.identity.domains
 
 
 class TestSecurityGroupRuleCompute(compute_fakes.TestComputev2):
@@ -44,6 +50,8 @@ class TestSecurityGroupRuleCompute(compute_fakes.TestComputev2):
 
 class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
+    project = identity_fakes.FakeProject.create_one_project()
+    domain = identity_fakes.FakeDomain.create_one_domain()
     # The security group rule to be created.
     _security_group_rule = None
 
@@ -91,29 +99,8 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
         self.network.find_security_group = mock.Mock(
             return_value=self._security_group)
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
-        # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
-
-        # Get a shortcut to the DomainManager Mock
-        self.domains_mock = self.identity.domains
-        self.domains_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.DOMAIN),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
+        self.domains_mock.get.return_value = self.domain
 
         # Get the command object to test
         self.cmd = security_group_rule.CreateSecurityGroupRule(
@@ -304,8 +291,8 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             '--dst-port', str(self._security_group_rule.port_range_min),
             '--egress',
             '--ethertype', self._security_group_rule.ethertype,
-            '--project', identity_fakes.project_name,
-            '--project-domain', identity_fakes.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.domain.name,
             '--protocol', self._security_group_rule.protocol,
             self._security_group.id,
         ]
@@ -314,8 +301,8 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
                           self._security_group_rule.port_range_max)),
             ('egress', True),
             ('ethertype', self._security_group_rule.ethertype),
-            ('project', identity_fakes.project_name),
-            ('project_domain', identity_fakes.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.domain.name),
             ('protocol', self._security_group_rule.protocol),
             ('group', self._security_group.id),
         ]
@@ -330,7 +317,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             'port_range_min': self._security_group_rule.port_range_min,
             'protocol': self._security_group_rule.protocol,
             'security_group_id': self._security_group.id,
-            'tenant_id': identity_fakes.project_id,
+            'tenant_id': self.project.id,
         })
         self.assertEqual(self.expected_columns, columns)
         self.assertEqual(self.expected_data, data)
@@ -468,6 +455,8 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
 class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
+    project = identity_fakes.FakeProject.create_one_project()
+    domain = identity_fakes.FakeDomain.create_one_domain()
     # The security group rule to be created.
     _security_group_rule = None
 
@@ -532,8 +521,8 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
             '--ethertype', 'IPv4',
             '--icmp-type', '3',
             '--icmp-code', '11',
-            '--project', identity_fakes.project_name,
-            '--project-domain', identity_fakes.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.domain.name,
             self._security_group.id,
         ]
         self.assertRaises(tests_utils.ParserException,
@@ -667,17 +656,20 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
 class TestDeleteSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
-    # The security group rule to be deleted.
-    _security_group_rule = \
-        network_fakes.FakeSecurityGroupRule.create_one_security_group_rule()
+    # The security group rules to be deleted.
+    _security_group_rules = \
+        network_fakes.FakeSecurityGroupRule.create_security_group_rules(
+            count=2)
 
     def setUp(self):
         super(TestDeleteSecurityGroupRuleNetwork, self).setUp()
 
         self.network.delete_security_group_rule = mock.Mock(return_value=None)
 
-        self.network.find_security_group_rule = mock.Mock(
-            return_value=self._security_group_rule)
+        self.network.find_security_group_rule = (
+            network_fakes.FakeSecurityGroupRule.get_security_group_rules(
+                self._security_group_rules)
+        )
 
         # Get the command object to test
         self.cmd = security_group_rule.DeleteSecurityGroupRule(
@@ -685,25 +677,76 @@ class TestDeleteSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
     def test_security_group_rule_delete(self):
         arglist = [
-            self._security_group_rule.id,
+            self._security_group_rules[0].id,
         ]
         verifylist = [
-            ('rule', self._security_group_rule.id),
+            ('rule', [self._security_group_rules[0].id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.network.delete_security_group_rule.assert_called_once_with(
-            self._security_group_rule)
+            self._security_group_rules[0])
         self.assertIsNone(result)
+
+    def test_multi_security_group_rules_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._security_group_rules:
+            arglist.append(s.id)
+        verifylist = [
+            ('rule', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._security_group_rules:
+            calls.append(call(s))
+        self.network.delete_security_group_rule.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_security_group_rules_delete_with_exception(self):
+        arglist = [
+            self._security_group_rules[0].id,
+            'unexist_rule',
+        ]
+        verifylist = [
+            ('rule',
+             [self._security_group_rules[0].id, 'unexist_rule']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [
+            self._security_group_rules[0], exceptions.CommandError]
+        self.network.find_security_group_rule = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 rules failed to delete.', str(e))
+
+        self.network.find_security_group_rule.assert_any_call(
+            self._security_group_rules[0].id, ignore_missing=False)
+        self.network.find_security_group_rule.assert_any_call(
+            'unexist_rule', ignore_missing=False)
+        self.network.delete_security_group_rule.assert_called_once_with(
+            self._security_group_rules[0]
+        )
 
 
 class TestDeleteSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
     # The security group rule to be deleted.
-    _security_group_rule = \
-        compute_fakes.FakeSecurityGroupRule.create_one_security_group_rule()
+    _security_group_rules = \
+        compute_fakes.FakeSecurityGroupRule.create_security_group_rules(
+            count=2)
 
     def setUp(self):
         super(TestDeleteSecurityGroupRuleCompute, self).setUp()
@@ -715,18 +758,64 @@ class TestDeleteSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
     def test_security_group_rule_delete(self):
         arglist = [
-            self._security_group_rule.id,
+            self._security_group_rules[0].id,
         ]
         verifylist = [
-            ('rule', self._security_group_rule.id),
+            ('rule', [self._security_group_rules[0].id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
         self.compute.security_group_rules.delete.assert_called_once_with(
-            self._security_group_rule.id)
+            self._security_group_rules[0].id)
         self.assertIsNone(result)
+
+    def test_multi_security_group_rules_delete(self):
+        arglist = []
+        verifylist = []
+
+        for s in self._security_group_rules:
+            arglist.append(s.id)
+        verifylist = [
+            ('rule', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for s in self._security_group_rules:
+            calls.append(call(s.id))
+        self.compute.security_group_rules.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_multi_security_group_rules_delete_with_exception(self):
+        arglist = [
+            self._security_group_rules[0].id,
+            'unexist_rule',
+        ]
+        verifylist = [
+            ('rule',
+             [self._security_group_rules[0].id, 'unexist_rule']),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [None, exceptions.CommandError]
+        self.compute.security_group_rules.delete = (
+            mock.MagicMock(side_effect=find_mock_result)
+        )
+
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('1 of 2 rules failed to delete.', str(e))
+
+        self.compute.security_group_rules.delete.assert_any_call(
+            self._security_group_rules[0].id)
+        self.compute.security_group_rules.delete.assert_any_call(
+            'unexist_rule')
 
 
 class TestListSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):

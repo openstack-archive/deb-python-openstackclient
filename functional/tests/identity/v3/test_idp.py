@@ -10,11 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from functional.tests.identity.v3 import test_identity
+from functional.tests.identity.v3 import common
 from tempest.lib.common.utils import data_utils
 
 
-class IdentityProviderTests(test_identity.IdentityTests):
+class IdentityProviderTests(common.IdentityTests):
     # Introduce functional test case for command 'Identity Provider'
 
     def test_idp_create(self):
@@ -24,6 +24,13 @@ class IdentityProviderTests(test_identity.IdentityTests):
         identity_provider = self._create_dummy_idp(add_clean_up=False)
         raw_output = self.openstack('identity provider delete %s'
                                     % identity_provider)
+        self.assertEqual(0, len(raw_output))
+
+    def test_idp_multi_delete(self):
+        idp_1 = self._create_dummy_idp(add_clean_up=False)
+        idp_2 = self._create_dummy_idp(add_clean_up=False)
+        raw_output = self.openstack(
+            'identity provider delete %s %s' % (idp_1, idp_2))
         self.assertEqual(0, len(raw_output))
 
     def test_idp_show(self):

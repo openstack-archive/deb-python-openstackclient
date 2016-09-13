@@ -15,8 +15,9 @@
 
 """Object client"""
 
+from osc_lib import utils
+
 from openstackclient.api import object_store_v1
-from openstackclient.common import utils
 
 DEFAULT_API_VERSION = '1'
 API_VERSION_OPTION = 'os_object_api_version'
@@ -31,8 +32,8 @@ def make_client(instance):
 
     endpoint = instance.get_endpoint_for_service_type(
         'object-store',
-        region_name=instance._region_name,
-        interface=instance._interface,
+        region_name=instance.region_name,
+        interface=instance.interface,
     )
 
     client = object_store_v1.APIv1(

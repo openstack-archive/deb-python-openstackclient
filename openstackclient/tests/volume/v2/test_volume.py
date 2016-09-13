@@ -12,12 +12,12 @@
 #   under the License.
 #
 
-import copy
-
+import mock
 from mock import call
 
-from openstackclient.common import utils
-from openstackclient.tests import fakes
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
 from openstackclient.tests.volume.v2 import fakes as volume_fakes
@@ -54,6 +54,9 @@ class TestVolume(volume_fakes.TestVolume):
 
 
 class TestVolumeCreate(TestVolume):
+
+    project = identity_fakes.FakeProject.create_one_project()
+    user = identity_fakes.FakeUser.create_one_user()
 
     columns = (
         'attachments',
@@ -166,28 +169,20 @@ class TestVolumeCreate(TestVolume):
 
     def test_volume_create_user_project_id(self):
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
         # Return a user
-        self.users_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.USER),
-            loaded=True,
-        )
+        self.users_mock.get.return_value = self.user
 
         arglist = [
             '--size', str(self.new_volume.size),
-            '--project', identity_fakes.project_id,
-            '--user', identity_fakes.user_id,
+            '--project', self.project.id,
+            '--user', self.user.id,
             self.new_volume.name,
         ]
         verifylist = [
             ('size', self.new_volume.size),
-            ('project', identity_fakes.project_id),
-            ('user', identity_fakes.user_id),
+            ('project', self.project.id),
+            ('user', self.user.id),
             ('name', self.new_volume.name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -203,8 +198,8 @@ class TestVolumeCreate(TestVolume):
             name=self.new_volume.name,
             description=None,
             volume_type=None,
-            user_id=identity_fakes.user_id,
-            project_id=identity_fakes.project_id,
+            user_id=self.user.id,
+            project_id=self.project.id,
             availability_zone=None,
             metadata=None,
             imageRef=None,
@@ -216,28 +211,20 @@ class TestVolumeCreate(TestVolume):
 
     def test_volume_create_user_project_name(self):
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
         # Return a user
-        self.users_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.USER),
-            loaded=True,
-        )
+        self.users_mock.get.return_value = self.user
 
         arglist = [
             '--size', str(self.new_volume.size),
-            '--project', identity_fakes.project_name,
-            '--user', identity_fakes.user_name,
+            '--project', self.project.name,
+            '--user', self.user.name,
             self.new_volume.name,
         ]
         verifylist = [
             ('size', self.new_volume.size),
-            ('project', identity_fakes.project_name),
-            ('user', identity_fakes.user_name),
+            ('project', self.project.name),
+            ('user', self.user.name),
             ('name', self.new_volume.name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -253,8 +240,8 @@ class TestVolumeCreate(TestVolume):
             name=self.new_volume.name,
             description=None,
             volume_type=None,
-            user_id=identity_fakes.user_id,
-            project_id=identity_fakes.project_id,
+            user_id=self.user.id,
+            project_id=self.project.id,
             availability_zone=None,
             metadata=None,
             imageRef=None,
@@ -433,13 +420,16 @@ class TestVolumeDelete(TestVolume):
             volumes[0].id
         ]
         verifylist = [
-            ("volumes", [volumes[0].id])
+            ("force", False),
+            ("purge", False),
+            ("volumes", [volumes[0].id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
-        self.volumes_mock.delete.assert_called_with(volumes[0].id)
+        self.volumes_mock.delete.assert_called_once_with(
+            volumes[0].id, cascade=False)
         self.assertIsNone(result)
 
     def test_volume_delete_multi_volumes(self):
@@ -447,18 +437,93 @@ class TestVolumeDelete(TestVolume):
 
         arglist = [v.id for v in volumes]
         verifylist = [
+            ('force', False),
+            ('purge', False),
             ('volumes', arglist),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
-        calls = [call(v.id) for v in volumes]
+        calls = [call(v.id, cascade=False) for v in volumes]
         self.volumes_mock.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_volume_delete_multi_volumes_with_exception(self):
+        volumes = self.setup_volumes_mock(count=2)
+
+        arglist = [
+            volumes[0].id,
+            'unexist_volume',
+        ]
+        verifylist = [
+            ('force', False),
+            ('purge', False),
+            ('volumes', arglist),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [volumes[0], exceptions.CommandError]
+        with mock.patch.object(utils, 'find_resource',
+                               side_effect=find_mock_result) as find_mock:
+            try:
+                self.cmd.take_action(parsed_args)
+                self.fail('CommandError should be raised.')
+            except exceptions.CommandError as e:
+                self.assertEqual('1 of 2 volumes failed to delete.',
+                                 str(e))
+
+            find_mock.assert_any_call(self.volumes_mock, volumes[0].id)
+            find_mock.assert_any_call(self.volumes_mock, 'unexist_volume')
+
+            self.assertEqual(2, find_mock.call_count)
+            self.volumes_mock.delete.assert_called_once_with(
+                volumes[0].id, cascade=False)
+
+    def test_volume_delete_with_purge(self):
+        volumes = self.setup_volumes_mock(count=1)
+
+        arglist = [
+            '--purge',
+            volumes[0].id,
+        ]
+        verifylist = [
+            ('force', False),
+            ('purge', True),
+            ('volumes', [volumes[0].id]),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        self.volumes_mock.delete.assert_called_once_with(
+            volumes[0].id, cascade=True)
+        self.assertIsNone(result)
+
+    def test_volume_delete_with_force(self):
+        volumes = self.setup_volumes_mock(count=1)
+
+        arglist = [
+            '--force',
+            volumes[0].id,
+        ]
+        verifylist = [
+            ('force', True),
+            ('purge', False),
+            ('volumes', [volumes[0].id]),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        self.volumes_mock.force_delete.assert_called_once_with(volumes[0].id)
         self.assertIsNone(result)
 
 
 class TestVolumeList(TestVolume):
+
+    project = identity_fakes.FakeProject.create_one_project()
+    user = identity_fakes.FakeUser.create_one_user()
 
     columns = [
         'ID',
@@ -474,21 +539,9 @@ class TestVolumeList(TestVolume):
         self.mock_volume = volume_fakes.FakeVolume.create_one_volume()
         self.volumes_mock.list.return_value = [self.mock_volume]
 
-        self.users_mock.get.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.USER),
-                loaded=True,
-            ),
-        ]
+        self.users_mock.get.return_value = self.user
 
-        self.projects_mock.get.return_value = [
-            fakes.FakeResource(
-                None,
-                copy.deepcopy(identity_fakes.PROJECT),
-                loaded=True,
-            ),
-        ]
+        self.projects_mock.get.return_value = self.project
 
         # Get the command object to test
         self.cmd = volume.ListVolume(self.app, None)
@@ -521,10 +574,10 @@ class TestVolumeList(TestVolume):
 
     def test_volume_list_project(self):
         arglist = [
-            '--project', identity_fakes.project_name,
+            '--project', self.project.name,
         ]
         verifylist = [
-            ('project', identity_fakes.project_name),
+            ('project', self.project.name),
             ('long', False),
             ('all_projects', False),
             ('status', None),
@@ -549,12 +602,12 @@ class TestVolumeList(TestVolume):
 
     def test_volume_list_project_domain(self):
         arglist = [
-            '--project', identity_fakes.project_name,
-            '--project-domain', identity_fakes.domain_name,
+            '--project', self.project.name,
+            '--project-domain', self.project.domain_id,
         ]
         verifylist = [
-            ('project', identity_fakes.project_name),
-            ('project_domain', identity_fakes.domain_name),
+            ('project', self.project.name),
+            ('project_domain', self.project.domain_id),
             ('long', False),
             ('all_projects', False),
             ('status', None),
@@ -579,10 +632,10 @@ class TestVolumeList(TestVolume):
 
     def test_volume_list_user(self):
         arglist = [
-            '--user', identity_fakes.user_name,
+            '--user', self.user.name,
         ]
         verifylist = [
-            ('user', identity_fakes.user_name),
+            ('user', self.user.name),
             ('long', False),
             ('all_projects', False),
             ('status', None),
@@ -606,12 +659,12 @@ class TestVolumeList(TestVolume):
 
     def test_volume_list_user_domain(self):
         arglist = [
-            '--user', identity_fakes.user_name,
-            '--user-domain', identity_fakes.domain_name,
+            '--user', self.user.name,
+            '--user-domain', self.user.domain_id,
         ]
         verifylist = [
-            ('user', identity_fakes.user_name),
-            ('user_domain', identity_fakes.domain_name),
+            ('user', self.user.name),
+            ('user_domain', self.user.domain_id),
             ('long', False),
             ('all_projects', False),
             ('status', None),
@@ -761,6 +814,74 @@ class TestVolumeList(TestVolume):
         self.assertEqual(datalist, tuple(data))
 
 
+class TestVolumeSet(TestVolume):
+
+    def setUp(self):
+        super(TestVolumeSet, self).setUp()
+
+        self.new_volume = volume_fakes.FakeVolume.create_one_volume()
+        self.volumes_mock.get.return_value = self.new_volume
+
+        # Get the command object to test
+        self.cmd = volume.SetVolume(self.app, None)
+
+    def test_volume_set_image_property(self):
+        arglist = [
+            '--image-property', 'Alpha=a',
+            '--image-property', 'Beta=b',
+            self.new_volume.id,
+        ]
+        verifylist = [
+            ('image_property', {'Alpha': 'a', 'Beta': 'b'}),
+            ('volume', self.new_volume.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        # In base command class ShowOne in cliff, abstract method take_action()
+        # returns nothing
+        self.cmd.take_action(parsed_args)
+        self.volumes_mock.set_image_metadata.assert_called_with(
+            self.new_volume.id, parsed_args.image_property)
+
+    def test_volume_set_state(self):
+        arglist = [
+            '--state', 'error',
+            self.new_volume.id
+        ]
+        verifylist = [
+            ('state', 'error'),
+            ('volume', self.new_volume.id)
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+        self.volumes_mock.reset_state.assert_called_with(
+            self.new_volume.id, 'error')
+        self.assertIsNone(result)
+
+    def test_volume_set_state_failed(self):
+        self.volumes_mock.reset_state.side_effect = exceptions.CommandError()
+        arglist = [
+            '--state', 'error',
+            self.new_volume.id
+        ]
+        verifylist = [
+            ('state', 'error'),
+            ('volume', self.new_volume.id)
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        try:
+            self.cmd.take_action(parsed_args)
+            self.fail('CommandError should be raised.')
+        except exceptions.CommandError as e:
+            self.assertEqual('One or more of the set operations failed',
+                             str(e))
+        self.volumes_mock.reset_state.assert_called_with(
+            self.new_volume.id, 'error')
+
+
 class TestVolumeShow(TestVolume):
 
     def setUp(self):
@@ -792,43 +913,13 @@ class TestVolumeShow(TestVolume):
             data)
 
 
-class TestVolumeSet(TestVolume):
-
-    def setUp(self):
-        super(TestVolumeSet, self).setUp()
-
-        self.new_volume = volume_fakes.FakeVolume.create_one_volume()
-        self.volumes_mock.create.return_value = self.new_volume
-
-        # Get the command object to test
-        self.cmd = volume.SetVolume(self.app, None)
-
-    def test_volume_set_image_property(self):
-        arglist = [
-            '--image-property', 'Alpha=a',
-            '--image-property', 'Beta=b',
-            self.new_volume.id,
-        ]
-        verifylist = [
-            ('image_property', {'Alpha': 'a', 'Beta': 'b'}),
-            ('volume', self.new_volume.id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # In base command class ShowOne in cliff, abstract method take_action()
-        # returns nothing
-        self.cmd.take_action(parsed_args)
-        self.volumes_mock.set_image_metadata.assert_called_with(
-            self.volumes_mock.get().id, parsed_args.image_property)
-
-
 class TestVolumeUnset(TestVolume):
 
     def setUp(self):
         super(TestVolumeUnset, self).setUp()
 
         self.new_volume = volume_fakes.FakeVolume.create_one_volume()
-        self.volumes_mock.create.return_value = self.new_volume
+        self.volumes_mock.get.return_value = self.new_volume
 
         # Get the command object to set property
         self.cmd_set = volume.SetVolume(self.app, None)
@@ -872,4 +963,4 @@ class TestVolumeUnset(TestVolume):
         self.cmd_unset.take_action(parsed_args_unset)
 
         self.volumes_mock.delete_image_metadata.assert_called_with(
-            self.volumes_mock.get().id, parsed_args_unset.image_property)
+            self.new_volume.id, parsed_args_unset.image_property)

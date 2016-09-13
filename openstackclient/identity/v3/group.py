@@ -15,15 +15,19 @@
 
 """Group action implementations"""
 
-import six
+import logging
 import sys
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.command import command
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class AddUserToGroup(command.Command):
@@ -156,14 +160,14 @@ class CreateGroup(command.ShowOne):
                 name=parsed_args.name,
                 domain=domain,
                 description=parsed_args.description)
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 group = utils.find_resource(identity_client.groups,
                                             parsed_args.name,
                                             domain_id=domain)
-                self.log.info(_('Returning existing group %s'), group.name)
+                LOG.info(_('Returning existing group %s'), group.name)
             else:
-                raise e
+                raise
 
         group._info.pop('links')
         return zip(*sorted(six.iteritems(group._info)))
@@ -339,9 +343,6 @@ class SetGroup(command.Command):
         if parsed_args.description:
             kwargs['description'] = parsed_args.description
 
-        if not len(kwargs):
-            sys.stderr.write("Group not updated, no arguments present\n")
-            return
         identity_client.groups.update(group.id, **kwargs)
 
 

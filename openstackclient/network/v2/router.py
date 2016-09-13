@@ -14,13 +14,15 @@
 """Router action implementations"""
 
 import argparse
+import copy
 import json
 import logging
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 
@@ -204,7 +206,7 @@ class CreateRouter(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
 
-        return columns, data
+        return (columns, data)
 
 
 class DeleteRouter(command.Command):
@@ -222,9 +224,23 @@ class DeleteRouter(command.Command):
 
     def take_action(self, parsed_args):
         client = self.app.client_manager.network
+        result = 0
+
         for router in parsed_args.router:
-            obj = client.find_router(router)
-            client.delete_router(obj)
+            try:
+                obj = client.find_router(router, ignore_missing=False)
+                client.delete_router(obj)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete router with "
+                          "name or ID '%(router)s': %(e)s")
+                          % {'router': router, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.router)
+            msg = (_("%(result)s of %(total)s routers failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListRouter(command.Lister):
@@ -294,7 +310,7 @@ class RemovePortFromRouter(command.Command):
         parser.add_argument(
             'port',
             metavar='<port>',
-            help=_("Port to be removed (name or ID)")
+            help=_("Port to be removed and deleted (name or ID)")
         )
         return parser
 
@@ -426,10 +442,6 @@ class SetRouter(command.Command):
                 route['nexthop'] = route.pop('gateway')
             attrs['routes'] = obj.routes + parsed_args.routes
 
-        if attrs == {}:
-            msg = _("Nothing specified to be set")
-            raise exceptions.CommandError(msg)
-
         client.update_router(obj, **attrs)
 
 
@@ -450,4 +462,46 @@ class ShowRouter(command.ShowOne):
         obj = client.find_router(parsed_args.router, ignore_missing=False)
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
-        return columns, data
+        return (columns, data)
+
+
+class UnsetRouter(command.Command):
+    """Unset router properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetRouter, self).get_parser(prog_name)
+        parser.add_argument(
+            '--route',
+            metavar='destination=<subnet>,gateway=<ip-address>',
+            action=parseractions.MultiKeyValueAction,
+            dest='routes',
+            default=None,
+            required_keys=['destination', 'gateway'],
+            help=_("Routes to be removed from the router "
+                   "destination: destination subnet (in CIDR notation) "
+                   "gateway: nexthop IP address "
+                   "(repeat option to unset multiple routes)"))
+        parser.add_argument(
+            'router',
+            metavar="<router>",
+            help=_("Router to modify (name or ID)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        client = self.app.client_manager.network
+        obj = client.find_router(parsed_args.router, ignore_missing=False)
+        tmp_routes = copy.deepcopy(obj.routes)
+        attrs = {}
+        if parsed_args.routes:
+            try:
+                for route in parsed_args.routes:
+                    tmp_routes.remove(route)
+            except ValueError:
+                msg = (_("Router does not contain route %s") % route)
+                raise exceptions.CommandError(msg)
+            for route in tmp_routes:
+                route['nexthop'] = route.pop('gateway')
+            attrs['routes'] = tmp_routes
+        if attrs:
+            client.update_router(obj, **attrs)

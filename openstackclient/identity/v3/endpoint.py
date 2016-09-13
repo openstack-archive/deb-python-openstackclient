@@ -15,13 +15,18 @@
 
 """Identity v3 Endpoint action implementations"""
 
-import six
-import sys
+import logging
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+import six
+
 from openstackclient.i18n import _
 from openstackclient.identity import common
+
+
+LOG = logging.getLogger(__name__)
 
 
 def get_service_name(service):
@@ -39,7 +44,7 @@ class CreateEndpoint(command.ShowOne):
         parser.add_argument(
             'service',
             metavar='<service>',
-            help=_('New endpoint service (name or ID)'),
+            help=_('Service to be associated with new endpoint (name or ID)'),
         )
         parser.add_argument(
             'interface',
@@ -94,22 +99,37 @@ class CreateEndpoint(command.ShowOne):
 
 
 class DeleteEndpoint(command.Command):
-    """Delete endpoint"""
+    """Delete endpoint(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteEndpoint, self).get_parser(prog_name)
         parser.add_argument(
             'endpoint',
             metavar='<endpoint-id>',
-            help=_('Endpoint ID to delete'),
+            nargs='+',
+            help=_('Endpoint(s) to delete (ID only)'),
         )
         return parser
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
-        endpoint_id = utils.find_resource(identity_client.endpoints,
-                                          parsed_args.endpoint).id
-        identity_client.endpoints.delete(endpoint_id)
+        result = 0
+        for i in parsed_args.endpoint:
+            try:
+                endpoint_id = utils.find_resource(
+                    identity_client.endpoints, i).id
+                identity_client.endpoints.delete(endpoint_id)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete endpoint with "
+                          "ID '%(endpoint)s': %(e)s")
+                          % {'endpoint': i, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.endpoint)
+            msg = (_("%(result)s of %(total)s endpoints failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListEndpoint(command.Lister):
@@ -120,7 +140,7 @@ class ListEndpoint(command.Lister):
         parser.add_argument(
             '--service',
             metavar='<service>',
-            help=_('Filter by service'),
+            help=_('Filter by service (name or ID)'),
         )
         parser.add_argument(
             '--interface',
@@ -168,7 +188,7 @@ class SetEndpoint(command.Command):
         parser.add_argument(
             'endpoint',
             metavar='<endpoint-id>',
-            help=_('Endpoint ID to modify'),
+            help=_('Endpoint to modify (ID only)'),
         )
         parser.add_argument(
             '--region',
@@ -210,12 +230,6 @@ class SetEndpoint(command.Command):
         identity_client = self.app.client_manager.identity
         endpoint = utils.find_resource(identity_client.endpoints,
                                        parsed_args.endpoint)
-
-        if (not parsed_args.interface and not parsed_args.url
-                and not parsed_args.service and not parsed_args.region
-                and not parsed_args.enabled and not parsed_args.disabled):
-            sys.stdout.write(_("Endpoint not updated, no arguments present\n"))
-            return
 
         service_id = None
         if parsed_args.service:

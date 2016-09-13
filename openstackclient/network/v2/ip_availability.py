@@ -13,8 +13,9 @@
 
 """IP Availability Info implementations"""
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 
@@ -40,15 +41,17 @@ class ListIPAvailability(command.Lister):
         parser.add_argument(
             '--ip-version',
             type=int,
+            default=4,
             choices=[4, 6],
             metavar='<ip-version>',
             dest='ip_version',
-            help=_("List IP availability of given IP version networks"),
+            help=_("List IP availability of given IP version "
+                   "networks (default is 4)"),
         )
         parser.add_argument(
             '--project',
             metavar='<project>',
-            help=_("List IP availability of given project"),
+            help=_("List IP availability of given project (name or ID)"),
         )
         identity_common.add_project_domain_option_to_parser(parser)
         return parser
@@ -106,4 +109,4 @@ class ShowIPAvailability(command.ShowOne):
                                                   ignore_missing=False)
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
-        return columns, data
+        return (columns, data)

@@ -13,7 +13,12 @@
 #   under the License.
 #
 
+import copy
 import mock
+import uuid
+
+from keystoneauth1 import access
+from keystoneauth1 import fixture
 
 from openstackclient.tests import fakes
 from openstackclient.tests import utils
@@ -45,6 +50,11 @@ ROLE = {
     'name': role_name,
 }
 
+ROLE_2 = {
+    'id': '2',
+    'name': 'bigboss',
+}
+
 service_id = '1925-10-11'
 service_name = 'elmore'
 service_description = 'Leonard, Elmore, rip'
@@ -71,19 +81,19 @@ USER = {
 }
 
 token_expires = '2014-01-01T00:00:00Z'
-token_id = 'tttttttt-tttt-tttt-tttt-tttttttttttt'
+token_id = 'token-id-' + uuid.uuid4().hex
 
 TOKEN = {
     'expires': token_expires,
     'id': token_id,
-    'tenant_id': project_id,
-    'user_id': user_id,
+    'tenant_id': 'project-id',
+    'user_id': 'user-id',
 }
 
 UNSCOPED_TOKEN = {
     'expires': token_expires,
     'id': token_id,
-    'user_id': user_id,
+    'user_id': 'user-id',
 }
 
 endpoint_name = service_name
@@ -106,25 +116,42 @@ ENDPOINT = {
     'service_id': endpoint_service_id,
 }
 
-extension_name = 'OpenStack Keystone User CRUD'
-extension_namespace = 'http://docs.openstack.org/identity/'\
-    'api/ext/OS-KSCRUD/v1.0'
-extension_description = 'OpenStack extensions to Keystone v2.0 API'\
-    ' enabling User Operations.'
-extension_updated = '2013-07-07T12:00:0-00:00'
-extension_alias = 'OS-KSCRUD'
-extension_links = '[{"href":'\
-    '"https://github.com/openstack/identity-api", "type":'\
-    ' "text/html", "rel": "describedby"}]'
 
-EXTENSION = {
-    'name': extension_name,
-    'namespace': extension_namespace,
-    'description': extension_description,
-    'updated': extension_updated,
-    'alias': extension_alias,
-    'links': extension_links,
-}
+def fake_auth_ref(fake_token, fake_service=None):
+    """Create an auth_ref using keystoneauth's fixtures"""
+    token_copy = copy.deepcopy(fake_token)
+    token_copy['token_id'] = token_copy.pop('id')
+    token = fixture.V2Token(**token_copy)
+    # An auth_ref is actually an access info object
+    auth_ref = access.create(body=token)
+
+    # Create a service catalog
+    if fake_service:
+        service = token.add_service(
+            fake_service.type,
+            fake_service.name,
+        )
+        # TODO(dtroyer): Add an 'id' element to KSA's _Service fixure
+        service['id'] = fake_service.id
+        for e in fake_service.endpoints:
+            # KSA's _Service fixture copies publicURL to internalURL and
+            # adminURL if they do not exist.  Soooo helpful...
+            internal = e.get('internalURL', None)
+            admin = e.get('adminURL', None)
+            region = e.get('region_id') or e.get('region', '<none>')
+            endpoint = service.add_endpoint(
+                public=e['publicURL'],
+                internal=internal,
+                admin=admin,
+                region=region,
+            )
+            # ...so undo that helpfulness
+            if not internal:
+                endpoint['internalURL'] = None
+            if not admin:
+                endpoint['adminURL'] = None
+
+    return auth_ref
 
 
 class FakeIdentityv2Client(object):
@@ -166,3 +193,323 @@ class TestIdentityv2(utils.TestCommand):
             endpoint=fakes.AUTH_URL,
             token=fakes.AUTH_TOKEN,
         )
+
+
+class FakeExtension(object):
+    """Fake one or more extension."""
+
+    @staticmethod
+    def create_one_extension(attrs=None):
+        """Create a fake extension.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object with name, namespace, etc.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        extension_info = {
+            'name': 'name-' + uuid.uuid4().hex,
+            'namespace': ('http://docs.openstack.org/identity/'
+                          'api/ext/OS-KSCRUD/v1.0'),
+            'description': 'description-' + uuid.uuid4().hex,
+            'updated': '2013-07-07T12:00:0-00:00',
+            'alias': 'OS-KSCRUD',
+            'links': ('[{"href":'
+                      '"https://github.com/openstack/identity-api", "type":'
+                      ' "text/html", "rel": "describedby"}]')
+        }
+
+        # Overwrite default attributes.
+        extension_info.update(attrs)
+
+        extension = fakes.FakeResource(
+            info=copy.deepcopy(extension_info),
+            loaded=True)
+        return extension
+
+
+class FakeCatalog(object):
+    """Fake one or more catalog."""
+
+    @staticmethod
+    def create_catalog(attrs=None):
+        """Create a fake catalog.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object with id, name, type and so on.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        catalog_info = {
+            'id': 'service-id-' + uuid.uuid4().hex,
+            'type': 'compute',
+            'name': 'supernova',
+            'endpoints': [
+                {
+                    'region': 'one',
+                    'publicURL': 'https://public.one.example.com',
+                    'internalURL': 'https://internal.one.example.com',
+                    'adminURL': 'https://admin.one.example.com',
+                },
+                {
+                    'region': 'two',
+                    'publicURL': 'https://public.two.example.com',
+                    'internalURL': 'https://internal.two.example.com',
+                    'adminURL': 'https://admin.two.example.com',
+                },
+                {
+                    'region': None,
+                    'publicURL': 'https://public.none.example.com',
+                    'internalURL': 'https://internal.none.example.com',
+                    'adminURL': 'https://admin.none.example.com',
+                },
+            ],
+        }
+        # Overwrite default attributes.
+        catalog_info.update(attrs)
+
+        catalog = fakes.FakeResource(
+            info=copy.deepcopy(catalog_info),
+            loaded=True)
+
+        return catalog
+
+
+class FakeProject(object):
+    """Fake one or more project."""
+
+    @staticmethod
+    def create_one_project(attrs=None):
+        """Create a fake project.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        project_info = {
+            'id': 'project-id-' + uuid.uuid4().hex,
+            'name': 'project-name-' + uuid.uuid4().hex,
+            'description': 'project_description',
+            'enabled': True,
+        }
+        project_info.update(attrs)
+
+        project = fakes.FakeResource(info=copy.deepcopy(project_info),
+                                     loaded=True)
+        return project
+
+    @staticmethod
+    def create_projects(attrs=None, count=2):
+        """Create multiple fake projects.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of projects to fake
+        :return:
+            A list of FakeResource objects faking the projects
+        """
+        projects = []
+        for i in range(0, count):
+            projects.append(FakeProject.create_one_project(attrs))
+
+        return projects
+
+
+class FakeEndpoint(object):
+    """Fake one or more endpoint."""
+
+    @staticmethod
+    def create_one_endpoint(attrs=None):
+        """Create a fake agent.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, region, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        endpoint_info = {
+            'service_name': 'service-name-' + uuid.uuid4().hex,
+            'adminurl': 'http://endpoint_adminurl',
+            'region': 'endpoint_region',
+            'internalurl': 'http://endpoint_internalurl',
+            'service_type': 'service_type',
+            'id': 'endpoint-id-' + uuid.uuid4().hex,
+            'publicurl': 'http://endpoint_publicurl',
+            'service_id': 'service-name-' + uuid.uuid4().hex,
+
+        }
+        endpoint_info.update(attrs)
+
+        endpoint = fakes.FakeResource(info=copy.deepcopy(endpoint_info),
+                                      loaded=True)
+        return endpoint
+
+    @staticmethod
+    def create_endpoints(attrs=None, count=2):
+        """Create multiple fake endpoints.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of endpoints to fake
+        :return:
+            A list of FakeResource objects faking the endpoints
+        """
+        endpoints = []
+        for i in range(0, count):
+            endpoints.append(FakeEndpoint.create_one_endpoint(attrs))
+
+        return endpoints
+
+
+class FakeService(object):
+    """Fake one or more service."""
+
+    @staticmethod
+    def create_one_service(attrs=None):
+        """Create a fake service.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, type, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        service_info = {
+            'id': 'service-id-' + uuid.uuid4().hex,
+            'name': 'service-name-' + uuid.uuid4().hex,
+            'description': 'service_description',
+            'type': 'service_type',
+
+        }
+        service_info.update(attrs)
+
+        service = fakes.FakeResource(info=copy.deepcopy(service_info),
+                                     loaded=True)
+        return service
+
+    @staticmethod
+    def create_services(attrs=None, count=2):
+        """Create multiple fake services.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of services to fake
+        :return:
+            A list of FakeResource objects faking the services
+        """
+        services = []
+        for i in range(0, count):
+            services.append(FakeService.create_one_service(attrs))
+
+        return services
+
+
+class FakeRole(object):
+    """Fake one or more role."""
+
+    @staticmethod
+    def create_one_role(attrs=None):
+        """Create a fake role.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        role_info = {
+            'id': 'role-id' + uuid.uuid4().hex,
+            'name': 'role-name' + uuid.uuid4().hex,
+        }
+        role_info.update(attrs)
+
+        role = fakes.FakeResource(info=copy.deepcopy(role_info),
+                                  loaded=True)
+        return role
+
+    @staticmethod
+    def create_roles(attrs=None, count=2):
+        """Create multiple fake roles.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of roles to fake
+        :return:
+            A list of FakeResource objects faking the roles
+        """
+        roles = []
+        for i in range(0, count):
+            roles.append(FakeRole.create_one_role(attrs))
+
+        return roles
+
+
+class FakeUser(object):
+    """Fake one or more user."""
+
+    @staticmethod
+    def create_one_user(attrs=None):
+        """Create a fake user.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+        attrs = attrs or {}
+
+        # set default attributes.
+        user_info = {
+            'id': 'user-id-' + uuid.uuid4().hex,
+            'name': 'user-name-' + uuid.uuid4().hex,
+            'tenantId': 'project-id-' + uuid.uuid4().hex,
+            'email': 'admin@openstack.org',
+            'enabled': True,
+        }
+        user_info.update(attrs)
+
+        user = fakes.FakeResource(info=copy.deepcopy(user_info),
+                                  loaded=True)
+        return user
+
+    @staticmethod
+    def create_users(attrs=None, count=2):
+        """Create multiple fake users.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of users to fake
+        :return:
+            A list of FakeResource objects faking the users
+        """
+        users = []
+        for i in range(0, count):
+            users.append(FakeUser.create_one_user(attrs))
+
+        return users

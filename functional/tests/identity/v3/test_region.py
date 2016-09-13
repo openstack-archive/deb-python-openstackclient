@@ -10,10 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from functional.tests.identity.v3 import test_identity
+from functional.tests.identity.v3 import common
 
 
-class RegionTests(test_identity.IdentityTests):
+class RegionTests(common.IdentityTests):
 
     def test_region_create(self):
         self._create_dummy_region()
@@ -25,6 +25,13 @@ class RegionTests(test_identity.IdentityTests):
     def test_region_delete(self):
         region_id = self._create_dummy_region(add_clean_up=False)
         raw_output = self.openstack('region delete %s' % region_id)
+        self.assertEqual(0, len(raw_output))
+
+    def test_region_multi_delete(self):
+        region_1 = self._create_dummy_region(add_clean_up=False)
+        region_2 = self._create_dummy_region(add_clean_up=False)
+        raw_output = self.openstack(
+            'region delete %s %s' % (region_1, region_2))
         self.assertEqual(0, len(raw_output))
 
     def test_region_list(self):

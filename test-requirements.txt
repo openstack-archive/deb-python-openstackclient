@@ -4,31 +4,36 @@
 hacking<0.11,>=0.10.0
 
 coverage>=3.6 # Apache-2.0
-discover # BSD
 fixtures>=3.0.0 # Apache-2.0/BSD
 mock>=2.0 # BSD
 oslosphinx!=3.4.0,>=2.5.0 # Apache-2.0
 oslotest>=1.10.0 # Apache-2.0
-reno>=1.6.2 # Apache2
-requests-mock>=0.7.0 # Apache-2.0
-sphinx!=1.2.0,!=1.3b1,<1.3,>=1.1.2 # BSD
+reno>=1.8.0 # Apache2
+requests>=2.10.0 # Apache-2.0
+requests-mock>=1.0 # Apache-2.0
+sphinx!=1.3b1,<1.3,>=1.2.1 # BSD
+stevedore>=1.16.0 # Apache-2.0
+os-client-config!=1.19.0,!=1.19.1,!=1.20.0,!=1.20.1,!=1.21.0,>=1.13.1 # Apache-2.0
 os-testr>=0.7.0 # Apache-2.0
 testrepository>=0.0.18 # Apache-2.0/BSD
 testtools>=1.4.0 # MIT
-tempest>=11.0.0 # Apache-2.0
-osprofiler>=1.3.0 # Apache-2.0
-bandit>=1.0.1 # Apache-2.0
+tempest>=12.1.0 # Apache-2.0
+osprofiler>=1.4.0 # Apache-2.0
+bandit>=1.1.0 # Apache-2.0
+wrapt>=1.7.0 # BSD License
 
 # Install these to generate sphinx autodocs
+aodhclient>=0.5.0 # Apache-2.0
 python-barbicanclient>=4.0.0 # Apache-2.0
-python-congressclient<2000,>=1.0.0 # Apache-2.0
+python-congressclient<2000,>=1.3.0 # Apache-2.0
 python-designateclient>=1.5.0 # Apache-2.0
-python-heatclient>=1.1.0 # Apache-2.0
-python-ironicclient>=1.1.0 # Apache-2.0
+python-heatclient>=1.4.0 # Apache-2.0
+python-ironicclient>=1.6.0 # Apache-2.0
 python-ironic-inspector-client>=1.5.0 # Apache-2.0
-python-mistralclient>=1.0.0 # Apache-2.0
+python-mistralclient>=2.0.0 # Apache-2.0
 python-muranoclient>=0.8.2 # Apache-2.0
-python-saharaclient>=0.13.0 # Apache-2.0
+python-neutronclient>=5.1.0 # Apache-2.0
+python-saharaclient>=0.16.0 # Apache-2.0
 python-searchlightclient>=0.2.0 #Apache-2.0
 python-senlinclient>=0.3.0 # Apache-2.0
 python-zaqarclient>=1.0.0 # Apache-2.0

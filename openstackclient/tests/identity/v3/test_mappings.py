@@ -13,10 +13,10 @@
 #   under the License.
 
 import copy
-
 import mock
 
-from openstackclient.common import exceptions
+from osc_lib import exceptions
+
 from openstackclient.identity.v3 import mapping
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
@@ -90,7 +90,7 @@ class TestMappingDelete(TestMapping):
             identity_fakes.mapping_id
         ]
         verifylist = [
-            ('mapping', identity_fakes.mapping_id)
+            ('mapping', [identity_fakes.mapping_id])
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 

@@ -13,9 +13,11 @@
 
 """Configuration action implementations"""
 
+from keystoneauth1.loading import base
+from osc_lib.command import command
 import six
 
-from openstackclient.common import command
+from openstackclient.i18n import _
 
 REDACTED = "<redacted>"
 
@@ -31,24 +33,25 @@ class ShowConfiguration(command.ShowOne):
             dest="mask",
             action="store_true",
             default=True,
-            help="Attempt to mask passwords (default)",
+            help=_("Attempt to mask passwords (default)"),
         )
         mask_group.add_argument(
             "--unmask",
             dest="mask",
             action="store_false",
-            help="Show password in clear text",
+            help=_("Show password in clear text"),
         )
         return parser
 
     def take_action(self, parsed_args):
 
+        auth_plg_name = self.app.client_manager.auth_plugin_name
+        secret_opts = [o.dest for o in base.get_plugin_options(auth_plg_name)
+                       if o.secret]
+
         info = self.app.client_manager.get_configuration()
         for key, value in six.iteritems(info.pop('auth', {})):
-            if parsed_args.mask:
-                if 'password' in key.lower():
-                    value = REDACTED
-                if 'token' in key.lower():
+            if parsed_args.mask and key.lower() in secret_opts:
                     value = REDACTED
             info['auth.' + key] = value
         return zip(*sorted(six.iteritems(info)))

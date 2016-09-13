@@ -38,7 +38,7 @@ Create a new aggregate
 
     os aggregate create
         [--zone <availability-zone>]
-        [--property <key=value>]
+        [--property <key=value> [...] ]
         <name>
 
 .. option:: --zone <availability-zone>
@@ -56,17 +56,17 @@ Create a new aggregate
 aggregate delete
 ----------------
 
-Delete an existing aggregate
+Delete existing aggregate(s)
 
 .. program:: aggregate delete
 .. code:: bash
 
     os aggregate delete
-        <aggregate>
+        <aggregate> [<aggregate> ...]
 
 .. describe:: <aggregate>
 
-    Aggregate to delete (name or ID)
+    Aggregate(s) to delete (name or ID)
 
 aggregate list
 --------------
@@ -115,7 +115,7 @@ Set aggregate properties
     os aggregate set
         [--name <new-name>]
         [--zone <availability-zone>]
-        [--property <key=value>]
+        [--property <key=value> [...] ]
         <aggregate>
 
 .. option:: --name <name>
@@ -160,8 +160,7 @@ Unset aggregate properties
 .. code-block:: bash
 
     os aggregate unset
-        --property <key>
-        [--property <key>] ...
+        [--property <key> [...] ]
         <aggregate>
 
 .. option:: --property <key>

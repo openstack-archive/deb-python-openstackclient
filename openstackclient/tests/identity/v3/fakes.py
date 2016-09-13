@@ -13,7 +13,12 @@
 #   under the License.
 #
 
+import copy
 import mock
+import uuid
+
+from keystoneauth1 import access
+from keystoneauth1 import fixture
 
 from openstackclient.tests import fakes
 from openstackclient.tests import utils
@@ -168,7 +173,15 @@ role_name = 'roller'
 ROLE = {
     'id': role_id,
     'name': role_name,
+    'domain': None,
     'links': base_url + 'roles/' + role_id,
+}
+
+ROLE_2 = {
+    'id': 'r2',
+    'name': 'Rolls Royce',
+    'domain': domain_id,
+    'links': base_url + 'roles/' + 'r2',
 }
 
 service_id = 's-123'
@@ -192,8 +205,6 @@ SERVICE_WITHOUT_NAME = {
     'enabled': True,
     'links': base_url + 'services/' + service_id,
 }
-
-credential_id = 'c-123'
 
 endpoint_id = 'e-123'
 endpoint_url = 'http://127.0.0.1:35357'
@@ -355,6 +366,12 @@ ASSIGNMENT_WITH_DOMAIN_ID_AND_USER_ID = {
     'role': {'id': role_id},
 }
 
+ASSIGNMENT_WITH_DOMAIN_ROLE = {
+    'scope': {'domain': {'id': domain_id}},
+    'user': {'id': user_id},
+    'role': {'id': ROLE_2['id']},
+}
+
 ASSIGNMENT_WITH_DOMAIN_ID_AND_USER_ID_INCLUDE_NAMES = {
     'scope': {
         'domain': {'id': domain_id,
@@ -419,6 +436,36 @@ OAUTH_VERIFIER = {
 }
 
 
+def fake_auth_ref(fake_token, fake_service=None):
+    """Create an auth_ref using keystoneauth's fixtures"""
+    token_copy = copy.deepcopy(fake_token)
+    token_id = token_copy.pop('id')
+    token = fixture.V3Token(**token_copy)
+    # An auth_ref is actually an access info object
+    auth_ref = access.create(
+        body=token,
+        auth_token=token_id,
+    )
+
+    # Create a service catalog
+    if fake_service:
+        service = token.add_service(
+            fake_service['type'],
+            fake_service['name'],
+        )
+        # TODO(dtroyer): Add an 'id' element to KSA's _Service fixure
+        service['id'] = fake_service['id']
+        for e in fake_service['endpoints']:
+            region = e.get('region_id') or e.get('region', '<none>')
+            service.add_endpoint(
+                e['interface'],
+                e['url'],
+                region=region,
+            )
+
+    return auth_ref
+
+
 class FakeAuth(object):
 
     def __init__(self, auth_method_class=None):
@@ -468,6 +515,9 @@ class FakeIdentityv3Client(object):
         self.role_assignments.resource_class = fakes.FakeResource(None, {})
         self.auth_token = kwargs['token']
         self.management_url = kwargs['endpoint']
+        self.auth = FakeAuth()
+        self.auth.client = mock.Mock()
+        self.auth.client.resource_class = fakes.FakeResource(None, {})
 
 
 class FakeFederationManager(object):
@@ -538,3 +588,327 @@ class TestOAuth1(utils.TestCommand):
             endpoint=fakes.AUTH_URL,
             token=fakes.AUTH_TOKEN
         )
+
+
+class FakeProject(object):
+    """Fake one or more project."""
+
+    @staticmethod
+    def create_one_project(attrs=None):
+        """Create a fake project.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        project_info = {
+            'id': 'project-id-' + uuid.uuid4().hex,
+            'name': 'project-name-' + uuid.uuid4().hex,
+            'description': 'project-description-' + uuid.uuid4().hex,
+            'enabled': True,
+            'is_domain': False,
+            'domain_id': 'domain-id-' + uuid.uuid4().hex,
+            'parent_id': 'parent-id-' + uuid.uuid4().hex,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        project_info.update(attrs)
+
+        project = fakes.FakeResource(info=copy.deepcopy(project_info),
+                                     loaded=True)
+        return project
+
+
+class FakeDomain(object):
+    """Fake one or more domain."""
+
+    @staticmethod
+    def create_one_domain(attrs=None):
+        """Create a fake domain.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        domain_info = {
+            'id': 'domain-id-' + uuid.uuid4().hex,
+            'name': 'domain-name-' + uuid.uuid4().hex,
+            'description': 'domain-description-' + uuid.uuid4().hex,
+            'enabled': True,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        domain_info.update(attrs)
+
+        domain = fakes.FakeResource(info=copy.deepcopy(domain_info),
+                                    loaded=True)
+        return domain
+
+
+class FakeCredential(object):
+    """Fake one or more credential."""
+
+    @staticmethod
+    def create_one_credential(attrs=None):
+        """Create a fake credential.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, type, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        credential_info = {
+            'id': 'credential-id-' + uuid.uuid4().hex,
+            'type': 'cert',
+            'user_id': 'user-id-' + uuid.uuid4().hex,
+            'blob': 'credential-data-' + uuid.uuid4().hex,
+            'project_id': 'project-id-' + uuid.uuid4().hex,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        credential_info.update(attrs)
+
+        credential = fakes.FakeResource(
+            info=copy.deepcopy(credential_info), loaded=True)
+        return credential
+
+    @staticmethod
+    def create_credentials(attrs=None, count=2):
+        """Create multiple fake credentials.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of credentials to fake
+        :return:
+            A list of FakeResource objects faking the credentials
+        """
+        credentials = []
+        for i in range(0, count):
+            credential = FakeCredential.create_one_credential(attrs)
+            credentials.append(credential)
+
+        return credentials
+
+    @staticmethod
+    def get_credentials(credentials=None, count=2):
+        """Get an iterable MagicMock object with a list of faked credentials.
+
+        If credentials list is provided, then initialize the Mock object with
+        the list. Otherwise create one.
+
+        :param List credentials:
+            A list of FakeResource objects faking credentials
+        :param Integer count:
+            The number of credentials to be faked
+        :return
+            An iterable Mock object with side_effect set to a list of faked
+            credentials
+        """
+        if credentials is None:
+            credentials = FakeCredential.create_credentials(count)
+
+        return mock.MagicMock(side_effect=credentials)
+
+
+class FakeUser(object):
+    """Fake one or more user."""
+
+    @staticmethod
+    def create_one_user(attrs=None):
+        """Create a fake user.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        user_info = {
+            'id': 'user-id-' + uuid.uuid4().hex,
+            'name': 'user-name-' + uuid.uuid4().hex,
+            'default_project_id': 'project-' + uuid.uuid4().hex,
+            'email': 'user-email-' + uuid.uuid4().hex,
+            'enabled': True,
+            'domain_id': 'domain-id-' + uuid.uuid4().hex,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        user_info.update(attrs)
+
+        user = fakes.FakeResource(info=copy.deepcopy(user_info),
+                                  loaded=True)
+        return user
+
+
+class FakeGroup(object):
+    """Fake one or more group."""
+
+    @staticmethod
+    def create_one_group(attrs=None):
+        """Create a fake group.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        group_info = {
+            'id': 'group-id-' + uuid.uuid4().hex,
+            'name': 'group-name-' + uuid.uuid4().hex,
+            'links': 'links-' + uuid.uuid4().hex,
+            'domain_id': 'domain-id-' + uuid.uuid4().hex,
+            'description': 'group-description-' + uuid.uuid4().hex,
+        }
+        group_info.update(attrs)
+
+        group = fakes.FakeResource(info=copy.deepcopy(group_info),
+                                   loaded=True)
+        return group
+
+    @staticmethod
+    def create_groups(attrs=None, count=2):
+        """Create multiple fake groups.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of groups to fake
+        :return:
+            A list of FakeResource objects faking the groups
+        """
+        groups = []
+        for i in range(0, count):
+            group = FakeGroup.create_one_group(attrs)
+            groups.append(group)
+
+        return groups
+
+    @staticmethod
+    def get_groups(groups=None, count=2):
+        """Get an iterable MagicMock object with a list of faked groups.
+
+        If groups list is provided, then initialize the Mock object with
+        the list. Otherwise create one.
+
+        :param List groups:
+            A list of FakeResource objects faking groups
+        :param Integer count:
+            The number of groups to be faked
+        :return
+            An iterable Mock object with side_effect set to a list of faked
+            groups
+        """
+        if groups is None:
+            groups = FakeGroup.create_groups(count)
+
+        return mock.MagicMock(side_effect=groups)
+
+
+class FakeEndpoint(object):
+    """Fake one or more endpoint."""
+
+    @staticmethod
+    def create_one_endpoint(attrs=None):
+        """Create a fake endpoint.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, url, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        endpoint_info = {
+            'id': 'endpoint-id-' + uuid.uuid4().hex,
+            'url': 'url-' + uuid.uuid4().hex,
+            'region': 'endpoint-region-' + uuid.uuid4().hex,
+            'interface': 'admin',
+            'service_id': 'service-id-' + uuid.uuid4().hex,
+            'enabled': True,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        endpoint_info.update(attrs)
+
+        endpoint = fakes.FakeResource(info=copy.deepcopy(endpoint_info),
+                                      loaded=True)
+        return endpoint
+
+
+class FakeService(object):
+    """Fake one or more service."""
+
+    @staticmethod
+    def create_one_service(attrs=None):
+        """Create a fake service.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, name, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        service_info = {
+            'id': 'service-id-' + uuid.uuid4().hex,
+            'name': 'service-name-' + uuid.uuid4().hex,
+            'type': 'service-type-' + uuid.uuid4().hex,
+            'description': 'service-description-' + uuid.uuid4().hex,
+            'enabled': True,
+            'links': 'links-' + uuid.uuid4().hex,
+        }
+        service_info.update(attrs)
+
+        service = fakes.FakeResource(info=copy.deepcopy(service_info),
+                                     loaded=True)
+        return service
+
+
+class FakeRoleAssignment(object):
+    """Fake one or more role assignment."""
+
+    @staticmethod
+    def create_one_role_assignment(attrs=None):
+        """Create a fake role assignment.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with scope, user, and so on
+        """
+
+        attrs = attrs or {}
+
+        # set default attributes.
+        role_assignment_info = {
+            'scope': {'project': {'id': 'project-id-' + uuid.uuid4().hex}},
+            'user': {'id': 'user-id-' + uuid.uuid4().hex},
+            'role': {'id': 'role-id-' + uuid.uuid4().hex},
+        }
+        role_assignment_info.update(attrs)
+
+        role_assignment = fakes.FakeResource(
+            info=copy.deepcopy(role_assignment_info), loaded=True)
+
+        return role_assignment

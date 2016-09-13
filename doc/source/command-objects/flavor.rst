@@ -21,6 +21,9 @@ Create new flavor
         [--vcpus <num-cpu>]
         [--rxtx-factor <factor>]
         [--public | --private]
+        [--property <key=value> [...] ]
+        [--project <project>]
+        [--project-domain <project-domain>]
         <flavor-name>
 
 .. option:: --id <id>
@@ -59,6 +62,20 @@ Create new flavor
 
     Flavor is not available to other projects
 
+.. option:: --property <key=value>
+
+    Property to add for this flavor (repeat option to set multiple properties)
+
+.. option:: --project <project>
+
+    Allow <project> to access private flavor (name or ID)
+    (Must be used with :option:`--private` option)
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
 .. _flavor_create-flavor-name:
 .. describe:: <flavor-name>
 
@@ -67,18 +84,18 @@ Create new flavor
 flavor delete
 -------------
 
-Delete flavor
+Delete flavor(s)
 
 .. program:: flavor delete
 .. code:: bash
 
     os flavor delete
-        <flavor>
+        <flavor> [<flavor> ...]
 
 .. _flavor_delete-flavor:
 .. describe:: <flavor>
 
-    Flavor to delete (name or ID)
+    Flavor(s) to delete (name or ID)
 
 flavor list
 -----------

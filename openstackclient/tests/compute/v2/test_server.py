@@ -12,12 +12,14 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 #
+import collections
 import getpass
 import mock
-
 from mock import call
-from openstackclient.common import exceptions
-from openstackclient.common import utils as common_utils
+
+from osc_lib import exceptions
+from osc_lib import utils as common_utils
+
 from openstackclient.compute.v2 import server
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
@@ -42,6 +44,11 @@ class TestServer(compute_fakes.TestComputev2):
         self.flavors_mock = self.app.client_manager.compute.flavors
         self.flavors_mock.reset_mock()
 
+        # Get a shortcut to the compute client SecurityGroupManager Mock
+        self.security_groups_mock = \
+            self.app.client_manager.compute.security_groups
+        self.security_groups_mock.reset_mock()
+
         # Get a shortcut to the image client ImageManager Mock
         self.images_mock = self.app.client_manager.image.images
         self.images_mock.reset_mock()
@@ -50,10 +57,10 @@ class TestServer(compute_fakes.TestComputev2):
         self.volumes_mock = self.app.client_manager.volume.volumes
         self.volumes_mock.reset_mock()
 
-        # Set object attributes to be tested. Could be overwriten in subclass.
+        # Set object attributes to be tested. Could be overwritten in subclass.
         self.attrs = {}
 
-        # Set object methods to be tested. Could be overwriten in subclass.
+        # Set object methods to be tested. Could be overwritten in subclass.
         self.methods = {}
 
     def setup_servers_mock(self, count):
@@ -84,6 +91,128 @@ class TestServer(compute_fakes.TestComputev2):
         for s in servers:
             method = getattr(s, method_name)
             method.assert_called_with()
+        self.assertIsNone(result)
+
+
+class TestServerAddFixedIP(TestServer):
+
+    def setUp(self):
+        super(TestServerAddFixedIP, self).setUp()
+
+        # Get a shortcut to the compute client ServerManager Mock
+        self.networks_mock = self.app.client_manager.compute.networks
+
+        # Get the command object to test
+        self.cmd = server.AddFixedIP(self.app, None)
+
+        # Set add_fixed_ip method to be tested.
+        self.methods = {
+            'add_fixed_ip': None,
+        }
+
+    def test_server_add_fixed_ip(self):
+        servers = self.setup_servers_mock(count=1)
+        network = compute_fakes.FakeNetwork.create_one_network()
+        self.networks_mock.get.return_value = network
+
+        arglist = [
+            servers[0].id,
+            network.id,
+        ]
+        verifylist = [
+            ('server', servers[0].id),
+            ('network', network.id)
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        servers[0].add_fixed_ip.assert_called_once_with(
+            network.id,
+        )
+        self.assertIsNone(result)
+
+
+class TestServerAddFloatingIP(TestServer):
+
+    def setUp(self):
+        super(TestServerAddFloatingIP, self).setUp()
+
+        # Get a shortcut to the compute client ServerManager Mock
+        self.networks_mock = self.app.client_manager.compute.networks
+
+        # Get the command object to test
+        self.cmd = server.AddFloatingIP(self.app, None)
+
+        # Set add_floating_ip method to be tested.
+        self.methods = {
+            'add_floating_ip': None,
+        }
+
+    def test_server_add_floating_ip(self):
+        servers = self.setup_servers_mock(count=1)
+
+        arglist = [
+            servers[0].id,
+            '1.2.3.4',
+        ]
+        verifylist = [
+            ('server', servers[0].id),
+            ('ip_address', '1.2.3.4'),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        servers[0].add_floating_ip.assert_called_once_with('1.2.3.4')
+        self.assertIsNone(result)
+
+
+class TestServerAddSecurityGroup(TestServer):
+
+    def setUp(self):
+        super(TestServerAddSecurityGroup, self).setUp()
+
+        self.security_group = \
+            compute_fakes.FakeSecurityGroup.create_one_security_group()
+        # This is the return value for utils.find_resource() for security group
+        self.security_groups_mock.get.return_value = self.security_group
+
+        attrs = {
+            'security_groups': [{'name': self.security_group.id}]
+        }
+        methods = {
+            'add_security_group': None,
+        }
+
+        self.server = compute_fakes.FakeServer.create_one_server(
+            attrs=attrs,
+            methods=methods
+        )
+        # This is the return value for utils.find_resource() for server
+        self.servers_mock.get.return_value = self.server
+
+        # Get the command object to test
+        self.cmd = server.AddServerSecurityGroup(self.app, None)
+
+    def test_server_add_security_group(self):
+        arglist = [
+            self.server.id,
+            self.security_group.id
+        ]
+        verifylist = [
+            ('server', self.server.id),
+            ('group', self.security_group.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+        self.security_groups_mock.get.assert_called_with(
+            self.security_group.id,
+        )
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.server.add_security_group.assert_called_with(
+            self.security_group.id,
+        )
         self.assertIsNone(result)
 
 
@@ -510,150 +639,6 @@ class TestServerDumpCreate(TestServer):
         self.run_method_with_servers('trigger_crash_dump', 3)
 
 
-class TestServerImageCreate(TestServer):
-
-    columns = (
-        'id',
-        'name',
-        'owner',
-        'protected',
-        'tags',
-        'visibility',
-    )
-
-    def datalist(self):
-        datalist = (
-            self.image.id,
-            self.image.name,
-            self.image.owner,
-            self.image.protected,
-            self.image.tags,
-            self.image.visibility,
-        )
-        return datalist
-
-    def setUp(self):
-        super(TestServerImageCreate, self).setUp()
-
-        self.server = compute_fakes.FakeServer.create_one_server()
-
-        # This is the return value for utils.find_resource()
-        self.servers_mock.get.return_value = self.server
-
-        self.image = image_fakes.FakeImage.create_one_image()
-        self.images_mock.get.return_value = self.image
-        self.servers_mock.create_image.return_value = self.image.id
-
-        # Get the command object to test
-        self.cmd = server.CreateServerImage(self.app, None)
-
-    def test_server_image_create_no_options(self):
-        arglist = [
-            self.server.id,
-        ]
-        verifylist = [
-            ('server', self.server.id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # In base command class ShowOne in cliff, abstract method take_action()
-        # returns a two-part tuple with a tuple of column names and a tuple of
-        # data to be shown.
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # ServerManager.create_image(server, image_name, metadata=)
-        self.servers_mock.create_image.assert_called_with(
-            self.servers_mock.get.return_value,
-            self.server.name,
-        )
-
-        self.assertEqual(self.columns, columns)
-        self.assertEqual(self.datalist(), data)
-
-    def test_server_image_create_name(self):
-        arglist = [
-            '--name', 'img-nam',
-            self.server.id,
-        ]
-        verifylist = [
-            ('name', 'img-nam'),
-            ('server', self.server.id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # In base command class ShowOne in cliff, abstract method take_action()
-        # returns a two-part tuple with a tuple of column names and a tuple of
-        # data to be shown.
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # ServerManager.create_image(server, image_name, metadata=)
-        self.servers_mock.create_image.assert_called_with(
-            self.servers_mock.get.return_value,
-            'img-nam',
-        )
-
-        self.assertEqual(self.columns, columns)
-        self.assertEqual(self.datalist(), data)
-
-    @mock.patch.object(common_utils, 'wait_for_status', return_value=False)
-    def test_server_create_image_with_wait_fails(self, mock_wait_for_status):
-        arglist = [
-            '--wait',
-            self.server.id,
-        ]
-        verifylist = [
-            ('wait', True),
-            ('server', self.server.id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        self.assertRaises(SystemExit, self.cmd.take_action, parsed_args)
-
-        mock_wait_for_status.assert_called_once_with(
-            self.images_mock.get,
-            self.image.id,
-            callback=server._show_progress
-        )
-
-        # ServerManager.create_image(server, image_name, metadata=)
-        self.servers_mock.create_image.assert_called_with(
-            self.servers_mock.get.return_value,
-            self.server.name,
-        )
-
-    @mock.patch.object(common_utils, 'wait_for_status', return_value=True)
-    def test_server_create_image_with_wait_ok(self, mock_wait_for_status):
-        arglist = [
-            '--wait',
-            self.server.id,
-        ]
-        verifylist = [
-            ('wait', True),
-            ('server', self.server.id),
-        ]
-        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-
-        # In base command class ShowOne in cliff, abstract method take_action()
-        # returns a two-part tuple with a tuple of column names and a tuple of
-        # data to be shown.
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # ServerManager.create_image(server, image_name, metadata=)
-        self.servers_mock.create_image.assert_called_with(
-            self.servers_mock.get.return_value,
-            self.server.name,
-        )
-
-        mock_wait_for_status.assert_called_once_with(
-            self.images_mock.get,
-            self.image.id,
-            callback=server._show_progress
-        )
-
-        self.assertEqual(self.columns, columns)
-        self.assertEqual(self.datalist(), data)
-
-
 class TestServerList(TestServer):
 
     # Columns to be listed up.
@@ -662,6 +647,7 @@ class TestServerList(TestServer):
         'Name',
         'Status',
         'Networks',
+        'Image Name',
     )
     columns_long = (
         'ID',
@@ -670,6 +656,8 @@ class TestServerList(TestServer):
         'Task State',
         'Power State',
         'Networks',
+        'Image Name',
+        'Image ID',
         'Availability Zone',
         'Host',
         'Properties',
@@ -732,12 +720,19 @@ class TestServerList(TestServer):
         self.data = []
         self.data_long = []
 
+        Image = collections.namedtuple('Image', 'id name')
+        self.images_mock.list.return_value = [
+            Image(id=s.image['id'], name=self.image.name)
+            for s in self.servers
+        ]
+
         for s in self.servers:
             self.data.append((
                 s.id,
                 s.name,
                 s.status,
                 server._format_servers_list_networks(s.networks),
+                self.image.name,
             ))
             self.data_long.append((
                 s.id,
@@ -748,6 +743,8 @@ class TestServerList(TestServer):
                     getattr(s, 'OS-EXT-STS:power_state')
                 ),
                 server._format_servers_list_networks(s.networks),
+                self.image.name,
+                s.image['id'],
                 getattr(s, 'OS-EXT-AZ:availability_zone'),
                 getattr(s, 'OS-EXT-SRV-ATTR:host'),
                 s.Metadata,
@@ -795,7 +792,7 @@ class TestServerList(TestServer):
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
         columns, data = self.cmd.take_action(parsed_args)
 
-        self.cimages_mock.get.assert_called_with(self.image.id)
+        self.cimages_mock.get.assert_any_call(self.image.id)
 
         self.search_opts['image'] = self.image.id
         self.servers_mock.list.assert_called_with(**self.kwargs)
@@ -984,6 +981,118 @@ class TestServerRebuild(TestServer):
         self.servers_mock.get.assert_called_with(self.server.id)
         self.cimages_mock.get.assert_called_with(self.image.id)
         self.server.rebuild.assert_called_with(self.image, None)
+
+
+class TestServerRemoveFixedIP(TestServer):
+
+    def setUp(self):
+        super(TestServerRemoveFixedIP, self).setUp()
+
+        # Get the command object to test
+        self.cmd = server.RemoveFixedIP(self.app, None)
+
+        # Set unshelve method to be tested.
+        self.methods = {
+            'remove_fixed_ip': None,
+        }
+
+    def test_server_remove_fixed_ip(self):
+        servers = self.setup_servers_mock(count=1)
+
+        arglist = [
+            servers[0].id,
+            '1.2.3.4',
+        ]
+        verifylist = [
+            ('server', servers[0].id),
+            ('ip_address', '1.2.3.4'),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        servers[0].remove_fixed_ip.assert_called_once_with('1.2.3.4')
+        self.assertIsNone(result)
+
+
+class TestServerRemoveFloatingIP(TestServer):
+
+    def setUp(self):
+        super(TestServerRemoveFloatingIP, self).setUp()
+
+        # Get the command object to test
+        self.cmd = server.RemoveFloatingIP(self.app, None)
+
+        # Set unshelve method to be tested.
+        self.methods = {
+            'remove_floating_ip': None,
+        }
+
+    def test_server_remove_floating_ip(self):
+        servers = self.setup_servers_mock(count=1)
+
+        arglist = [
+            servers[0].id,
+            '1.2.3.4',
+        ]
+        verifylist = [
+            ('server', servers[0].id),
+            ('ip_address', '1.2.3.4'),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        servers[0].remove_floating_ip.assert_called_once_with('1.2.3.4')
+        self.assertIsNone(result)
+
+
+class TestServerRemoveSecurityGroup(TestServer):
+
+    def setUp(self):
+        super(TestServerRemoveSecurityGroup, self).setUp()
+
+        self.security_group = \
+            compute_fakes.FakeSecurityGroup.create_one_security_group()
+        # This is the return value for utils.find_resource() for security group
+        self.security_groups_mock.get.return_value = self.security_group
+
+        attrs = {
+            'security_groups': [{'name': self.security_group.id}]
+        }
+        methods = {
+            'remove_security_group': None,
+        }
+
+        self.server = compute_fakes.FakeServer.create_one_server(
+            attrs=attrs,
+            methods=methods
+        )
+        # This is the return value for utils.find_resource() for server
+        self.servers_mock.get.return_value = self.server
+
+        # Get the command object to test
+        self.cmd = server.RemoveServerSecurityGroup(self.app, None)
+
+    def test_server_remove_security_group(self):
+        arglist = [
+            self.server.id,
+            self.security_group.id
+        ]
+        verifylist = [
+            ('server', self.server.id),
+            ('group', self.security_group.id),
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+        self.security_groups_mock.get.assert_called_with(
+            self.security_group.id,
+        )
+        self.servers_mock.get.assert_called_with(self.server.id)
+        self.server.remove_security_group.assert_called_with(
+            self.security_group.id,
+        )
+        self.assertIsNone(result)
 
 
 class TestServerResize(TestServer):
@@ -1691,7 +1800,7 @@ class TestServerGeneral(TestServer):
                (data_1, data_2, networks_format))
         self.assertIn(networks_format, (data_1, data_2), msg)
 
-    @mock.patch('openstackclient.common.utils.find_resource')
+    @mock.patch('osc_lib.utils.find_resource')
     def test_prep_server_detail(self, find_resource):
         # Setup mock method return value. utils.find_resource() will be called
         # three times in _prep_server_detail():
@@ -1732,4 +1841,4 @@ class TestServerGeneral(TestServer):
         server_detail.pop('networks')
 
         # Check the results.
-        self.assertDictEqual(info, server_detail)
+        self.assertEqual(info, server_detail)

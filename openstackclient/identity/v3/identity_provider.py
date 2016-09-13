@@ -13,11 +13,17 @@
 
 """Identity v3 IdentityProvider action implementations"""
 
+import logging
+
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateIdentityProvider(command.ShowOne):
@@ -88,21 +94,35 @@ class CreateIdentityProvider(command.ShowOne):
 
 
 class DeleteIdentityProvider(command.Command):
-    """Delete identity provider"""
+    """Delete identity provider(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteIdentityProvider, self).get_parser(prog_name)
         parser.add_argument(
             'identity_provider',
             metavar='<identity-provider>',
-            help=_('Identity provider to delete'),
+            nargs='+',
+            help=_('Identity provider(s) to delete'),
         )
         return parser
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
-        identity_client.federation.identity_providers.delete(
-            parsed_args.identity_provider)
+        result = 0
+        for i in parsed_args.identity_provider:
+            try:
+                identity_client.federation.identity_providers.delete(i)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete identity providers with "
+                          "name or ID '%(provider)s': %(e)s")
+                          % {'provider': i, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.identity_provider)
+            msg = (_("%(result)s of %(total)s identity providers failed"
+                   " to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListIdentityProvider(command.Lister):
@@ -164,14 +184,6 @@ class SetIdentityProvider(command.Command):
     def take_action(self, parsed_args):
         federation_client = self.app.client_manager.identity.federation
 
-        # Basic argument checking
-        if (not parsed_args.enable and not parsed_args.disable and
-                not parsed_args.remote_id and
-                not parsed_args.remote_id_file and
-                not parsed_args.description):
-            self.log.error(_('No changes requested'))
-            return (None, None)
-
         # Always set remote_ids if either is passed in
         if parsed_args.remote_id_file:
             file_content = utils.read_blob_file_contents(
@@ -192,11 +204,10 @@ class SetIdentityProvider(command.Command):
         if parsed_args.remote_id_file or parsed_args.remote_id:
             kwargs['remote_ids'] = remote_ids
 
-        identity_provider = federation_client.identity_providers.update(
-            parsed_args.identity_provider, **kwargs)
-
-        identity_provider._info.pop('links', None)
-        return zip(*sorted(six.iteritems(identity_provider._info)))
+        federation_client.identity_providers.update(
+            parsed_args.identity_provider,
+            **kwargs
+        )
 
 
 class ShowIdentityProvider(command.ShowOne):

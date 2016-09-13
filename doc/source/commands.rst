@@ -8,10 +8,11 @@ Commands take the form::
 
     openstack [<global-options>] <object-1> <action> [<object-2>] [<command-arguments>]
 
-* All long options names begin with two dashes (``--``) and use a single dash
+.. NOTE::
+
+  All long options names begin with two dashes (``--``) and use a single dash
   (``-``) internally between words (``--like-this``).  Underscores (``_``) are
   not used in option names.
-
 
 Global Options
 --------------
@@ -78,7 +79,7 @@ referring to both Compute and Volume quotas.
 * ``command``: (**Internal**) installed commands in the OSC process
 * ``compute agent``: (**Compute**) a cloud Compute agent available to a hypervisor
 * ``compute service``: (**Compute**) a cloud Compute process running on a host
-* ``configuration``: (**Internal**) openstack client configuration
+* ``configuration``: (**Internal**) OpenStack client configuration
 * ``console log``: (**Compute**) server console text dump
 * ``console url``: (**Compute**) server remote console URL
 * ``consumer``: (**Identity**) OAuth-based delegatee
@@ -89,7 +90,10 @@ referring to both Compute and Volume quotas.
 * ``endpoint``: (**Identity**) the base URL used to contact a specific service
 * ``extension``: (**Compute**, **Identity**, **Network**, **Volume**) OpenStack server API extensions
 * ``federation protocol``: (**Identity**) the underlying protocol used while federating identities
-* ``flavor``: (**Compute**) predefined server configurations: ram, root disk, etc
+* ``flavor``: (**Compute**) predefined server configurations: ram, root disk and so on
+* ``fixed ip``: (**Compute**, **Network**) - an internal IP address assigned to a server
+* ``floating ip``: (**Compute**, **Network**) - a public IP address that can be mapped to a server
+* ``floating ip pool``: (**Compute**, **Network**) - a pool of public IP addresses
 * ``group``: (**Identity**) a grouping of users
 * ``host``: (**Compute**) - the physical computer running compute services
 * ``hypervisor``: (**Compute**) the virtual machine manager
@@ -105,6 +109,8 @@ referring to both Compute and Volume quotas.
 * ``mapping``: (**Identity**) a definition to translate identity provider attributes to Identity concepts
 * ``module``: (**Internal**) - installed Python modules in the OSC process
 * ``network``: (**Compute**, **Network**) - a virtual network for connecting servers and other resources
+* ``network agent``: (**Network**) - A network agent is an agent that handles various tasks used to implement virtual networks
+* ``network rbac``: (**Network**) - an RBAC policy for network resources
 * ``network segment``: (**Network**) - a segment of a virtual network
 * ``object``: (**Object Storage**) a single file in the Object Storage
 * ``object store account``: (**Object Storage**) owns a group of Object Storage resources
@@ -156,7 +162,7 @@ list check out :doc:`plugin-commands`.
 * ``cluster event``: (**Clustering (Senlin)**)
 * ``cluster members``: (**Clustering (Senlin)**)
 * ``cluster node``: (**Clustering (Senlin)**)
-* ``cluster policy``: (**CLustering (Senlin)**)
+* ``cluster policy``: (**Clustering (Senlin)**)
 * ``cluster policy binding``: (**Clustering (Senlin)**)
 * ``cluster policy type``: (**Clustering (Senlin)**)
 * ``cluster profile``: (**Clustering (Senlin)**)
@@ -173,6 +179,8 @@ list check out :doc:`plugin-commands`.
 * ``dataprocessing plugin``: (**Data Processing (Sahara)**)
 * ``message-broker cluster``: (**Message Broker (Cue)**)
 * ``message flavor``: (**Messaging (Zaqar)**)
+* ``network subport``: (**Networking (Neutron)**)
+* ``network trunk``: (**Networking (Neutron)**)
 * ``orchestration resource``: (**Orchestration (Heat)**)
 * ``orchestration template``: (**Orchestration (Heat)**)
 * ``pool``: (**Messaging (Zaqar)**)
@@ -190,7 +198,7 @@ list check out :doc:`plugin-commands`.
 * ``stack resource``: (**Orchestration (Heat)**)
 * ``stack snapshot``: (**Orchestration (Heat)**)
 * ``stack template``: (**Orchestration (Heat)**)
-* ``task exeuction``: (**Workflow Engine (Mistral)**)
+* ``task execution``: (**Workflow Engine (Mistral)**)
 * ``tld``: (**DNS (Designate)**)
 * ``workbook``: (**Workflow Engine (Mistral)**)
 * ``workflow``: (**Workflow Engine (Mistral)**)

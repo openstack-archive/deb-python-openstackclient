@@ -15,14 +15,18 @@
 
 """Identity v2 Project action implementations"""
 
-import six
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateProject(command.ShowOne):
@@ -82,15 +86,15 @@ class CreateProject(command.ShowOne):
                 enabled=enabled,
                 **kwargs
             )
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 project = utils.find_resource(
                     identity_client.tenants,
                     parsed_args.name,
                 )
-                self.log.info(_('Returning existing project %s'), project.name)
+                LOG.info(_('Returning existing project %s'), project.name)
             else:
-                raise e
+                raise
 
         # TODO(stevemar): Remove the line below when we support multitenancy
         project._info.pop('parent_id', None)
@@ -190,13 +194,6 @@ class SetProject(command.Command):
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
 
-        if (not parsed_args.name
-                and not parsed_args.description
-                and not parsed_args.enable
-                and not parsed_args.property
-                and not parsed_args.disable):
-            return
-
         project = utils.find_resource(
             identity_client.tenants,
             parsed_args.project,
@@ -245,7 +242,7 @@ class ShowProject(command.ShowOne):
                 parsed_args.project,
             )
             info.update(project._info)
-        except ks_exc.Forbidden as e:
+        except ks_exc.Forbidden:
             auth_ref = self.app.client_manager.auth_ref
             if (
                 parsed_args.project == auth_ref.project_id or
@@ -259,7 +256,7 @@ class ShowProject(command.ShowOne):
                     'enabled': True,
                 }
             else:
-                raise e
+                raise
 
         # TODO(stevemar): Remove the line below when we support multitenancy
         info.pop('parent_id', None)
@@ -296,7 +293,6 @@ class UnsetProject(command.Command):
             metavar='<key>',
             action='append',
             default=[],
-            required=True,
             help=_('Unset a project property '
                    '(repeat option to unset multiple properties)'),
         )
@@ -308,11 +304,8 @@ class UnsetProject(command.Command):
             identity_client.tenants,
             parsed_args.project,
         )
-        if not parsed_args.property:
-            self.app.log.error(_("No changes requested\n"))
-        else:
-            kwargs = project._info
-            for key in parsed_args.property:
-                if key in kwargs:
-                    kwargs[key] = None
-            identity_client.tenants.update(project.id, **kwargs)
+        kwargs = project._info
+        for key in parsed_args.property:
+            if key in kwargs:
+                kwargs[key] = None
+        identity_client.tenants.update(project.id, **kwargs)

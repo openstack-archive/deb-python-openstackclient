@@ -15,13 +15,17 @@
 
 """Identity v2.0 User action implementations"""
 
-import six
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.command import command
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateUser(command.ShowOne):
@@ -98,15 +102,15 @@ class CreateUser(command.ShowOne):
                 tenant_id=project_id,
                 enabled=enabled,
             )
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 user = utils.find_resource(
                     identity_client.users,
                     parsed_args.name,
                 )
-                self.log.info(_('Returning existing user %s'), user.name)
+                LOG.info(_('Returning existing user %s'), user.name)
             else:
-                raise e
+                raise
 
         # NOTE(dtroyer): The users.create() method wants 'tenant_id' but
         #                the returned resource has 'tenantId'.  Sigh.
@@ -241,7 +245,7 @@ class SetUser(command.Command):
         parser.add_argument(
             'user',
             metavar='<user>',
-            help=_('User to change (name or ID)'),
+            help=_('User to modify (name or ID)'),
         )
         parser.add_argument(
             '--name',
@@ -287,15 +291,6 @@ class SetUser(command.Command):
 
         if parsed_args.password_prompt:
             parsed_args.password = utils.get_password(self.app.stdin)
-
-        if (not parsed_args.name
-                and not parsed_args.name
-                and not parsed_args.password
-                and not parsed_args.email
-                and not parsed_args.project
-                and not parsed_args.enable
-                and not parsed_args.disable):
-            return
 
         user = utils.find_resource(
             identity_client.users,
@@ -354,7 +349,7 @@ class ShowUser(command.ShowOne):
                 parsed_args.user,
             )
             info.update(user._info)
-        except ks_exc.Forbidden as e:
+        except ks_exc.Forbidden:
             auth_ref = self.app.client_manager.auth_ref
             if (
                 parsed_args.user == auth_ref.user_id or
@@ -369,7 +364,7 @@ class ShowUser(command.ShowOne):
                     'enabled': True,
                 }
             else:
-                raise e
+                raise
 
         if 'tenantId' in info:
             info.update(

@@ -45,7 +45,8 @@ Create new port
 
 .. option:: --device-owner <device-owner>
 
-    Device owner of this port
+    Device owner of this port. This is the entity that uses
+    the port (for example, network:dhcp).
 
 .. option:: --vnic-type <vnic-type>
 
@@ -54,7 +55,8 @@ Create new port
 
 .. option:: --binding-profile <binding-profile>
 
-    Custom data to be passed as binding:profile: <key>=<value>
+    Custom data to be passed as binding:profile. Data may
+    be passed as <key>=<value> or JSON.
     (repeat option to set multiple binding:profile data)
 
 .. option:: --host <host-id>
@@ -112,7 +114,13 @@ List ports
 .. code:: bash
 
     os port list
+        [--device-owner <device-owner>]
         [--router <router>]
+
+.. option:: --device-owner <device-owner>
+
+    List only ports with the specified device owner. This is
+    the entity that uses the port (for example, network:dhcp).
 
 .. option:: --router <router>
 
@@ -153,7 +161,8 @@ Set port properties
 
 .. option:: --device-owner <device-owner>
 
-    Device owner of this port
+    Device owner of this port. This is the entity that uses
+    the port (for example, network:dhcp).
 
 .. option:: --vnic-type <vnic-type>
 
@@ -162,7 +171,8 @@ Set port properties
 
 .. option:: --binding-profile <binding-profile>
 
-    Custom data to be passed as binding:profile: <key>=<value>
+    Custom data to be passed as binding:profile. Data may
+    be passed as <key>=<value> or JSON.
     (repeat option to set multiple binding:profile data)
 
 .. option:: --no-binding-profile
@@ -205,3 +215,32 @@ Display port details
 .. describe:: <port>
 
     Port to display (name or ID)
+
+port unset
+----------
+
+Unset port properties
+
+.. program:: port unset
+.. code:: bash
+
+    os port unset
+        [--fixed-ip subnet=<subnet>,ip-address=<ip-address> [...]]
+        [--binding-profile <binding-profile-key> [...]]
+        <port>
+
+.. option:: --fixed-ip subnet=<subnet>,ip-address=<ip-address>
+
+    Desired IP and/or subnet (name or ID) which should be removed
+    from this port: subnet=<subnet>,ip-address=<ip-address>
+    (repeat option to unset multiple fixed IP addresses)
+
+.. option:: --binding-profile <binding-profile-key>
+
+    Desired key which should be removed from binding-profile
+    (repeat option to unset multiple binding:profile data)
+
+.. _port_unset-port:
+.. describe:: <port>
+
+    Port to modify (name or ID)

@@ -12,6 +12,12 @@
 #   under the License.
 #
 
+import mock
+from mock import call
+
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.tests.volume.v2 import fakes as volume_fakes
 from openstackclient.volume.v2 import backup
 
@@ -25,6 +31,8 @@ class TestBackup(volume_fakes.TestVolume):
         self.backups_mock.reset_mock()
         self.volumes_mock = self.app.client_manager.volume.volumes
         self.volumes_mock.reset_mock()
+        self.snapshots_mock = self.app.client_manager.volume.volume_snapshots
+        self.snapshots_mock.reset_mock()
         self.restores_mock = self.app.client_manager.volume.restores
         self.restores_mock.reset_mock()
 
@@ -32,8 +40,9 @@ class TestBackup(volume_fakes.TestVolume):
 class TestBackupCreate(TestBackup):
 
     volume = volume_fakes.FakeVolume.create_one_volume()
+    snapshot = volume_fakes.FakeSnapshot.create_one_snapshot()
     new_backup = volume_fakes.FakeBackup.create_one_backup(
-        attrs={'volume_id': volume.id})
+        attrs={'volume_id': volume.id, 'snapshot_id': snapshot.id})
 
     columns = (
         'availability_zone',
@@ -43,6 +52,7 @@ class TestBackupCreate(TestBackup):
         'name',
         'object_count',
         'size',
+        'snapshot_id',
         'status',
         'volume_id',
     )
@@ -54,6 +64,7 @@ class TestBackupCreate(TestBackup):
         new_backup.name,
         new_backup.object_count,
         new_backup.size,
+        new_backup.snapshot_id,
         new_backup.status,
         new_backup.volume_id,
     )
@@ -62,22 +73,29 @@ class TestBackupCreate(TestBackup):
         super(TestBackupCreate, self).setUp()
 
         self.volumes_mock.get.return_value = self.volume
+        self.snapshots_mock.get.return_value = self.snapshot
         self.backups_mock.create.return_value = self.new_backup
 
         # Get the command object to test
-        self.cmd = backup.CreateBackup(self.app, None)
+        self.cmd = backup.CreateVolumeBackup(self.app, None)
 
     def test_backup_create(self):
         arglist = [
             "--name", self.new_backup.name,
             "--description", self.new_backup.description,
             "--container", self.new_backup.container,
+            "--force",
+            "--incremental",
+            "--snapshot", self.new_backup.snapshot_id,
             self.new_backup.volume_id,
         ]
         verifylist = [
             ("name", self.new_backup.name),
             ("description", self.new_backup.description),
             ("container", self.new_backup.container),
+            ("force", True),
+            ("incremental", True),
+            ("snapshot", self.new_backup.snapshot_id),
             ("volume", self.new_backup.volume_id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -88,7 +106,10 @@ class TestBackupCreate(TestBackup):
             self.new_backup.volume_id,
             container=self.new_backup.container,
             name=self.new_backup.name,
-            description=self.new_backup.description
+            description=self.new_backup.description,
+            force=True,
+            incremental=True,
+            snapshot_id=self.new_backup.snapshot_id,
         )
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
@@ -112,7 +133,10 @@ class TestBackupCreate(TestBackup):
             self.new_backup.volume_id,
             container=self.new_backup.container,
             name=None,
-            description=self.new_backup.description
+            description=self.new_backup.description,
+            force=False,
+            incremental=False,
+            snapshot_id=None,
         )
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, data)
@@ -120,30 +144,94 @@ class TestBackupCreate(TestBackup):
 
 class TestBackupDelete(TestBackup):
 
-    backup = volume_fakes.FakeBackup.create_one_backup()
+    backups = volume_fakes.FakeBackup.create_backups(count=2)
 
     def setUp(self):
         super(TestBackupDelete, self).setUp()
 
-        self.backups_mock.get.return_value = self.backup
+        self.backups_mock.get = (
+            volume_fakes.FakeBackup.get_backups(self.backups))
         self.backups_mock.delete.return_value = None
 
         # Get the command object to mock
-        self.cmd = backup.DeleteBackup(self.app, None)
+        self.cmd = backup.DeleteVolumeBackup(self.app, None)
 
     def test_backup_delete(self):
         arglist = [
-            self.backup.id
+            self.backups[0].id
         ]
         verifylist = [
-            ("backups", [self.backup.id])
+            ("backups", [self.backups[0].id])
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         result = self.cmd.take_action(parsed_args)
 
-        self.backups_mock.delete.assert_called_with(self.backup.id)
+        self.backups_mock.delete.assert_called_with(
+            self.backups[0].id, False)
         self.assertIsNone(result)
+
+    def test_backup_delete_with_force(self):
+        arglist = [
+            '--force',
+            self.backups[0].id,
+        ]
+        verifylist = [
+            ('force', True),
+            ("backups", [self.backups[0].id])
+        ]
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        result = self.cmd.take_action(parsed_args)
+
+        self.backups_mock.delete.assert_called_with(self.backups[0].id, True)
+        self.assertIsNone(result)
+
+    def test_delete_multiple_backups(self):
+        arglist = []
+        for b in self.backups:
+            arglist.append(b.id)
+        verifylist = [
+            ('backups', arglist),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+        result = self.cmd.take_action(parsed_args)
+
+        calls = []
+        for b in self.backups:
+            calls.append(call(b.id, False))
+        self.backups_mock.delete.assert_has_calls(calls)
+        self.assertIsNone(result)
+
+    def test_delete_multiple_backups_with_exception(self):
+        arglist = [
+            self.backups[0].id,
+            'unexist_backup',
+        ]
+        verifylist = [
+            ('backups', arglist),
+        ]
+
+        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
+
+        find_mock_result = [self.backups[0], exceptions.CommandError]
+        with mock.patch.object(utils, 'find_resource',
+                               side_effect=find_mock_result) as find_mock:
+            try:
+                self.cmd.take_action(parsed_args)
+                self.fail('CommandError should be raised.')
+            except exceptions.CommandError as e:
+                self.assertEqual('1 of 2 backups failed to delete.',
+                                 str(e))
+
+            find_mock.assert_any_call(self.backups_mock, self.backups[0].id)
+            find_mock.assert_any_call(self.backups_mock, 'unexist_backup')
+
+            self.assertEqual(2, find_mock.call_count)
+            self.backups_mock.delete.assert_called_once_with(
+                self.backups[0].id, False
+            )
 
 
 class TestBackupList(TestBackup):
@@ -193,7 +281,7 @@ class TestBackupList(TestBackup):
         self.volumes_mock.list.return_value = [self.volume]
         self.backups_mock.list.return_value = self.backups
         # Get the command to test
-        self.cmd = backup.ListBackup(self.app, None)
+        self.cmd = backup.ListVolumeBackup(self.app, None)
 
     def test_backup_list_without_options(self):
         arglist = []
@@ -229,7 +317,7 @@ class TestBackupRestore(TestBackup):
         self.volumes_mock.get.return_value = self.volume
         self.restores_mock.restore.return_value = None
         # Get the command object to mock
-        self.cmd = backup.RestoreBackup(self.app, None)
+        self.cmd = backup.RestoreVolumeBackup(self.app, None)
 
     def test_backup_restore(self):
         arglist = [
@@ -260,6 +348,7 @@ class TestBackupShow(TestBackup):
         'name',
         'object_count',
         'size',
+        'snapshot_id',
         'status',
         'volume_id',
     )
@@ -271,6 +360,7 @@ class TestBackupShow(TestBackup):
         backup.name,
         backup.object_count,
         backup.size,
+        backup.snapshot_id,
         backup.status,
         backup.volume_id,
     )
@@ -280,7 +370,7 @@ class TestBackupShow(TestBackup):
 
         self.backups_mock.get.return_value = self.backup
         # Get the command object to test
-        self.cmd = backup.ShowBackup(self.app, None)
+        self.cmd = backup.ShowVolumeBackup(self.app, None)
 
     def test_backup_show(self):
         arglist = [

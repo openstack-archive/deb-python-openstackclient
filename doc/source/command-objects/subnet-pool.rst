@@ -81,18 +81,18 @@ Create subnet pool
 subnet pool delete
 ------------------
 
-Delete subnet pool
+Delete subnet pool(s)
 
 .. program:: subnet pool delete
 .. code:: bash
 
     os subnet pool delete
-        <subnet-pool>
+        <subnet-pool> [<subnet-pool> ...]
 
 .. _subnet_pool_delete-subnet-pool:
 .. describe:: <subnet-pool>
 
-    Subnet pool to delete (name or ID)
+    Subnet pool(s) to delete (name or ID)
 
 subnet pool list
 ----------------
@@ -185,3 +185,25 @@ Display subnet pool details
 .. describe:: <subnet-pool>
 
     Subnet pool to display (name or ID)
+
+subnet pool unset
+-----------------
+
+Unset subnet pool properties
+
+.. program:: subnet pool unset
+.. code:: bash
+
+    os subnet pool unset
+        [--pool-prefix <pool-prefix> [...]]
+        <subnet-pool>
+
+.. option:: --pool-prefix <pool-prefix>
+
+    Remove subnet pool prefixes (in CIDR notation).
+    (repeat option to unset multiple prefixes).
+
+.. _subnet_pool_unset-subnet-pool:
+.. describe:: <subnet-pool>
+
+    Subnet pool to modify (name or ID)

@@ -14,12 +14,15 @@
 """Port action implementations"""
 
 import argparse
+import copy
+import json
 import logging
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 
@@ -60,6 +63,32 @@ def _get_columns(item):
             columns.remove(binding_column)
             columns.append(binding_column.replace('binding:', 'binding_', 1))
     return tuple(sorted(columns))
+
+
+class JSONKeyValueAction(argparse.Action):
+    """A custom action to parse arguments as JSON or key=value pairs
+
+    Ensures that ``dest`` is a dict
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+
+        # Make sure we have an empty dict rather than None
+        if getattr(namespace, self.dest, None) is None:
+            setattr(namespace, self.dest, {})
+
+        # Try to load JSON first before falling back to <key>=<value>.
+        current_dest = getattr(namespace, self.dest)
+        try:
+            current_dest.update(json.loads(values))
+        except ValueError as e:
+            if '=' in values:
+                current_dest.update([values.split('=', 1)])
+            else:
+                msg = _("Expected '<key>=<value>' or JSON data for option "
+                        "%(option)s, but encountered JSON parsing error: "
+                        "%(error)s") % {"option": option_string, "error": e}
+                raise argparse.ArgumentTypeError(msg)
 
 
 def _get_attrs(client_manager, parsed_args):
@@ -168,7 +197,8 @@ def _add_updatable_args(parser):
         parser.add_argument(
             '--device-owner',
             metavar='<device-owner>',
-            help=_("Device owner of this port")
+            help=_("Device owner of this port. This is the entity that uses "
+                   "the port (for example, network:dhcp).")
         )
         parser.add_argument(
             '--vnic-type',
@@ -218,9 +248,9 @@ class CreatePort(command.ShowOne):
         parser.add_argument(
             '--binding-profile',
             metavar='<binding-profile>',
-            action=parseractions.KeyValueAction,
-            help=_("Custom data to be passed as binding:profile: "
-                   "<key>=<value> "
+            action=JSONKeyValueAction,
+            help=_("Custom data to be passed as binding:profile. Data may "
+                   "be passed as <key>=<value> or JSON. "
                    "(repeat option to set multiple binding:profile data)")
         )
         admin_group = parser.add_mutually_exclusive_group()
@@ -266,7 +296,7 @@ class CreatePort(command.ShowOne):
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
 
-        return columns, data
+        return (columns, data)
 
 
 class DeletePort(command.Command):
@@ -292,9 +322,9 @@ class DeletePort(command.Command):
                 client.delete_port(obj)
             except Exception as e:
                 result += 1
-                self.app.log.error(_("Failed to delete port with "
-                                   "name or ID '%(port)s': %(e)s")
-                                   % {'port': port, 'e': e})
+                LOG.error(_("Failed to delete port with "
+                            "name or ID '%(port)s': %(e)s"),
+                          {'port': port, 'e': e})
 
         if result > 0:
             total = len(parsed_args.port)
@@ -308,6 +338,13 @@ class ListPort(command.Lister):
 
     def get_parser(self, prog_name):
         parser = super(ListPort, self).get_parser(prog_name)
+        parser.add_argument(
+            '--device-owner',
+            metavar='<device-owner>',
+            help=_("List only ports with the specified device owner. "
+                   "This is the entity that uses the port (for example, "
+                   "network:dhcp).")
+        )
         parser.add_argument(
             '--router',
             metavar='<router>',
@@ -333,10 +370,12 @@ class ListPort(command.Lister):
         )
 
         filters = {}
+        if parsed_args.device_owner is not None:
+            filters['device_owner'] = parsed_args.device_owner
         if parsed_args.router:
             _router = client.find_router(parsed_args.router,
                                          ignore_missing=False)
-            filters = {'device_id': _router.id}
+            filters['device_id'] = _router.id
 
         data = client.ports(**filters)
 
@@ -389,9 +428,9 @@ class SetPort(command.Command):
         binding_profile.add_argument(
             '--binding-profile',
             metavar='<binding-profile>',
-            action=parseractions.KeyValueAction,
-            help=_("Custom data to be passed as binding:profile: "
-                   "<key>=<value> "
+            action=JSONKeyValueAction,
+            help=_("Custom data to be passed as binding:profile. Data may "
+                   "be passed as <key>=<value> or JSON. "
                    "(repeat option to set multiple binding:profile data)")
         )
         binding_profile.add_argument(
@@ -426,9 +465,6 @@ class SetPort(command.Command):
         elif parsed_args.no_fixed_ip:
             attrs['fixed_ips'] = []
 
-        if attrs == {}:
-            msg = _("Nothing specified to be set")
-            raise exceptions.CommandError(msg)
         client.update_port(obj, **attrs)
 
 
@@ -449,4 +485,62 @@ class ShowPort(command.ShowOne):
         obj = client.find_port(parsed_args.port, ignore_missing=False)
         columns = _get_columns(obj)
         data = utils.get_item_properties(obj, columns, formatters=_formatters)
-        return columns, data
+        return (columns, data)
+
+
+class UnsetPort(command.Command):
+    """Unset port properties"""
+
+    def get_parser(self, prog_name):
+        parser = super(UnsetPort, self).get_parser(prog_name)
+        parser.add_argument(
+            '--fixed-ip',
+            metavar='subnet=<subnet>,ip-address=<ip-address>',
+            action=parseractions.MultiKeyValueAction,
+            optional_keys=['subnet', 'ip-address'],
+            help=_("Desired IP and/or subnet (name or ID) which should be "
+                   "removed from this port: subnet=<subnet>,"
+                   "ip-address=<ip-address> (repeat option to unset multiple "
+                   "fixed IP addresses)"))
+
+        parser.add_argument(
+            '--binding-profile',
+            metavar='<binding-profile-key>',
+            action='append',
+            help=_("Desired key which should be removed from binding:profile"
+                   "(repeat option to unset multiple binding:profile data)"))
+        parser.add_argument(
+            'port',
+            metavar="<port>",
+            help=_("Port to modify (name or ID)")
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        client = self.app.client_manager.network
+        obj = client.find_port(parsed_args.port, ignore_missing=False)
+        # SDK ignores update() if it recieves a modified obj and attrs
+        # To handle the same tmp_obj is created in all take_action of
+        # Unset* classes
+        tmp_fixed_ips = copy.deepcopy(obj.fixed_ips)
+        tmp_binding_profile = copy.deepcopy(obj.binding_profile)
+        _prepare_fixed_ips(self.app.client_manager, parsed_args)
+        attrs = {}
+        if parsed_args.fixed_ip:
+            try:
+                for ip in parsed_args.fixed_ip:
+                    tmp_fixed_ips.remove(ip)
+            except ValueError:
+                msg = _("Port does not contain fixed-ip %s") % ip
+                raise exceptions.CommandError(msg)
+            attrs['fixed_ips'] = tmp_fixed_ips
+        if parsed_args.binding_profile:
+            try:
+                for key in parsed_args.binding_profile:
+                    del tmp_binding_profile[key]
+            except KeyError:
+                msg = _("Port does not contain binding-profile %s") % key
+                raise exceptions.CommandError(msg)
+            attrs['binding:profile'] = tmp_binding_profile
+        if attrs:
+            client.update_port(obj, **attrs)

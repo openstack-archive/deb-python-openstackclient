@@ -15,7 +15,7 @@ import uuid
 from functional.tests.volume.v1 import common
 
 
-class VolumeTests(common.BaseVolumeTests):
+class QosTests(common.BaseVolumeTests):
     """Functional tests for volume qos. """
 
     NAME = uuid.uuid4().hex
@@ -25,7 +25,8 @@ class VolumeTests(common.BaseVolumeTests):
 
     @classmethod
     def setUpClass(cls):
-        opts = cls.get_show_opts(cls.FIELDS)
+        super(QosTests, cls).setUpClass()
+        opts = cls.get_opts(cls.FIELDS)
         raw_output = cls.openstack('volume qos create ' + cls.NAME + opts)
         cls.ID, name, rol = raw_output.split('\n')
         cls.assertOutput(cls.NAME, name)
@@ -36,12 +37,12 @@ class VolumeTests(common.BaseVolumeTests):
         cls.assertOutput('', raw_output)
 
     def test_volume_qos_list(self):
-        opts = self.get_list_opts(self.HEADERS)
+        opts = self.get_opts(self.HEADERS)
         raw_output = self.openstack('volume qos list' + opts)
         self.assertIn(self.NAME, raw_output)
 
     def test_volume_qos_show(self):
-        opts = self.get_show_opts(self.FIELDS)
+        opts = self.get_opts(self.FIELDS)
         raw_output = self.openstack('volume qos show ' + self.ID + opts)
         self.assertEqual(self.ID + "\n" + self.NAME + "\n", raw_output)
 
@@ -49,6 +50,6 @@ class VolumeTests(common.BaseVolumeTests):
         raw_output = self.openstack(
             'volume qos set --property a=b --property c=d ' + self.ID)
         self.assertEqual("", raw_output)
-        opts = self.get_show_opts(['name', 'specs'])
+        opts = self.get_opts(['name', 'specs'])
         raw_output = self.openstack('volume qos show ' + self.ID + opts)
         self.assertEqual(self.NAME + "\na='b', c='d'\n", raw_output)

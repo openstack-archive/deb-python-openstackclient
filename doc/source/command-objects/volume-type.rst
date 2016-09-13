@@ -16,6 +16,8 @@ Create new volume type
         [--description <description>]
         [--public | --private]
         [--property <key=value> [...] ]
+        [--project <project>]
+        [--project-domain <project-domain>]
         <name>
 
 .. option:: --description <description>
@@ -40,6 +42,20 @@ Create new volume type
 
     Set a property on this volume type (repeat option to set multiple properties)
 
+.. option:: --project <project>
+
+    Allow <project> to access private type (name or ID)
+    (Must be used with :option:`--private` option)
+
+    *Volume version 2 only*
+
+.. option:: --project-domain <project-domain>
+
+    Domain the project belongs to (name or ID).
+    This can be used in case collisions between project names exist.
+
+    *Volume version 2 only*
+
 .. _volume_type_create-name:
 .. describe:: <name>
 
@@ -48,18 +64,18 @@ Create new volume type
 volume type delete
 ------------------
 
-Delete volume type
+Delete volume type(s)
 
 .. program:: volume type delete
 .. code:: bash
 
     os volume type delete
-        <volume-type>
+        <volume-type> [<volume-type> ...]
 
 .. _volume_type_delete-volume-type:
 .. describe:: <volume-type>
 
-    Volume type to delete (name or ID)
+    Volume type(s) to delete (name or ID)
 
 volume type list
 ----------------
@@ -71,10 +87,23 @@ List volume types
 
     os volume type list
         [--long]
+        [--public | --private]
 
 .. option:: --long
 
     List additional fields in output
+
+.. option:: --public
+
+    List only public types
+
+    *Volume version 2 only*
+
+.. option:: --private
+
+    List only private types (admin only)
+
+    *Volume version 2 only*
 
 volume type set
 ---------------
@@ -128,7 +157,6 @@ volume type show
 ----------------
 
 Display volume type details
-
 
 .. program:: volume type show
 .. code:: bash

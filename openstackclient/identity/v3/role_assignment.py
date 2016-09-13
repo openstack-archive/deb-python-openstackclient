@@ -13,8 +13,9 @@
 
 """Identity v3 Assignment action implementations """
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common
 
@@ -35,6 +36,7 @@ class ListRoleAssignment(command.Lister):
             metavar='<role>',
             help=_('Role to filter (name or ID)'),
         )
+        common.add_role_domain_option_to_parser(parser)
         parser.add_argument(
             '--names',
             action="store_true",
@@ -66,6 +68,19 @@ class ListRoleAssignment(command.Lister):
         )
         common.add_project_domain_option_to_parser(parser)
         common.add_inherited_option_to_parser(parser)
+        parser.add_argument(
+            '--auth-user',
+            action="store_true",
+            dest='authuser',
+            help='Only list assignments for the authenticated user',
+        )
+        parser.add_argument(
+            '--auth-project',
+            action="store_true",
+            dest='authproject',
+            help='Only list assignments for the project to which the '
+                 'authenticated user\'s token is scoped',
+        )
         return parser
 
     def _as_tuple(self, assignment):
@@ -74,12 +89,18 @@ class ListRoleAssignment(command.Lister):
 
     def take_action(self, parsed_args):
         identity_client = self.app.client_manager.identity
+        auth_ref = self.app.client_manager.auth_ref
 
         role = None
+        role_domain_id = None
+        if parsed_args.role_domain:
+            role_domain_id = common.find_domain(identity_client,
+                                                parsed_args.role_domain).id
         if parsed_args.role:
             role = utils.find_resource(
                 identity_client.roles,
                 parsed_args.role,
+                domain_id=role_domain_id
             )
 
         user = None
@@ -89,6 +110,12 @@ class ListRoleAssignment(command.Lister):
                 parsed_args.user,
                 parsed_args.user_domain,
             )
+        elif parsed_args.authuser:
+            if auth_ref:
+                user = common.find_user(
+                    identity_client,
+                    auth_ref.user_id
+                )
 
         domain = None
         if parsed_args.domain:
@@ -104,6 +131,12 @@ class ListRoleAssignment(command.Lister):
                 parsed_args.project,
                 parsed_args.project_domain,
             )
+        elif parsed_args.authproject:
+            if auth_ref:
+                project = common.find_project(
+                    identity_client,
+                    auth_ref.project_id
+                )
 
         group = None
         if parsed_args.group:
@@ -178,6 +211,12 @@ class ListRoleAssignment(command.Lister):
 
             if hasattr(assignment, 'role'):
                 if include_names:
+                    # TODO(henry-nash): If this is a domain specific role it
+                    # would be good show this as role@domain, although this
+                    # domain info is not yet included in the response from the
+                    # server. Although we could get it by re-reading the role
+                    # from the ID, let's wait until the server does the right
+                    # thing.
                     setattr(assignment, 'role', assignment.role['name'])
                 else:
                     setattr(assignment, 'role', assignment.role['id'])

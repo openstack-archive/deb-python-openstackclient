@@ -28,6 +28,7 @@ Create new subnet
         [--ip-version {4,6}]
         [--ipv6-ra-mode {dhcpv6-stateful,dhcpv6-stateless,slaac}]
         [--ipv6-address-mode {dhcpv6-stateful,dhcpv6-stateless,slaac}]
+        [--network-segment <network-segment>]
         --network <network>
         <name>
 
@@ -82,7 +83,7 @@ Create new subnet
      'auto': Gateway address should automatically be chosen from
      within the subnet itself, 'none': This subnet will not use
      a gateway, e.g.: ``--gateway 192.168.9.1``, ``--gateway auto``,
-     ``--gateway none`` (default is 'auto')
+     ``--gateway none`` (default is 'auto').
 
 .. option:: --host-route destination=<subnet>,gateway=<ip-address>
 
@@ -107,6 +108,14 @@ Create new subnet
 
      IPv6 address mode, valid modes: [dhcpv6-stateful, dhcpv6-stateless, slaac]
 
+.. option:: --network-segment <network-segment>
+
+     Network segment to associate with this subnet (ID only)
+
+     .. caution:: This is a beta command option and subject
+                  to change. Use global option ``--os-beta-command``
+                  to enable this command option.
+
 .. option:: --network <network>
 
      Network this subnet belongs to (name or ID)
@@ -119,18 +128,18 @@ Create new subnet
 subnet delete
 -------------
 
-Delete a subnet
+Delete subnet(s)
 
 .. program:: subnet delete
 .. code:: bash
 
     os subnet delete
-        <subnet>
+        <subnet> [<subnet> ...]
 
 .. _subnet_delete-subnet:
 .. describe:: <subnet>
 
-    Subnet to delete (name or ID)
+    Subnet(s) to delete (name or ID)
 
 subnet list
 -----------
@@ -142,6 +151,8 @@ List subnets
 
     os subnet list
         [--long]
+        [--ip-version {4,6}]
+        [--dhcp | --no-dhcp]
 
 .. option:: --long
 
@@ -149,7 +160,16 @@ List subnets
 
 .. option:: --ip-version {4, 6}
 
-    List only subnets of given IP version in output
+    List only subnets of given IP version in output.
+    Allowed values for IP version are 4 and 6.
+
+.. option:: --dhcp
+
+    List subnets which have DHCP enabled
+
+.. option:: --no-dhcp
+
+    List subnets which have DHCP disabled
 
 subnet set
 ----------
@@ -191,7 +211,7 @@ Set subnet properties
      Specify a gateway for the subnet. The options are:
      <ip-address>: Specific IP address to use as the gateway,
      'none': This subnet will not use a gateway,
-     e.g.: ``--gateway 192.168.9.1``, ``--gateway none``
+     e.g.: ``--gateway 192.168.9.1``, ``--gateway none``.
 
 .. option:: --host-route destination=<subnet>,gateway=<ip-address>
 
@@ -226,3 +246,41 @@ Display subnet details
 .. describe:: <subnet>
 
     Subnet to display (name or ID)
+
+subnet unset
+------------
+
+Unset subnet properties
+
+.. program:: subnet unset
+.. code:: bash
+
+    os subnet unset
+        [--allocation-pool start=<ip-address>,end=<ip-address> [...]]
+        [--dns-nameserver <dns-nameserver> [...]]
+        [--host-route destination=<subnet>,gateway=<ip-address> [...]]
+        <subnet>
+
+.. option:: --dns-nameserver <dns-nameserver>
+
+     DNS server to be removed from this subnet
+     (repeat option to unset multiple DNS servers)
+
+.. option:: --allocation-pool start=<ip-address>,end=<ip-address>
+
+    Allocation pool to be removed from this subnet e.g.:
+    ``start=192.168.199.2,end=192.168.199.254``
+    (repeat option to unset multiple Allocation pools)
+
+.. option:: --host-route destination=<subnet>,gateway=<ip-address>
+
+     Route to be removed from this subnet e.g.:
+     ``destination=10.10.0.0/16,gateway=192.168.71.254``
+     destination: destination subnet (in CIDR notation)
+     gateway: nexthop IP address
+     (repeat option to unset multiple host routes)
+
+.. _subnet_unset-subnet:
+.. describe:: <subnet>
+
+    subnet to modify (name or ID)

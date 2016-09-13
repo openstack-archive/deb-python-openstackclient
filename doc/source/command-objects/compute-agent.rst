@@ -59,42 +59,44 @@ Delete compute agent(s)
 compute agent list
 ------------------
 
-List compute agent command
+List compute agents
 
 .. program:: compute agent list
 .. code:: bash
 
     os compute agent list [--hypervisor <hypervisor>]
 
-.. _compute_agent-list:
-.. describe:: --hypervisor <hypervisor>
+.. option:: --hypervisor <hypervisor>
 
-    Optional type of hypervisor
+    Type of hypervisor
 
 compute agent set
 -----------------
 
-Set compute agent command
+Set compute agent properties
 
 .. program:: agent set
 .. code:: bash
 
     os compute agent set
-        <id> <version> <url> <md5hash>
+        [--agent-version <version>]
+        [--url <url]
+        [--md5hash <md5hash>]
+        <id>
 
 .. _compute_agent-set:
-.. describe:: <id>
-
-    ID of the agent
-
-.. describe:: <version>
+.. option:: --agent-version <version>
 
     Version of the agent
 
-.. describe:: <url>
+.. option:: --url <url>
 
-    URL
+    URL of the agent
 
-.. describe:: <md5hash>
+.. option:: --md5hash <md5hash>
 
-    MD5 hash
+    MD5 hash of the agent
+
+.. describe:: <id>
+
+    Agent to modify (ID only)

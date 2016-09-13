@@ -14,43 +14,20 @@
 import mock
 
 from openstackclient.identity.v2_0 import catalog
+from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
 from openstackclient.tests import utils
 
 
 class TestCatalog(utils.TestCommand):
 
-    fake_service = {
-        'id': 'qwertyuiop',
-        'type': 'compute',
-        'name': 'supernova',
-        'endpoints': [
-            {
-                'region': 'one',
-                'publicURL': 'https://public.one.example.com',
-                'internalURL': 'https://internal.one.example.com',
-                'adminURL': 'https://admin.one.example.com',
-            },
-            {
-                'region': 'two',
-                'publicURL': 'https://public.two.example.com',
-                'internalURL': 'https://internal.two.example.com',
-                'adminURL': 'https://admin.two.example.com',
-            },
-            {
-                'region': None,
-                'publicURL': 'https://public.none.example.com',
-                'internalURL': 'https://internal.none.example.com',
-                'adminURL': 'https://admin.none.example.com',
-            },
-        ],
-    }
+    service_catalog = identity_fakes.FakeCatalog.create_catalog()
 
     def setUp(self):
         super(TestCatalog, self).setUp()
 
         self.sc_mock = mock.MagicMock()
-        self.sc_mock.service_catalog.get_data.return_value = [
-            self.fake_service,
+        self.sc_mock.service_catalog.catalog.return_value = [
+            self.service_catalog,
         ]
 
         self.auth_mock = mock.MagicMock()
@@ -74,6 +51,13 @@ class TestCatalogList(TestCatalog):
         self.cmd = catalog.ListCatalog(self.app, None)
 
     def test_catalog_list(self):
+        auth_ref = identity_fakes.fake_auth_ref(
+            identity_fakes.TOKEN,
+            fake_service=self.service_catalog,
+        )
+        self.ar_mock = mock.PropertyMock(return_value=auth_ref)
+        type(self.app.client_manager).auth_ref = self.ar_mock
+
         arglist = []
         verifylist = []
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -82,7 +66,6 @@ class TestCatalogList(TestCatalog):
         # returns a tuple containing the column names and an iterable
         # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
-        self.sc_mock.service_catalog.get_data.assert_called_with()
 
         self.assertEqual(self.columns, columns)
         datalist = ((
@@ -101,7 +84,7 @@ class TestCatalogList(TestCatalog):
         self.assertEqual(datalist, tuple(data))
 
     def test_catalog_list_with_endpoint_url(self):
-        fake_service = {
+        attr = {
             'id': 'qwertyuiop',
             'type': 'compute',
             'name': 'supernova',
@@ -117,9 +100,13 @@ class TestCatalogList(TestCatalog):
                 },
             ],
         }
-        self.sc_mock.service_catalog.get_data.return_value = [
-            fake_service,
-        ]
+        service_catalog = identity_fakes.FakeCatalog.create_catalog(attr)
+        auth_ref = identity_fakes.fake_auth_ref(
+            identity_fakes.TOKEN,
+            fake_service=service_catalog,
+        )
+        self.ar_mock = mock.PropertyMock(return_value=auth_ref)
+        type(self.app.client_manager).auth_ref = self.ar_mock
 
         arglist = []
         verifylist = []
@@ -129,7 +116,6 @@ class TestCatalogList(TestCatalog):
         # returns a tuple containing the column names and an iterable
         # containing the data to be listed.
         columns, data = self.cmd.take_action(parsed_args)
-        self.sc_mock.service_catalog.get_data.assert_called_with()
 
         self.assertEqual(self.columns, columns)
         datalist = ((
@@ -151,6 +137,13 @@ class TestCatalogShow(TestCatalog):
         self.cmd = catalog.ShowCatalog(self.app, None)
 
     def test_catalog_show(self):
+        auth_ref = identity_fakes.fake_auth_ref(
+            identity_fakes.UNSCOPED_TOKEN,
+            fake_service=self.service_catalog,
+        )
+        self.ar_mock = mock.PropertyMock(return_value=auth_ref)
+        type(self.app.client_manager).auth_ref = self.ar_mock
+
         arglist = [
             'compute',
         ]
@@ -163,7 +156,6 @@ class TestCatalogShow(TestCatalog):
         # returns a two-part tuple with a tuple of column names and a tuple of
         # data to be shown.
         columns, data = self.cmd.take_action(parsed_args)
-        self.sc_mock.service_catalog.get_data.assert_called_with()
 
         collist = ('endpoints', 'id', 'name', 'type')
         self.assertEqual(collist, columns)
@@ -177,7 +169,7 @@ class TestCatalogShow(TestCatalog):
             '<none>\n  publicURL: https://public.none.example.com\n  '
             'internalURL: https://internal.none.example.com\n  '
             'adminURL: https://admin.none.example.com\n',
-            'qwertyuiop',
+            self.service_catalog.id,
             'supernova',
             'compute',
         )

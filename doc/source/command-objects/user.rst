@@ -95,7 +95,7 @@ Delete user(s)
 .. _user_delete-user:
 .. describe:: <user>
 
-    User to delete (name or ID)
+    User(s) to delete (name or ID)
 
 user list
 ---------
@@ -143,6 +143,7 @@ Set user properties
         [--name <name>]
         [--project <project> [--project-domain <project-domain>]]
         [--password <password>]
+        [--password-prompt]
         [--email <email-address>]
         [--description <description>]
         [--enable|--disable]

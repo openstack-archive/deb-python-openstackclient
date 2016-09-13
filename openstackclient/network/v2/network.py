@@ -13,9 +13,9 @@
 
 """Network action implementations"""
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
 from openstackclient.network import common
@@ -58,6 +58,10 @@ def _get_attrs(client_manager, parsed_args):
         attrs['shared'] = True
     if parsed_args.no_share:
         attrs['shared'] = False
+    if parsed_args.enable_port_security:
+        attrs['port_security_enabled'] = True
+    if parsed_args.disable_port_security:
+        attrs['port_security_enabled'] = False
 
     # "network set" command doesn't support setting project.
     if 'project' in parsed_args and parsed_args.project is not None:
@@ -104,11 +108,11 @@ def _add_additional_network_options(parser):
     parser.add_argument(
         '--provider-network-type',
         metavar='<provider-network-type>',
-        choices=['flat', 'gre', 'local',
+        choices=['flat', 'geneve', 'gre', 'local',
                  'vlan', 'vxlan'],
         help=_("The physical mechanism by which the virtual network "
                "is implemented. The supported options are: "
-               "flat, gre, local, vlan, vxlan"))
+               "flat, geneve, gre, local, vlan, vxlan."))
     parser.add_argument(
         '--provider-physical-network',
         metavar='<provider-physical-network>',
@@ -119,8 +123,8 @@ def _add_additional_network_options(parser):
         '--provider-segment',
         metavar='<provider-segment>',
         dest='segmentation_id',
-        help=_("VLAN ID for VLAN networks or Tunnel ID for GRE/VXLAN "
-               "networks"))
+        help=_("VLAN ID for VLAN networks or Tunnel ID for "
+               "GENEVE/GRE/VXLAN networks"))
 
     vlan_transparent_grp = parser.add_mutually_exclusive_group()
     vlan_transparent_grp.add_argument(
@@ -196,6 +200,19 @@ class CreateNetwork(common.NetworkAndComputeShowOne):
             help=_("Availability Zone in which to create this network "
                    "(Network Availability Zone extension required, "
                    "repeat option to set multiple availability zones)")
+        )
+        port_security_group = parser.add_mutually_exclusive_group()
+        port_security_group.add_argument(
+            '--enable-port-security',
+            action='store_true',
+            help=_("Enable port security by default for ports created on "
+                   "this network (default)")
+        )
+        port_security_group.add_argument(
+            '--disable-port-security',
+            action='store_true',
+            help=_("Disable port security by default for ports created on "
+                   "this network")
         )
         external_router_grp = parser.add_mutually_exclusive_group()
         external_router_grp.add_argument(
@@ -403,6 +420,19 @@ class SetNetwork(command.Command):
             action='store_true',
             help=_("Do not share the network between projects")
         )
+        port_security_group = parser.add_mutually_exclusive_group()
+        port_security_group.add_argument(
+            '--enable-port-security',
+            action='store_true',
+            help=_("Enable port security by default for ports created on "
+                   "this network")
+        )
+        port_security_group.add_argument(
+            '--disable-port-security',
+            action='store_true',
+            help=_("Disable port security by default for ports created on "
+                   "this network")
+        )
         external_router_grp = parser.add_mutually_exclusive_group()
         external_router_grp.add_argument(
             '--external',
@@ -434,10 +464,6 @@ class SetNetwork(command.Command):
         obj = client.find_network(parsed_args.network, ignore_missing=False)
 
         attrs = _get_attrs(self.app.client_manager, parsed_args)
-        if attrs == {}:
-            msg = _("Nothing specified to be set")
-            raise exceptions.CommandError(msg)
-
         client.update_network(obj, **attrs)
 
 

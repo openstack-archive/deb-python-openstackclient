@@ -24,11 +24,23 @@ Show server's remote console URL
 
 .. option:: --xvpvnc
 
-    Show xpvnc console URL
+    Show xvpvnc console URL
 
 .. option:: --spice
 
     Show SPICE console URL
+
+.. option:: --rdp
+
+    Show RDP console URL
+
+.. option:: --serial
+
+    Show serial console URL
+
+.. option:: --mks
+
+    Show WebMKS console URL
 
 .. describe:: <server>
 

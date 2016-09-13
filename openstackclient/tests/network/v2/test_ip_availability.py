@@ -11,12 +11,11 @@
 #   under the License.
 #
 
-import copy
 import mock
 
-from openstackclient.common import utils as osc_utils
+from osc_lib import utils as common_utils
+
 from openstackclient.network.v2 import ip_availability
-from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
 from openstackclient.tests.network.v2 import fakes as network_fakes
 from openstackclient.tests import utils as tests_utils
@@ -30,21 +29,11 @@ class TestIPAvailability(network_fakes.TestNetworkV2):
         # Get a shortcut to the network client
         self.network = self.app.client_manager.network
 
-        # Set identity client v3. And get a shortcut to Identity client.
-        identity_client = identity_fakes.FakeIdentityv3Client(
-            endpoint=fakes.AUTH_URL,
-            token=fakes.AUTH_TOKEN,
-        )
-        self.app.client_manager.identity = identity_client
-        self.identity = self.app.client_manager.identity
-
         # Get a shortcut to the ProjectManager Mock
-        self.projects_mock = self.identity.projects
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock = self.app.client_manager.identity.projects
+
+        self.project = identity_fakes.FakeProject.create_one_project()
+        self.projects_mock.get.return_value = self.project
 
 
 class TestListIPAvailability(TestIPAvailability):
@@ -81,8 +70,10 @@ class TestListIPAvailability(TestIPAvailability):
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
+        filters = {'ip_version': 4}
 
-        self.network.network_ip_availabilities.assert_called_once_with()
+        self.network.network_ip_availabilities.assert_called_once_with(
+            **filters)
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.data, list(data))
 
@@ -106,16 +97,17 @@ class TestListIPAvailability(TestIPAvailability):
 
     def test_list_project(self):
         arglist = [
-            '--project', identity_fakes.project_name
+            '--project', self.project.name
         ]
         verifylist = [
-            ('project', identity_fakes.project_name)
+            ('project', self.project.name)
         ]
 
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
         columns, data = self.cmd.take_action(parsed_args)
-        filters = {'tenant_id': identity_fakes.project_id}
+        filters = {'tenant_id': self.project.id,
+                   'ip_version': 4}
 
         self.network.network_ip_availabilities.assert_called_once_with(
             **filters)
@@ -140,7 +132,7 @@ class TestShowIPAvailability(TestIPAvailability):
         _ip_availability.network_id,
         _ip_availability.network_name,
         _ip_availability.tenant_id,
-        osc_utils.format_list(
+        common_utils.format_list(
             _ip_availability.subnet_ip_availability),
         _ip_availability.total_ips,
         _ip_availability.used_ips,

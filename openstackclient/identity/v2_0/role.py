@@ -15,14 +15,18 @@
 
 """Identity v2 Role action implementations"""
 
-import six
+import logging
 
 from keystoneauth1 import exceptions as ks_exc
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
+import six
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import utils
 from openstackclient.i18n import _
+
+
+LOG = logging.getLogger(__name__)
 
 
 class AddRole(command.ShowOne):
@@ -89,15 +93,15 @@ class CreateRole(command.ShowOne):
         identity_client = self.app.client_manager.identity
         try:
             role = identity_client.roles.create(parsed_args.role_name)
-        except ks_exc.Conflict as e:
+        except ks_exc.Conflict:
             if parsed_args.or_show:
                 role = utils.find_resource(
                     identity_client.roles,
                     parsed_args.role_name,
                 )
-                self.log.info(_('Returning existing role %s'), role.name)
+                LOG.info(_('Returning existing role %s'), role.name)
             else:
-                raise e
+                raise
 
         info = {}
         info.update(role._info)
@@ -146,6 +150,15 @@ class ListRole(command.Lister):
         return parser
 
     def take_action(self, parsed_args):
+
+        def _deprecated():
+            # NOTE(henry-nash): Deprecated as of Newton, so we should remove
+            # this in the 'P' release.
+            self.log.warning(_('Listing assignments using role list is '
+                               'deprecated as of the Newton release. Use role '
+                               'assignment list --user <user-name> --project '
+                               '<project-name> --names instead.'))
+
         identity_client = self.app.client_manager.identity
         auth_ref = self.app.client_manager.auth_ref
 
@@ -162,6 +175,7 @@ class ListRole(command.Lister):
                 identity_client.projects,
                 parsed_args.project,
             )
+            _deprecated()
             data = identity_client.roles.roles_for_user(user.id, project.id)
 
         elif parsed_args.user:
@@ -177,6 +191,7 @@ class ListRole(command.Lister):
             else:
                 msg = _("Project must be specified")
                 raise exceptions.CommandError(msg)
+            _deprecated()
             data = identity_client.roles.roles_for_user(user.id, project.id)
         elif parsed_args.project:
             project = utils.find_resource(
@@ -191,6 +206,7 @@ class ListRole(command.Lister):
             else:
                 msg = _("User must be specified")
                 raise exceptions.CommandError(msg)
+            _deprecated()
             data = identity_client.roles.roles_for_user(user.id, project.id)
 
         if parsed_args.user or parsed_args.project:
@@ -231,19 +247,24 @@ class ListUserRole(command.Lister):
         # Project and user are required, if not included in command args
         # default to the values used for authentication.  For token-flow
         # authentication they must be included on the command line.
+        if (not parsed_args.project and
+                self.app.client_manager.auth_ref.project_id):
+            parsed_args.project = auth_ref.project_id
         if not parsed_args.project:
-            if self.app.client_manager.auth_ref:
-                parsed_args.project = auth_ref.project_id
-            else:
-                msg = _("Project must be specified")
-                raise exceptions.CommandError(msg)
-        if not parsed_args.user:
-            if self.app.client_manager.auth_ref:
-                parsed_args.user = auth_ref.user_id
-            else:
-                msg = _("User must be specified")
-                raise exceptions.CommandError(msg)
+            msg = _("Project must be specified")
+            raise exceptions.CommandError(msg)
 
+        if (not parsed_args.user and
+                self.app.client_manager.auth_ref.user_id):
+            parsed_args.user = auth_ref.user_id
+        if not parsed_args.user:
+            msg = _("User must be specified")
+            raise exceptions.CommandError(msg)
+
+        self.log.warning(_('Listing assignments using user role list is '
+                           'deprecated as of the Newton release. Use role '
+                           'assignment list --user <user-name> --project '
+                           '<project-name> --names instead.'))
         project = utils.find_resource(
             identity_client.tenants,
             parsed_args.project,

@@ -13,8 +13,9 @@
 
 import mock
 
-from openstackclient.common import exceptions
-from openstackclient.common import utils as common_utils
+from osc_lib import exceptions
+from osc_lib import utils as common_utils
+
 from openstackclient.compute.v2 import server_backup
 from openstackclient.tests.compute.v2 import fakes as compute_fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
@@ -33,10 +34,10 @@ class TestServerBackup(compute_fakes.TestComputev2):
         self.images_mock = self.app.client_manager.image.images
         self.images_mock.reset_mock()
 
-        # Set object attributes to be tested. Could be overwriten in subclass.
+        # Set object attributes to be tested. Could be overwritten in subclass.
         self.attrs = {}
 
-        # Set object methods to be tested. Could be overwriten in subclass.
+        # Set object methods to be tested. Could be overwritten in subclass.
         self.methods = {}
 
     def setup_servers_mock(self, count):

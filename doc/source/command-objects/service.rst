@@ -46,18 +46,18 @@ Create new service
 service delete
 --------------
 
-Delete service
+Delete service(s)
 
 .. program:: service delete
 .. code-block:: bash
 
     os service delete
-        <service>
+        <service> [<service> ...]
 
 .. _service_delete-type:
 .. describe:: <service>
 
-    Service to delete (type, name or ID)
+    Service(s) to delete (type, name or ID)
 
 service list
 ------------
@@ -117,7 +117,7 @@ Set service properties
 .. _service_set-service:
 .. describe:: <service>
 
-    Service to update (type, name or ID)
+    Service to modify (type, name or ID)
 
 service show
 ------------

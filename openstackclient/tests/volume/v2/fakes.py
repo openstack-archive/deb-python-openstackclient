@@ -17,219 +17,12 @@ import mock
 import random
 import uuid
 
-from openstackclient.common import utils as common_utils
+from osc_lib import utils as common_utils
+
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
 from openstackclient.tests.image.v2 import fakes as image_fakes
 from openstackclient.tests import utils
-
-volume_attachment_server = {
-    'device': '/dev/ice',
-    'server_id': '1233',
-}
-
-volume_id = "ce26708d-a7f8-4b4b-9861-4a80256615a6"
-volume_name = "fake_volume"
-volume_description = "fake description"
-volume_status = "available"
-volume_size = 20
-volume_type = "fake_lvmdriver-1"
-volume_metadata = {
-    'Alpha': 'a',
-    'Beta': 'b',
-    'Gamma': 'g',
-}
-volume_metadata_str = "Alpha='a', Beta='b', Gamma='g'"
-volume_snapshot_id = 1
-volume_availability_zone = "nova"
-volume_attachments = [volume_attachment_server]
-
-VOLUME = {
-    "id": volume_id,
-    "name": volume_name,
-    "description": volume_description,
-    "status": volume_status,
-    "size": volume_size,
-    "volume_type": volume_type,
-    "metadata": volume_metadata,
-    "snapshot_id": volume_snapshot_id,
-    "availability_zone": volume_availability_zone,
-    "attachments": volume_attachments
-}
-
-VOLUME_columns = (
-    "attachments",
-    "availability_zone",
-    "description",
-    "id",
-    "name",
-    "properties",
-    "size",
-    "snapshot_id",
-    "status",
-    "type"
-)
-
-VOLUME_data = (
-    volume_attachments,
-    volume_availability_zone,
-    volume_description,
-    volume_id,
-    volume_name,
-    common_utils.format_dict(volume_metadata),
-    volume_size,
-    volume_snapshot_id,
-    volume_status,
-    volume_type
-)
-
-
-snapshot_id = "cb2d364e-4d1c-451a-8c68-b5bbcb340fb2"
-snapshot_name = "fake_snapshot"
-snapshot_description = "fake description"
-snapshot_size = 10
-snapshot_metadata = {
-    "foo": "bar"
-}
-snapshot_volume_id = "bdbae8dc-e6ca-43c0-8076-951cc1b093a4"
-
-SNAPSHOT = {
-    "id": snapshot_id,
-    "name": snapshot_name,
-    "description": snapshot_description,
-    "size": snapshot_size,
-    "status": "available",
-    "metadata": snapshot_metadata,
-    "created_at": "2015-06-03T18:49:19.000000",
-    "volume_id": volume_name
-}
-EXPECTED_SNAPSHOT = copy.deepcopy(SNAPSHOT)
-EXPECTED_SNAPSHOT.pop("metadata")
-EXPECTED_SNAPSHOT['properties'] = "foo='bar'"
-SNAPSHOT_columns = tuple(sorted(EXPECTED_SNAPSHOT))
-SNAPSHOT_data = tuple((EXPECTED_SNAPSHOT[x]
-                       for x in sorted(EXPECTED_SNAPSHOT)))
-
-
-type_id = "5520dc9e-6f9b-4378-a719-729911c0f407"
-type_description = "fake description"
-type_name = "fake-lvmdriver-1"
-type_extra_specs = {
-    "foo": "bar"
-}
-
-TYPE = {
-    'id': type_id,
-    'name': type_name,
-    'description': type_description,
-    'extra_specs': type_extra_specs
-}
-
-TYPE_columns = tuple(sorted(TYPE))
-TYPE_data = tuple((TYPE[x] for x in sorted(TYPE)))
-
-formatted_type_properties = "foo='bar'"
-TYPE_FORMATTED = {
-    'id': type_id,
-    'name': type_name,
-    'description': type_description,
-    'properties': formatted_type_properties
-}
-TYPE_FORMATTED_columns = tuple(sorted(TYPE_FORMATTED))
-TYPE_FORMATTED_data = tuple((TYPE_FORMATTED[x] for x in
-                             sorted(TYPE_FORMATTED)))
-
-backup_id = "3c409fe6-4d03-4a06-aeab-18bdcdf3c8f4"
-backup_volume_id = "bdbae8dc-e6ca-43c0-8076-951cc1b093a4"
-backup_name = "fake_backup"
-backup_description = "fake description"
-backup_object_count = None
-backup_container = None
-backup_size = 10
-backup_status = "error"
-
-BACKUP = {
-    "id": backup_id,
-    "name": backup_name,
-    "volume_id": backup_volume_id,
-    "description": backup_description,
-    "object_count": backup_object_count,
-    "container": backup_container,
-    "size": backup_size,
-    "status": backup_status,
-    "availability_zone": volume_availability_zone,
-}
-
-BACKUP_columns = tuple(sorted(BACKUP))
-BACKUP_data = tuple((BACKUP[x] for x in sorted(BACKUP)))
-
-qos_id = '6f2be1de-997b-4230-b76c-a3633b59e8fb'
-qos_consumer = 'front-end'
-qos_default_consumer = 'both'
-qos_name = "fake-qos-specs"
-qos_specs = {
-    'foo': 'bar',
-    'iops': '9001'
-}
-qos_association = {
-    'association_type': 'volume_type',
-    'name': type_name,
-    'id': type_id
-}
-
-QOS = {
-    'id': qos_id,
-    'consumer': qos_consumer,
-    'name': qos_name
-}
-
-QOS_DEFAULT_CONSUMER = {
-    'id': qos_id,
-    'consumer': qos_default_consumer,
-    'name': qos_name
-}
-
-QOS_WITH_SPECS = {
-    'id': qos_id,
-    'consumer': qos_consumer,
-    'name': qos_name,
-    'specs': qos_specs
-}
-
-QOS_WITH_ASSOCIATIONS = {
-    'id': qos_id,
-    'consumer': qos_consumer,
-    'name': qos_name,
-    'specs': qos_specs,
-    'associations': [qos_association]
-}
-
-image_id = 'im1'
-image_name = 'graven'
-IMAGE = {
-    'id': image_id,
-    'name': image_name
-}
-
-extension_name = 'SchedulerHints'
-extension_namespace = 'http://docs.openstack.org/'\
-    'block-service/ext/scheduler-hints/api/v2'
-extension_description = 'Pass arbitrary key/value'\
-    'pairs to the scheduler.'
-extension_updated = '2013-04-18T00:00:00+00:00'
-extension_alias = 'OS-SCH-HNT'
-extension_links = '[{"href":'\
-    '"https://github.com/openstack/block-api", "type":'\
-    ' "text/html", "rel": "describedby"}]'
-
-EXTENSION = {
-    'name': extension_name,
-    'namespace': extension_namespace,
-    'description': extension_description,
-    'updated': extension_updated,
-    'alias': extension_alias,
-    'links': extension_links,
-}
 
 
 class FakeTransferClient(object):
@@ -260,7 +53,7 @@ class FakeTransfer(object):
 
         :param Dictionary attrs:
             A dictionary with all attributes of Transfer Request
-        :retrun:
+        :return:
             A FakeResource object with volume_id, name, id.
         """
         # Set default attribute
@@ -281,6 +74,38 @@ class FakeTransfer(object):
             loaded=True)
 
         return transfer
+
+
+class FakeTypeAccess(object):
+    """Fake one or more volume type access."""
+
+    @staticmethod
+    def create_one_type_access(attrs=None):
+        """Create a fake volume type access for project.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with  Volume_type_ID and Project_ID.
+        """
+        if attrs is None:
+            attrs = {}
+
+        # Set default attributes.
+        type_access_attrs = {
+            'volume_type_id': 'volume-type-id-' + uuid.uuid4().hex,
+            'project_id': 'project-id-' + uuid.uuid4().hex,
+        }
+
+        # Overwrite default attributes.
+        type_access_attrs.update(attrs)
+
+        type_access = fakes.FakeResource(
+            None,
+            type_access_attrs,
+            loaded=True)
+
+        return type_access
 
 
 class FakeServiceClient(object):
@@ -310,7 +135,7 @@ class FakeService(object):
 
         :param Dictionary attrs:
             A dictionary with all attributes of service
-        :retrun:
+        :return:
             A FakeResource object with host, status, etc.
         """
         # Set default attribute
@@ -353,32 +178,14 @@ class FakeService(object):
 
         return services
 
-    @staticmethod
-    def get_services(services=None, count=2):
-        """Get an iterable MagicMock object with a list of faked services.
-
-        If services list is provided, then initialize the Mock object with the
-        list. Otherwise create one.
-
-        :param List services:
-            A list of FakeResource objects faking services
-        :param Integer count:
-            The number of services to be faked
-        :return
-            An iterable Mock object with side_effect set to a list of faked
-            services
-        """
-        if services is None:
-            services = FakeService.create_services(count)
-
-        return mock.MagicMock(side_effect=services)
-
 
 class FakeVolumeClient(object):
 
     def __init__(self, **kwargs):
         self.volumes = mock.Mock()
         self.volumes.resource_class = fakes.FakeResource(None, {})
+        self.extensions = mock.Mock()
+        self.extensions.resource_class = fakes.FakeResource(None, {})
         self.volume_snapshots = mock.Mock()
         self.volume_snapshots.resource_class = fakes.FakeResource(None, {})
         self.backups = mock.Mock()
@@ -428,7 +235,7 @@ class FakeVolume(object):
 
         :param Dictionary attrs:
             A dictionary with all attributes of volume
-        :retrun:
+        :return:
             A FakeResource object with id, name, status, etc.
         """
         attrs = attrs or {}
@@ -608,6 +415,7 @@ class FakeBackup(object):
             "id": 'backup-id-' + uuid.uuid4().hex,
             "name": 'backup-name-' + uuid.uuid4().hex,
             "volume_id": 'volume-id-' + uuid.uuid4().hex,
+            "snapshot_id": 'snapshot-id' + uuid.uuid4().hex,
             "description": 'description-' + uuid.uuid4().hex,
             "object_count": None,
             "container": 'container-' + uuid.uuid4().hex,
@@ -641,6 +449,62 @@ class FakeBackup(object):
             backups.append(backup)
 
         return backups
+
+    @staticmethod
+    def get_backups(backups=None, count=2):
+        """Get an iterable MagicMock object with a list of faked backups.
+
+        If backups list is provided, then initialize the Mock object with the
+        list. Otherwise create one.
+
+        :param List volumes:
+            A list of FakeResource objects faking backups
+        :param Integer count:
+            The number of backups to be faked
+        :return
+            An iterable Mock object with side_effect set to a list of faked
+            backups
+        """
+        if backups is None:
+            backups = FakeBackup.create_backups(count)
+
+        return mock.MagicMock(side_effect=backups)
+
+
+class FakeExtension(object):
+    """Fake one or more extension."""
+
+    @staticmethod
+    def create_one_extension(attrs=None):
+        """Create a fake extension.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object with name, namespace, etc.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        extension_info = {
+            'name': 'name-' + uuid.uuid4().hex,
+            'namespace': ('http://docs.openstack.org/'
+                          'block-service/ext/scheduler-hints/api/v2'),
+            'description': 'description-' + uuid.uuid4().hex,
+            'updated': '2013-04-18T00:00:00+00:00',
+            'alias': 'OS-SCH-HNT',
+            'links': ('[{"href":'
+                      '"https://github.com/openstack/block-api", "type":'
+                      ' "text/html", "rel": "describedby"}]'),
+        }
+
+        # Overwrite default attributes.
+        extension_info.update(attrs)
+
+        extension = fakes.FakeResource(
+            info=copy.deepcopy(extension_info),
+            loaded=True)
+        return extension
 
 
 class FakeQos(object):
@@ -717,6 +581,26 @@ class FakeQos(object):
 
         return qoses
 
+    @staticmethod
+    def get_qoses(qoses=None, count=2):
+        """Get an iterable MagicMock object with a list of faked qoses.
+
+        If qoses list is provided, then initialize the Mock object with the
+        list. Otherwise create one.
+
+        :param List volumes:
+            A list of FakeResource objects faking qoses
+        :param Integer count:
+            The number of qoses to be faked
+        :return
+            An iterable Mock object with side_effect set to a list of faked
+            qoses
+        """
+        if qoses is None:
+            qoses = FakeQos.create_qoses(count)
+
+        return mock.MagicMock(side_effect=qoses)
+
 
 class FakeSnapshot(object):
     """Fake one or more snapshot."""
@@ -770,6 +654,26 @@ class FakeSnapshot(object):
 
         return snapshots
 
+    @staticmethod
+    def get_snapshots(snapshots=None, count=2):
+        """Get an iterable MagicMock object with a list of faked snapshots.
+
+        If snapshots list is provided, then initialize the Mock object with the
+        list. Otherwise create one.
+
+        :param List volumes:
+            A list of FakeResource objects faking snapshots
+        :param Integer count:
+            The number of snapshots to be faked
+        :return
+            An iterable Mock object with side_effect set to a list of faked
+            snapshots
+        """
+        if snapshots is None:
+            snapshots = FakeSnapshot.create_snapshots(count)
+
+        return mock.MagicMock(side_effect=snapshots)
+
 
 class FakeType(object):
     """Fake one or more type."""
@@ -794,6 +698,7 @@ class FakeType(object):
             "name": 'type-name-' + uuid.uuid4().hex,
             "description": 'type-description-' + uuid.uuid4().hex,
             "extra_specs": {"foo": "bar"},
+            "is_public": True,
         }
 
         # Overwrite default attributes.

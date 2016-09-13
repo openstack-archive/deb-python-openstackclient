@@ -15,12 +15,13 @@
 
 """Compute v2 Console action implementations"""
 
-import six
 import sys
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import utils
+import six
+
 from openstackclient.i18n import _
 
 
@@ -86,14 +87,35 @@ class ShowConsoleURL(command.ShowOne):
             dest='url_type',
             action='store_const',
             const='xvpvnc',
-            help=_("Show xpvnc console URL")
+            help=_("Show xvpvnc console URL")
         )
         type_group.add_argument(
             '--spice',
             dest='url_type',
             action='store_const',
-            const='spice',
+            const='spice-html5',
             help=_("Show SPICE console URL")
+        )
+        type_group.add_argument(
+            '--rdp',
+            dest='url_type',
+            action='store_const',
+            const='rdp-html5',
+            help=_("Show RDP console URL"),
+        )
+        type_group.add_argument(
+            '--serial',
+            dest='url_type',
+            action='store_const',
+            const='serial',
+            help=_("Show serial console URL"),
+        )
+        type_group.add_argument(
+            '--mks',
+            dest='url_type',
+            action='store_const',
+            const='webmks',
+            help=_("Show WebMKS console URL"),
         )
         return parser
 
@@ -104,14 +126,26 @@ class ShowConsoleURL(command.ShowOne):
             parsed_args.server,
         )
 
+        data = None
         if parsed_args.url_type in ['novnc', 'xvpvnc']:
             data = server.get_vnc_console(parsed_args.url_type)
-        if parsed_args.url_type in ['spice']:
+        if parsed_args.url_type in ['spice-html5']:
             data = server.get_spice_console(parsed_args.url_type)
+        if parsed_args.url_type in ['rdp-html5']:
+            data = server.get_rdp_console(parsed_args.url_type)
+        if parsed_args.url_type in ['serial']:
+            data = server.get_serial_console(parsed_args.url_type)
+        if parsed_args.url_type in ['webmks']:
+            data = server.get_mks_console()
 
         if not data:
             return ({}, {})
 
         info = {}
-        info.update(data['console'])
+        # NOTE(Rui Chen): Return 'remote_console' in compute microversion API
+        #                 2.6 and later, return 'console' in compute
+        #                 microversion API from 2.0 to 2.5, do compatibility
+        #                 handle for different microversion API.
+        console_data = data.get('remote_console', data.get('console'))
+        info.update(console_data)
         return zip(*sorted(six.iteritems(info)))

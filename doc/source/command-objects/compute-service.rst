@@ -7,23 +7,23 @@ Compute v2
 compute service delete
 ----------------------
 
-Delete service command
+Delete compute service(s)
 
 .. program:: compute service delete
 .. code:: bash
 
     os compute service delete
-        <service>
+        <service> [<service> ...]
 
 .. _compute-service-delete:
 .. describe:: <service>
 
-    Compute service to delete (ID only)
+    Compute service(s) to delete (ID only)
 
 compute service list
 --------------------
 
-List service command
+List compute services
 
 .. program:: compute service list
 .. code:: bash
@@ -50,7 +50,7 @@ List service command
 compute service set
 -------------------
 
-Set service command
+Set compute service properties
 
 .. program:: compute service set
 .. code:: bash
@@ -58,6 +58,7 @@ Set service command
     os compute service set
         [--enable | --disable]
         [--disable-reason <reason>]
+        [--up | --down]
         <host> <service>
 
 .. _compute-service-set:
@@ -73,11 +74,19 @@ Set service command
 
     Reason for disabling the service (in quotes). Should be used with --disable option.
 
+.. option:: --up
+
+    Force up service
+
+.. option:: --down
+
+    Force down service
+
 .. describe:: <host>
 
     Name of host
 
 .. describe:: <service>
 
-    Name of service
+    Name of service (Binary name)
 

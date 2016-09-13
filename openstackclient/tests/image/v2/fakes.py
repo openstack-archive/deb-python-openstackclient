@@ -19,13 +19,12 @@ import random
 import uuid
 
 from glanceclient.v2 import schemas
+from osc_lib import utils as common_utils
 import warlock
 
-from openstackclient.common import utils as common_utils
 from openstackclient.tests import fakes
-from openstackclient.tests import utils
-
 from openstackclient.tests.identity.v3 import fakes as identity_fakes
+from openstackclient.tests import utils
 
 image_id = '0f41529e-7c12-4de8-be2d-181abb825b3c'
 image_name = 'graven'
@@ -49,13 +48,6 @@ IMAGE_data = tuple((IMAGE[x] for x in sorted(IMAGE)))
 IMAGE_SHOW = copy.copy(IMAGE)
 IMAGE_SHOW['tags'] = ''
 IMAGE_SHOW_data = tuple((IMAGE_SHOW[x] for x in sorted(IMAGE_SHOW)))
-
-member_status = 'pending'
-MEMBER = {
-    'member_id': identity_fakes.project_id,
-    'image_id': image_id,
-    'status': member_status,
-}
 
 # Just enough v2 schema to do some testing
 IMAGE_schema = {
@@ -191,7 +183,7 @@ class FakeImage(object):
 
         :param Dictionary attrs:
             A dictionary with all attrbutes of image
-        :retrun:
+        :return:
             A FakeResource object with id, name, owner, protected,
             visibility and tags attrs
         """
@@ -289,3 +281,29 @@ class FakeImage(object):
                 else:
                     data_list.append(getattr(image, x))
         return tuple(data_list)
+
+    @staticmethod
+    def create_one_image_member(attrs=None):
+        """Create a fake image member.
+
+        :param Dictionary attrs:
+            A dictionary with all attrbutes of image member
+        :return:
+            A FakeResource object with member_id, image_id and so on
+        """
+        attrs = attrs or {}
+
+        # Set default attribute
+        image_member_info = {
+            'member_id': 'member-id-' + uuid.uuid4().hex,
+            'image_id': 'image-id-' + uuid.uuid4().hex,
+            'status': 'pending',
+        }
+
+        # Overwrite default attributes if there are some attributes set
+        image_member_info.update(attrs)
+
+        image_member = fakes.FakeModel(
+            copy.deepcopy(image_member_info))
+
+        return image_member

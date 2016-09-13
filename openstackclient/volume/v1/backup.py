@@ -16,18 +16,20 @@
 """Volume v1 Backup action implementations"""
 
 import copy
+import logging
+
+from osc_lib.command import command
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import utils
 from openstackclient.i18n import _
 
 
-class CreateBackup(command.ShowOne):
-    """Create new backup"""
+class CreateVolumeBackup(command.ShowOne):
+    """Create new volume backup"""
 
     def get_parser(self, prog_name):
-        parser = super(CreateBackup, self).get_parser(prog_name)
+        parser = super(CreateVolumeBackup, self).get_parser(prog_name)
         parser.add_argument(
             'volume',
             metavar='<volume>',
@@ -66,16 +68,33 @@ class CreateBackup(command.ShowOne):
         return zip(*sorted(six.iteritems(backup._info)))
 
 
-class DeleteBackup(command.Command):
-    """Delete backup(s)"""
+class CreateBackup(CreateVolumeBackup):
+    """Create new backup"""
+
+    # TODO(Huanxuan Ao): Remove this class and ``backup create`` command
+    #                    two cycles after Newton.
+
+    # This notifies cliff to not display the help for this command
+    deprecated = True
+
+    log = logging.getLogger('deprecated')
+
+    def take_action(self, parsed_args):
+        self.log.warning(_('This command has been deprecated. '
+                           'Please use "volume backup create" instead.'))
+        return super(CreateBackup, self).take_action(parsed_args)
+
+
+class DeleteVolumeBackup(command.Command):
+    """Delete volume backup(s)"""
 
     def get_parser(self, prog_name):
-        parser = super(DeleteBackup, self).get_parser(prog_name)
+        parser = super(DeleteVolumeBackup, self).get_parser(prog_name)
         parser.add_argument(
             'backups',
             metavar='<backup>',
             nargs="+",
-            help=_('Backup(s) to delete (ID only)'),
+            help=_('Backup(s) to delete (name or ID)'),
         )
         return parser
 
@@ -87,11 +106,28 @@ class DeleteBackup(command.Command):
             volume_client.backups.delete(backup_id)
 
 
-class ListBackup(command.Lister):
-    """List backups"""
+class DeleteBackup(DeleteVolumeBackup):
+    """Delete backup(s)"""
+
+    # TODO(Huanxuan Ao): Remove this class and ``backup delete`` command
+    #                    two cycles after Newton.
+
+    # This notifies cliff to not display the help for this command
+    deprecated = True
+
+    log = logging.getLogger('deprecated')
+
+    def take_action(self, parsed_args):
+        self.log.warning(_('This command has been deprecated. '
+                           'Please use "volume backup delete" instead.'))
+        return super(DeleteBackup, self).take_action(parsed_args)
+
+
+class ListVolumeBackup(command.Lister):
+    """List volume backups"""
 
     def get_parser(self, prog_name):
-        parser = super(ListBackup, self).get_parser(prog_name)
+        parser = super(ListVolumeBackup, self).get_parser(prog_name)
         parser.add_argument(
             '--long',
             action='store_true',
@@ -141,15 +177,32 @@ class ListBackup(command.Lister):
                 ) for s in data))
 
 
-class RestoreBackup(command.Command):
-    """Restore backup"""
+class ListBackup(ListVolumeBackup):
+    """List backups"""
+
+    # TODO(Huanxuan Ao): Remove this class and ``backup list`` command
+    #                    two cycles after Newton.
+
+    # This notifies cliff to not display the help for this command
+    deprecated = True
+
+    log = logging.getLogger('deprecated')
+
+    def take_action(self, parsed_args):
+        self.log.warning(_('This command has been deprecated. '
+                           'Please use "volume backup list" instead.'))
+        return super(ListBackup, self).take_action(parsed_args)
+
+
+class RestoreVolumeBackup(command.Command):
+    """Restore volume backup"""
 
     def get_parser(self, prog_name):
-        parser = super(RestoreBackup, self).get_parser(prog_name)
+        parser = super(RestoreVolumeBackup, self).get_parser(prog_name)
         parser.add_argument(
             'backup',
             metavar='<backup>',
-            help=_('Backup to restore (ID only)')
+            help=_('Backup to restore (name or ID)')
         )
         parser.add_argument(
             'volume',
@@ -168,15 +221,32 @@ class RestoreBackup(command.Command):
                                               destination_volume.id)
 
 
-class ShowBackup(command.ShowOne):
-    """Display backup details"""
+class RestoreBackup(RestoreVolumeBackup):
+    """Restore backup"""
+
+    # TODO(Huanxuan Ao): Remove this class and ``backup restore`` command
+    #                    two cycles after Newton.
+
+    # This notifies cliff to not display the help for this command
+    deprecated = True
+
+    log = logging.getLogger('deprecated')
+
+    def take_action(self, parsed_args):
+        self.log.warning(_('This command has been deprecated. '
+                           'Please use "volume backup restore" instead.'))
+        return super(RestoreBackup, self).take_action(parsed_args)
+
+
+class ShowVolumeBackup(command.ShowOne):
+    """Display volume backup details"""
 
     def get_parser(self, prog_name):
-        parser = super(ShowBackup, self).get_parser(prog_name)
+        parser = super(ShowVolumeBackup, self).get_parser(prog_name)
         parser.add_argument(
             'backup',
             metavar='<backup>',
-            help=_('Backup to display (ID only)')
+            help=_('Backup to display (name or ID)')
         )
         return parser
 
@@ -186,3 +256,20 @@ class ShowBackup(command.ShowOne):
                                      parsed_args.backup)
         backup._info.pop('links')
         return zip(*sorted(six.iteritems(backup._info)))
+
+
+class ShowBackup(ShowVolumeBackup):
+    """Display backup details"""
+
+    # TODO(Huanxuan Ao): Remove this class and ``backup show`` command
+    #                    two cycles after Newton.
+
+    # This notifies cliff to not display the help for this command
+    deprecated = True
+
+    log = logging.getLogger('deprecated')
+
+    def take_action(self, parsed_args):
+        self.log.warning(_('This command has been deprecated. '
+                           'Please use "volume backup show" instead.'))
+        return super(ShowBackup, self).take_action(parsed_args)

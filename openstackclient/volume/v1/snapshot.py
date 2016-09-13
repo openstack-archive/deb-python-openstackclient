@@ -1,4 +1,4 @@
-#   Copyright 2012-2013 OpenStack, LLC.
+#   Copyright 2012-2013 OpenStack Foundation
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain
@@ -16,11 +16,12 @@
 """Volume v1 Snapshot action implementations"""
 
 import copy
+
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 
 

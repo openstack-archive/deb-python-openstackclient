@@ -17,14 +17,9 @@ import mock
 import uuid
 
 from openstackclient.tests import fakes
+from openstackclient.tests.identity.v3 import fakes as identity_fakes_v3
 from openstackclient.tests import utils
 
-extension_name = 'Matrix'
-extension_namespace = 'http://docs.openstack.org/network/'
-extension_description = 'Simulated reality'
-extension_updated = '2013-07-09T12:00:0-00:00'
-extension_alias = 'Dystopian'
-extension_links = '[{"href":''"https://github.com/os/network", "type"}]'
 
 QUOTA = {
     "subnet": 10,
@@ -42,21 +37,11 @@ QUOTA = {
 }
 
 
-def create_extension():
-    extension = mock.Mock()
-    extension.name = extension_name
-    extension.namespace = extension_namespace
-    extension.description = extension_description
-    extension.updated = extension_updated
-    extension.alias = extension_alias
-    extension.links = extension_links
-    return extension
-
-
 class FakeNetworkV2Client(object):
 
     def __init__(self, **kwargs):
-        self.extensions = mock.Mock(return_value=[create_extension()])
+        self.extensions = mock.Mock()
+        self.extensions.resource_class = fakes.FakeResource(None, {})
 
 
 class TestNetworkV2(utils.TestCommand):
@@ -71,6 +56,13 @@ class TestNetworkV2(utils.TestCommand):
         self.app.client_manager.network = FakeNetworkV2Client(
             endpoint=fakes.AUTH_URL,
             token=fakes.AUTH_TOKEN,
+        )
+
+        self.app.client_manager.identity = (
+            identity_fakes_v3.FakeIdentityv3Client(
+                endpoint=fakes.AUTH_URL,
+                token=fakes.AUTH_TOKEN,
+            )
         )
 
 
@@ -240,6 +232,39 @@ class FakeIPAvailability(object):
         return network_ip_availabilities
 
 
+class FakeExtension(object):
+    """Fake one or more extension."""
+
+    @staticmethod
+    def create_one_extension(attrs=None):
+        """Create a fake extension.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object with name, namespace, etc.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes.
+        extension_info = {
+            'name': 'name-' + uuid.uuid4().hex,
+            'namespace': 'http://docs.openstack.org/network/',
+            'description': 'description-' + uuid.uuid4().hex,
+            'updated': '2013-07-09T12:00:0-00:00',
+            'alias': 'Dystopian',
+            'links': '[{"href":''"https://github.com/os/network", "type"}]',
+        }
+
+        # Overwrite default attributes.
+        extension_info.update(attrs)
+
+        extension = fakes.FakeResource(
+            info=copy.deepcopy(extension_info),
+            loaded=True)
+        return extension
+
+
 class FakeNetwork(object):
     """Fake one or more networks."""
 
@@ -268,6 +293,7 @@ class FakeNetwork(object):
             'availability_zones': [],
             'availability_zone_hints': [],
             'is_default': False,
+            'port_security_enabled': True,
         }
 
         # Overwrite default attributes.
@@ -279,6 +305,8 @@ class FakeNetwork(object):
         # Set attributes with special mapping in OpenStack SDK.
         network.project_id = network_attrs['tenant_id']
         network.is_router_external = network_attrs['router:external']
+        network.is_port_security_enabled = \
+            network_attrs['port_security_enabled']
 
         return network
 
@@ -335,7 +363,7 @@ class FakeNetworkSegment(object):
 
         # Set default attributes.
         network_segment_attrs = {
-            'id': 'segment-id-' + uuid.uuid4().hex,
+            'id': 'network-segment-id-' + uuid.uuid4().hex,
             'network_id': 'network-id-' + uuid.uuid4().hex,
             'network_type': 'vlan',
             'physical_network': 'physical-network-name-' + uuid.uuid4().hex,
@@ -461,6 +489,143 @@ class FakePort(object):
         if ports is None:
             ports = FakePort.create_ports(count)
         return mock.MagicMock(side_effect=ports)
+
+
+class FakeNetworkAgent(object):
+    """Fake one or more network agents."""
+
+    @staticmethod
+    def create_one_network_agent(attrs=None):
+        """Create a fake network agent
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, agent_type, and so on.
+        """
+        attrs = attrs or {}
+
+        # Set default attributes
+        agent_attrs = {
+            'id': 'agent-id-' + uuid.uuid4().hex,
+            'agent_type': 'agent-type-' + uuid.uuid4().hex,
+            'host': 'host-' + uuid.uuid4().hex,
+            'availability_zone': 'zone-' + uuid.uuid4().hex,
+            'alive': True,
+            'admin_state_up': True,
+            'binary': 'binary-' + uuid.uuid4().hex,
+            'configurations': {'subnet': 2, 'networks': 1},
+        }
+        agent_attrs.update(attrs)
+        agent = fakes.FakeResource(info=copy.deepcopy(agent_attrs),
+                                   loaded=True)
+        return agent
+
+    @staticmethod
+    def create_network_agents(attrs=None, count=2):
+        """Create multiple fake network agents.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of network agents to fake
+        :return:
+            A list of FakeResource objects faking the network agents
+        """
+        agents = []
+        for i in range(0, count):
+            agents.append(FakeNetworkAgent.create_one_network_agent(attrs))
+
+        return agents
+
+    @staticmethod
+    def get_network_agents(agents=None, count=2):
+        """Get an iterable MagicMock object with a list of faked network agents.
+
+        If network agents list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List agents:
+            A list of FakeResource objects faking network agents
+        :param int count:
+            The number of network agents to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            network agents
+        """
+        if agents is None:
+            agents = FakeNetworkAgent.create_network_agents(count)
+        return mock.MagicMock(side_effect=agents)
+
+
+class FakeNetworkRBAC(object):
+    """Fake one or more network rbac policies."""
+
+    @staticmethod
+    def create_one_network_rbac(attrs=None):
+        """Create a fake network rbac
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :return:
+            A FakeResource object, with id, action, target_tenant,
+            tenant_id, type
+        """
+        attrs = attrs or {}
+
+        # Set default attributes
+        rbac_attrs = {
+            'id': 'rbac-id-' + uuid.uuid4().hex,
+            'object_type': 'network',
+            'object_id': 'object-id-' + uuid.uuid4().hex,
+            'action': 'access_as_shared',
+            'target_tenant': 'target-tenant-' + uuid.uuid4().hex,
+            'tenant_id': 'tenant-id-' + uuid.uuid4().hex,
+        }
+        rbac_attrs.update(attrs)
+        rbac = fakes.FakeResource(info=copy.deepcopy(rbac_attrs),
+                                  loaded=True)
+        # Set attributes with special mapping in OpenStack SDK.
+        rbac.project_id = rbac_attrs['tenant_id']
+        rbac.target_project_id = rbac_attrs['target_tenant']
+        return rbac
+
+    @staticmethod
+    def create_network_rbacs(attrs=None, count=2):
+        """Create multiple fake network rbac policies.
+
+        :param Dictionary attrs:
+            A dictionary with all attributes
+        :param int count:
+            The number of rbac policies to fake
+        :return:
+            A list of FakeResource objects faking the rbac policies
+        """
+        rbac_policies = []
+        for i in range(0, count):
+            rbac_policies.append(FakeNetworkRBAC.
+                                 create_one_network_rbac(attrs))
+
+        return rbac_policies
+
+    @staticmethod
+    def get_network_rbacs(rbac_policies=None, count=2):
+        """Get an iterable MagicMock object with a list of faked rbac policies.
+
+        If rbac policies list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List rbac_policies:
+            A list of FakeResource objects faking rbac policies
+        :param int count:
+            The number of rbac policies to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            rbac policies
+        """
+        if rbac_policies is None:
+            rbac_policies = FakeNetworkRBAC.create_network_rbacs(count)
+        return mock.MagicMock(side_effect=rbac_policies)
 
 
 class FakeRouter(object):
@@ -594,6 +759,25 @@ class FakeSecurityGroup(object):
 
         return security_groups
 
+    @staticmethod
+    def get_security_groups(security_groups=None, count=2):
+        """Get an iterable MagicMock object with a list of faked security groups.
+
+        If security groups list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List security groups:
+            A list of FakeResource objects faking security groups
+        :param int count:
+            The number of security groups to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            security groups
+        """
+        if security_groups is None:
+            security_groups = FakeSecurityGroup.create_security_groups(count)
+        return mock.MagicMock(side_effect=security_groups)
+
 
 class FakeSecurityGroupRule(object):
     """Fake one or more security group rules."""
@@ -653,6 +837,26 @@ class FakeSecurityGroupRule(object):
 
         return security_group_rules
 
+    @staticmethod
+    def get_security_group_rules(security_group_rules=None, count=2):
+        """Get an iterable MagicMock object with a list of faked security group rules.
+
+        If security group rules list is provided, then initialize the Mock
+        object with the list. Otherwise create one.
+
+        :param List security group rules:
+            A list of FakeResource objects faking security group rules
+        :param int count:
+            The number of security group rules to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            security group rules
+        """
+        if security_group_rules is None:
+            security_group_rules = (
+                FakeSecurityGroupRule.create_security_group_rules(count))
+        return mock.MagicMock(side_effect=security_group_rules)
+
 
 class FakeSubnet(object):
     """Fake one or more subnets."""
@@ -682,9 +886,10 @@ class FakeSubnet(object):
             'host_routes': [],
             'ip_version': 4,
             'gateway_ip': '10.10.10.1',
-            'ipv6_address_mode': 'None',
-            'ipv6_ra_mode': 'None',
-            'subnetpool_id': 'None',
+            'ipv6_address_mode': None,
+            'ipv6_ra_mode': None,
+            'segment_id': None,
+            'subnetpool_id': None,
         }
 
         # Overwrite default attributes.
@@ -714,6 +919,25 @@ class FakeSubnet(object):
             subnets.append(FakeSubnet.create_one_subnet(attrs))
 
         return subnets
+
+    @staticmethod
+    def get_subnets(subnets=None, count=2):
+        """Get an iterable MagicMock object with a list of faked subnets.
+
+        If subnets list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List subnets:
+            A list of FakeResource objects faking subnets
+        :param int count:
+            The number of subnets to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            subnets
+        """
+        if subnets is None:
+            subnets = FakeSubnet.create_subnets(count)
+        return mock.MagicMock(side_effect=subnets)
 
 
 class FakeFloatingIP(object):
@@ -854,3 +1078,22 @@ class FakeSubnetPool(object):
             )
 
         return subnet_pools
+
+    @staticmethod
+    def get_subnet_pools(subnet_pools=None, count=2):
+        """Get an iterable MagicMock object with a list of faked subnet pools.
+
+        If subnet_pools list is provided, then initialize the Mock object
+        with the list. Otherwise create one.
+
+        :param List subnet pools:
+            A list of FakeResource objects faking subnet pools
+        :param int count:
+            The number of subnet pools to fake
+        :return:
+            An iterable Mock object with side_effect set to a list of faked
+            subnet pools
+        """
+        if subnet_pools is None:
+            subnet_pools = FakeSubnetPool.create_subnet_pools(count)
+        return mock.MagicMock(side_effect=subnet_pools)

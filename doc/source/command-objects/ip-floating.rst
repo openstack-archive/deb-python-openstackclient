@@ -8,6 +8,7 @@ ip floating add
 ---------------
 
 Add floating IP address to server
+(Deprecated, please use ``server add floating ip`` instead)
 
 .. program:: ip floating add
 .. code:: bash
@@ -28,6 +29,7 @@ ip floating create
 ------------------
 
 Create new floating IP address
+(Deprecated, please use ``floating ip create`` instead)
 
 .. program:: ip floating create
 .. code:: bash
@@ -66,21 +68,24 @@ Create new floating IP address
 ip floating delete
 ------------------
 
-Delete floating IP
+Delete floating IP(s)
+(Deprecated, please use ``floating ip delete`` instead)
 
 .. program:: ip floating delete
 .. code:: bash
 
-    os ip floating delete <floating-ip>
+    os ip floating delete
+        <floating-ip> [<floating-ip> ...]
 
 .. describe:: <floating-ip>
 
-    Floating IP to delete (IP address or ID)
+    Floating IP(s) to delete (IP address or ID)
 
 ip floating list
 ----------------
 
 List floating IP addresses
+(Deprecated, please use ``floating ip list`` instead)
 
 .. program:: ip floating list
 .. code:: bash
@@ -91,6 +96,7 @@ ip floating remove
 ------------------
 
 Remove floating IP address from server
+(Deprecated, please use ``server remove floating ip`` instead)
 
 .. program:: ip floating remove
 .. code:: bash
@@ -111,6 +117,7 @@ ip floating show
 ----------------
 
 Display floating IP details
+(Deprecated, please use ``floating ip show`` instead)
 
 .. program:: ip floating show
 .. code:: bash

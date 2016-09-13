@@ -14,6 +14,7 @@
 #
 
 import copy
+import mock
 
 from openstackclient.tests import fakes
 from openstackclient.tests.identity.v2_0 import fakes as identity_fakes
@@ -48,6 +49,9 @@ class TestVolume(volume_fakes.TestVolumev1):
 #                are implemented at this time.
 
 class TestVolumeCreate(TestVolume):
+
+    project = identity_fakes.FakeProject.create_one_project()
+    user = identity_fakes.FakeUser.create_one_user()
 
     columns = (
         'attach_status',
@@ -167,28 +171,20 @@ class TestVolumeCreate(TestVolume):
 
     def test_volume_create_user_project_id(self):
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
         # Return a user
-        self.users_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.USER),
-            loaded=True,
-        )
+        self.users_mock.get.return_value = self.user
 
         arglist = [
             '--size', str(volume_fakes.volume_size),
-            '--project', identity_fakes.project_id,
-            '--user', identity_fakes.user_id,
+            '--project', self.project.id,
+            '--user', self.user.id,
             volume_fakes.volume_name,
         ]
         verifylist = [
             ('size', volume_fakes.volume_size),
-            ('project', identity_fakes.project_id),
-            ('user', identity_fakes.user_id),
+            ('project', self.project.id),
+            ('user', self.user.id),
             ('name', volume_fakes.volume_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -210,8 +206,8 @@ class TestVolumeCreate(TestVolume):
             volume_fakes.volume_name,
             None,
             None,
-            identity_fakes.user_id,
-            identity_fakes.project_id,
+            self.user.id,
+            self.project.id,
             None,
             None,
             None,
@@ -222,28 +218,20 @@ class TestVolumeCreate(TestVolume):
 
     def test_volume_create_user_project_name(self):
         # Return a project
-        self.projects_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.PROJECT),
-            loaded=True,
-        )
+        self.projects_mock.get.return_value = self.project
         # Return a user
-        self.users_mock.get.return_value = fakes.FakeResource(
-            None,
-            copy.deepcopy(identity_fakes.USER),
-            loaded=True,
-        )
+        self.users_mock.get.return_value = self.user
 
         arglist = [
             '--size', str(volume_fakes.volume_size),
-            '--project', identity_fakes.project_name,
-            '--user', identity_fakes.user_name,
+            '--project', self.project.name,
+            '--user', self.user.name,
             volume_fakes.volume_name,
         ]
         verifylist = [
             ('size', volume_fakes.volume_size),
-            ('project', identity_fakes.project_name),
-            ('user', identity_fakes.user_name),
+            ('project', self.project.name),
+            ('user', self.user.name),
             ('name', volume_fakes.volume_name),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -265,8 +253,8 @@ class TestVolumeCreate(TestVolume):
             volume_fakes.volume_name,
             None,
             None,
-            identity_fakes.user_id,
-            identity_fakes.project_id,
+            self.user.id,
+            self.project.id,
             None,
             None,
             None,
@@ -656,7 +644,8 @@ class TestVolumeSet(TestVolume):
         )
         self.assertIsNone(result)
 
-    def test_volume_set_size_smaller(self):
+    @mock.patch.object(volume.LOG, 'error')
+    def test_volume_set_size_smaller(self, mock_log_error):
         arglist = [
             '--size', '100',
             volume_fakes.volume_name,
@@ -672,12 +661,13 @@ class TestVolumeSet(TestVolume):
 
         result = self.cmd.take_action(parsed_args)
 
-        self.assertEqual("New size must be greater than %s GB" %
-                         volume_fakes.volume_size,
-                         self.app.log.messages.get('error'))
+        mock_log_error.assert_called_with("New size must be greater "
+                                          "than %s GB",
+                                          volume_fakes.volume_size)
         self.assertIsNone(result)
 
-    def test_volume_set_size_not_available(self):
+    @mock.patch.object(volume.LOG, 'error')
+    def test_volume_set_size_not_available(self, mock_log_error):
         self.volumes_mock.get.return_value.status = 'error'
         arglist = [
             '--size', '130',
@@ -694,9 +684,9 @@ class TestVolumeSet(TestVolume):
 
         result = self.cmd.take_action(parsed_args)
 
-        self.assertEqual("Volume is in %s state, it must be available before "
-                         "size can be extended" % 'error',
-                         self.app.log.messages.get('error'))
+        mock_log_error.assert_called_with("Volume is in %s state, it must be "
+                                          "available before size can be "
+                                          "extended", 'error')
         self.assertIsNone(result)
 
     def test_volume_set_property(self):

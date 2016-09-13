@@ -13,7 +13,6 @@
 #   under the License.
 
 import copy
-
 import mock
 
 from openstackclient.identity.v3 import identity_provider
@@ -255,7 +254,7 @@ class TestIdentityProviderDelete(TestIdentityProvider):
             identity_fakes.idp_id,
         ]
         verifylist = [
-            ('identity_provider', identity_fakes.idp_id),
+            ('identity_provider', [identity_fakes.idp_id]),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
@@ -357,19 +356,11 @@ class TestIdentityProviderSet(TestIdentityProvider):
             ('remote_id', None)
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id,
             description=new_description,
         )
-        self.assertEqual(self.columns, columns)
-        datalist = (
-            identity_fakes.idp_description,
-            False,
-            identity_fakes.idp_id,
-            identity_fakes.idp_remote_ids
-        )
-        self.assertEqual(datalist, data)
 
     def test_identity_provider_disable(self):
         """Disable Identity Provider
@@ -403,21 +394,12 @@ class TestIdentityProviderSet(TestIdentityProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id,
             enabled=False,
             remote_ids=identity_fakes.idp_remote_ids
         )
-
-        self.assertEqual(self.columns, columns)
-        datalist = (
-            identity_fakes.idp_description,
-            False,
-            identity_fakes.idp_id,
-            identity_fakes.idp_remote_ids
-        )
-        self.assertEqual(datalist, data)
 
     def test_identity_provider_enable(self):
         """Enable Identity Provider.
@@ -449,12 +431,10 @@ class TestIdentityProviderSet(TestIdentityProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id, enabled=True,
             remote_ids=identity_fakes.idp_remote_ids)
-        self.assertEqual(self.columns, columns)
-        self.assertEqual(self.datalist, data)
 
     def test_identity_provider_replace_remote_ids(self):
         """Enable Identity Provider.
@@ -489,18 +469,10 @@ class TestIdentityProviderSet(TestIdentityProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
+        self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id, enabled=True,
             remote_ids=[self.new_remote_id])
-        self.assertEqual(self.columns, columns)
-        datalist = (
-            identity_fakes.idp_description,
-            True,
-            identity_fakes.idp_id,
-            [self.new_remote_id]
-        )
-        self.assertEqual(datalist, data)
 
     def test_identity_provider_replace_remote_ids_file(self):
         """Enable Identity Provider.
@@ -539,18 +511,10 @@ class TestIdentityProviderSet(TestIdentityProvider):
         mocker.return_value = self.new_remote_id
         with mock.patch("openstackclient.identity.v3.identity_provider."
                         "utils.read_blob_file_contents", mocker):
-            columns, data = self.cmd.take_action(parsed_args)
+            self.cmd.take_action(parsed_args)
         self.identity_providers_mock.update.assert_called_with(
             identity_fakes.idp_id, enabled=True,
             remote_ids=[self.new_remote_id])
-        self.assertEqual(self.columns, columns)
-        datalist = (
-            identity_fakes.idp_description,
-            True,
-            identity_fakes.idp_id,
-            [self.new_remote_id]
-        )
-        self.assertEqual(datalist, data)
 
     def test_identity_provider_no_options(self):
         def prepare(self):
@@ -581,12 +545,7 @@ class TestIdentityProviderSet(TestIdentityProvider):
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
 
-        columns, data = self.cmd.take_action(parsed_args)
-
-        # expect take_action() to return (None, None) as
-        # neither --enable nor --disable was specified
-        self.assertIsNone(columns)
-        self.assertIsNone(data)
+        self.cmd.take_action(parsed_args)
 
 
 class TestIdentityProviderShow(TestIdentityProvider):
@@ -599,7 +558,11 @@ class TestIdentityProviderShow(TestIdentityProvider):
             copy.deepcopy(identity_fakes.IDENTITY_PROVIDER),
             loaded=True,
         )
+
+        self.identity_providers_mock.get.side_effect = [Exception("Not found"),
+                                                        ret]
         self.identity_providers_mock.get.return_value = ret
+
         # Get the command object to test
         self.cmd = identity_provider.ShowIdentityProvider(self.app, None)
 

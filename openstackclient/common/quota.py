@@ -16,11 +16,13 @@
 """Quota action implementations"""
 
 import itertools
-import six
 import sys
 
-from openstackclient.common import command
-from openstackclient.common import utils
+from osc_lib.command import command
+from osc_lib import utils
+import six
+
+from openstackclient.i18n import _
 
 
 # List the quota items, map the internal argument name to the option
@@ -36,6 +38,8 @@ COMPUTE_QUOTAS = {
     'key_pairs': 'key-pairs',
     'metadata_items': 'properties',
     'ram': 'ram',
+    'server_groups': 'server-groups',
+    'server_group_members': 'server-group-members',
 }
 
 VOLUME_QUOTAS = {
@@ -84,14 +88,14 @@ class SetQuota(command.Command):
         parser.add_argument(
             'project',
             metavar='<project/class>',
-            help='Set quotas for this project or class (name/ID)',
+            help=_('Set quotas for this project or class (name/ID)'),
         )
         parser.add_argument(
             '--class',
             dest='quota_class',
             action='store_true',
             default=False,
-            help='Set quotas for <class>',
+            help=_('Set quotas for <class>'),
         )
         for k, v in self._build_options_list():
             parser.add_argument(
@@ -99,12 +103,12 @@ class SetQuota(command.Command):
                 metavar='<%s>' % v,
                 dest=k,
                 type=int,
-                help='New value for the %s quota' % v,
+                help=_('New value for the %s quota') % v,
             )
         parser.add_argument(
             '--volume-type',
             metavar='<volume-type>',
-            help='Set quotas for a specific <volume-type>',
+            help=_('Set quotas for a specific <volume-type>'),
         )
         return parser
 
@@ -139,11 +143,6 @@ class SetQuota(command.Command):
                 value = getattr(parsed_args, k, None)
                 if value is not None:
                     compute_kwargs[k] = value
-
-        if (compute_kwargs == {} and volume_kwargs == {}
-                and network_kwargs == {}):
-            sys.stderr.write("No quotas updated\n")
-            return
 
         if parsed_args.project:
             project = utils.find_resource(
@@ -187,7 +186,7 @@ class ShowQuota(command.ShowOne):
             'project',
             metavar='<project/class>',
             nargs='?',
-            help='Show quotas for this project or class (name or ID)',
+            help=_('Show quotas for this project or class (name or ID)'),
         )
         type_group = parser.add_mutually_exclusive_group()
         type_group.add_argument(
@@ -195,14 +194,14 @@ class ShowQuota(command.ShowOne):
             dest='quota_class',
             action='store_true',
             default=False,
-            help='Show quotas for <class>',
+            help=_('Show quotas for <class>'),
         )
         type_group.add_argument(
             '--default',
             dest='default',
             action='store_true',
             default=False,
-            help='Show default quotas for <project>'
+            help=_('Show default quotas for <project>')
         )
         return parser
 
@@ -234,7 +233,7 @@ class ShowQuota(command.ShowOne):
             if type(e).__name__ == 'EndpointNotFound':
                 return {}
             else:
-                raise e
+                raise
         return quota._info
 
     def get_network_quota(self, parsed_args):

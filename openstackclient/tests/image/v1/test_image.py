@@ -16,7 +16,8 @@
 import copy
 import mock
 
-from openstackclient.common import exceptions
+from osc_lib import exceptions
+
 from openstackclient.image.v1 import image
 from openstackclient.tests import fakes
 from openstackclient.tests.image.v1 import fakes as image_fakes
@@ -362,6 +363,7 @@ class TestImageList(TestImage):
             'Disk Format',
             'Container Format',
             'Size',
+            'Checksum',
             'Status',
             'Visibility',
             'Protected',
@@ -373,6 +375,7 @@ class TestImageList(TestImage):
         datalist = ((
             image_fakes.image_id,
             image_fakes.image_name,
+            '',
             '',
             '',
             '',
@@ -416,7 +419,7 @@ class TestImageList(TestImage):
         self.assertEqual(self.columns, columns)
         self.assertEqual(self.datalist, tuple(data))
 
-    @mock.patch('openstackclient.common.utils.sort_items')
+    @mock.patch('osc_lib.utils.sort_items')
     def test_image_list_sort_option(self, si_mock):
         si_mock.side_effect = [
             [copy.deepcopy(image_fakes.IMAGE)], [],
@@ -474,8 +477,8 @@ class TestImageSet(TestImage):
 
         result = self.cmd.take_action(parsed_args)
 
-        # Verify update() was not called, if it was show the args
-        self.assertEqual(self.images_mock.update.call_args_list, [])
+        self.images_mock.update.assert_called_with(image_fakes.image_id,
+                                                   **{})
         self.assertIsNone(result)
 
     def test_image_set_options(self):

@@ -12,10 +12,10 @@
 
 from tempest.lib.common.utils import data_utils
 
-from functional.tests.identity.v3 import test_identity
+from functional.tests.identity.v3 import common
 
 
-class ServiceTests(test_identity.IdentityTests):
+class ServiceTests(common.IdentityTests):
 
     def test_service_create(self):
         self._create_dummy_service()
@@ -25,11 +25,18 @@ class ServiceTests(test_identity.IdentityTests):
         raw_output = self.openstack('service delete %s' % service_name)
         self.assertEqual(0, len(raw_output))
 
+    def test_service_multi_delete(self):
+        service_1 = self._create_dummy_service(add_clean_up=False)
+        service_2 = self._create_dummy_service(add_clean_up=False)
+        raw_output = self.openstack(
+            'service delete %s %s' % (service_1, service_2))
+        self.assertEqual(0, len(raw_output))
+
     def test_service_list(self):
         self._create_dummy_service()
         raw_output = self.openstack('service list')
         items = self.parse_listing(raw_output)
-        self.assert_table_structure(items, test_identity.BASIC_LIST_HEADERS)
+        self.assert_table_structure(items, common.BASIC_LIST_HEADERS)
 
     def test_service_set(self):
         service_name = self._create_dummy_service()

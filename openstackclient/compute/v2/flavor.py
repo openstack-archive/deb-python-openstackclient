@@ -15,14 +15,19 @@
 
 """Flavor action implementations"""
 
+import logging
+
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _find_flavor(compute_client, flavor):
@@ -116,10 +121,29 @@ class CreateFlavor(command.ShowOne):
             action="store_false",
             help=_("Flavor is not available to other projects")
         )
+        parser.add_argument(
+            "--property",
+            metavar="<key=value>",
+            action=parseractions.KeyValueAction,
+            help=_("Property to add for this flavor "
+                   "(repeat option to set multiple properties)")
+        )
+        parser.add_argument(
+            '--project',
+            metavar='<project>',
+            help=_("Allow <project> to access private flavor (name or ID) "
+                   "(Must be used with --private option)"),
+        )
+        identity_common.add_project_domain_option_to_parser(parser)
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
+        identity_client = self.app.client_manager.identity
+
+        if parsed_args.project and parsed_args.public:
+            msg = _("--project is only allowed with --private")
+            raise exceptions.CommandError(msg)
 
         args = (
             parsed_args.name,
@@ -133,28 +157,65 @@ class CreateFlavor(command.ShowOne):
             parsed_args.public
         )
 
-        flavor = compute_client.flavors.create(*args)._info.copy()
-        flavor.pop("links")
+        flavor = compute_client.flavors.create(*args)
 
-        return zip(*sorted(six.iteritems(flavor)))
+        if parsed_args.project:
+            try:
+                project_id = identity_common.find_project(
+                    identity_client,
+                    parsed_args.project,
+                    parsed_args.project_domain,
+                ).id
+                compute_client.flavor_access.add_tenant_access(
+                    parsed_args.id, project_id)
+            except Exception as e:
+                msg = _("Failed to add project %(project)s access to "
+                        "flavor: %(e)s")
+                LOG.error(msg % {'project': parsed_args.project, 'e': e})
+        if parsed_args.property:
+            try:
+                flavor.set_keys(parsed_args.property)
+            except Exception as e:
+                LOG.error(_("Failed to set flavor property: %s"), e)
+
+        flavor_info = flavor._info.copy()
+        flavor_info.pop("links")
+        flavor_info['properties'] = utils.format_dict(flavor.get_keys())
+
+        return zip(*sorted(six.iteritems(flavor_info)))
 
 
 class DeleteFlavor(command.Command):
-    """Delete flavor"""
+    """Delete flavor(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteFlavor, self).get_parser(prog_name)
         parser.add_argument(
             "flavor",
             metavar="<flavor>",
-            help=_("Flavor to delete (name or ID)")
+            nargs='+',
+            help=_("Flavor(s) to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
-        flavor = _find_flavor(compute_client, parsed_args.flavor)
-        compute_client.flavors.delete(flavor.id)
+        result = 0
+        for f in parsed_args.flavor:
+            try:
+                flavor = _find_flavor(compute_client, f)
+                compute_client.flavors.delete(flavor.id)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete flavor with name or "
+                          "ID '%(flavor)s': %(e)s")
+                          % {'flavor': f, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.flavor)
+            msg = (_("%(result)s of %(total)s flavors failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListFlavor(command.Lister):
@@ -274,16 +335,12 @@ class SetFlavor(command.Command):
 
         flavor = _find_flavor(compute_client, parsed_args.flavor)
 
-        if not parsed_args.property and not parsed_args.project:
-            raise exceptions.CommandError(_("Nothing specified to be set."))
-
         result = 0
         if parsed_args.property:
             try:
                 flavor.set_keys(parsed_args.property)
             except Exception as e:
-                self.app.log.error(
-                    _("Failed to set flavor property: %s") % str(e))
+                LOG.error(_("Failed to set flavor property: %s"), e)
                 result += 1
 
         if parsed_args.project:
@@ -300,13 +357,12 @@ class SetFlavor(command.Command):
                     compute_client.flavor_access.add_tenant_access(
                         flavor.id, project_id)
             except Exception as e:
-                self.app.log.error(_("Failed to set flavor access to"
-                                     " project: %s") % str(e))
+                LOG.error(_("Failed to set flavor access to project: %s"), e)
                 result += 1
 
         if result > 0:
             raise exceptions.CommandError(_("Command Failed: One or more of"
-                                          " the operations failed"))
+                                            " the operations failed"))
 
 
 class ShowFlavor(command.ShowOne):
@@ -324,7 +380,27 @@ class ShowFlavor(command.ShowOne):
     def take_action(self, parsed_args):
         compute_client = self.app.client_manager.compute
         resource_flavor = _find_flavor(compute_client, parsed_args.flavor)
+
+        access_projects = None
+        # get access projects list of this flavor
+        if not resource_flavor.is_public:
+            try:
+                flavor_access = compute_client.flavor_access.list(
+                    flavor=resource_flavor.id)
+                projects = [utils.get_field(access, 'tenant_id')
+                            for access in flavor_access]
+                # TODO(Huanxuan Ao): This format case can be removed after
+                # patch https://review.openstack.org/#/c/330223/ merged.
+                access_projects = utils.format_list(projects)
+            except Exception as e:
+                msg = _("Failed to get access projects list "
+                        "for flavor '%(flavor)s': %(e)s")
+                LOG.error(msg % {'flavor': parsed_args.flavor, 'e': e})
+
         flavor = resource_flavor._info.copy()
+        flavor.update({
+            'access_project_ids': access_projects
+        })
         flavor.pop("links", None)
 
         flavor['properties'] = utils.format_dict(resource_flavor.get_keys())
@@ -365,16 +441,12 @@ class UnsetFlavor(command.Command):
 
         flavor = _find_flavor(compute_client, parsed_args.flavor)
 
-        if not parsed_args.property and not parsed_args.project:
-            raise exceptions.CommandError(_("Nothing specified to be unset."))
-
         result = 0
         if parsed_args.property:
             try:
                 flavor.unset_keys(parsed_args.property)
             except Exception as e:
-                self.app.log.error(
-                    _("Failed to unset flavor property: %s") % str(e))
+                LOG.error(_("Failed to unset flavor property: %s"), e)
                 result += 1
 
         if parsed_args.project:
@@ -391,10 +463,10 @@ class UnsetFlavor(command.Command):
                     compute_client.flavor_access.remove_tenant_access(
                         flavor.id, project_id)
             except Exception as e:
-                self.app.log.error(_("Failed to remove flavor access from"
-                                     " project: %s") % str(e))
+                LOG.error(_("Failed to remove flavor access from project: %s"),
+                          e)
                 result += 1
 
         if result > 0:
             raise exceptions.CommandError(_("Command Failed: One or more of"
-                                          " the operations failed"))
+                                            " the operations failed"))

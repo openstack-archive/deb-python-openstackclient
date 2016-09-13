@@ -14,14 +14,19 @@
 
 """Volume v2 Type action implementations"""
 
+import logging
+
+from osc_lib.cli import parseractions
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils
 import six
 
-from openstackclient.common import command
-from openstackclient.common import exceptions
-from openstackclient.common import parseractions
-from openstackclient.common import utils
 from openstackclient.i18n import _
 from openstackclient.identity import common as identity_common
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CreateVolumeType(command.ShowOne):
@@ -42,14 +47,12 @@ class CreateVolumeType(command.ShowOne):
         public_group = parser.add_mutually_exclusive_group()
         public_group.add_argument(
             "--public",
-            dest="public",
             action="store_true",
             default=False,
             help=_("Volume type is accessible to the public"),
         )
         public_group.add_argument(
             "--private",
-            dest="private",
             action="store_true",
             default=False,
             help=_("Volume type is not accessible to the public"),
@@ -61,11 +64,22 @@ class CreateVolumeType(command.ShowOne):
             help=_('Set a property on this volume type '
                    '(repeat option to set multiple properties)'),
         )
+        parser.add_argument(
+            '--project',
+            metavar='<project>',
+            help=_("Allow <project> to access private type (name or ID) "
+                   "(Must be used with --private option)"),
+        )
+        identity_common.add_project_domain_option_to_parser(parser)
         return parser
 
     def take_action(self, parsed_args):
-
+        identity_client = self.app.client_manager.identity
         volume_client = self.app.client_manager.volume
+
+        if parsed_args.project and not parsed_args.private:
+            msg = _("--project is only allowed with --private")
+            raise exceptions.CommandError(msg)
 
         kwargs = {}
         if parsed_args.public:
@@ -79,6 +93,20 @@ class CreateVolumeType(command.ShowOne):
             **kwargs
         )
         volume_type._info.pop('extra_specs')
+
+        if parsed_args.project:
+            try:
+                project_id = identity_common.find_project(
+                    identity_client,
+                    parsed_args.project,
+                    parsed_args.project_domain,
+                ).id
+                volume_client.volume_type_access.add_project_access(
+                    volume_type.id, project_id)
+            except Exception as e:
+                msg = _("Failed to add project %(project)s access to "
+                        "type: %(e)s")
+                LOG.error(msg % {'project': parsed_args.project, 'e': e})
         if parsed_args.property:
             result = volume_type.set_keys(parsed_args.property)
             volume_type._info.update({'properties': utils.format_dict(result)})
@@ -87,22 +115,39 @@ class CreateVolumeType(command.ShowOne):
 
 
 class DeleteVolumeType(command.Command):
-    """Delete volume type"""
+    """Delete volume type(s)"""
 
     def get_parser(self, prog_name):
         parser = super(DeleteVolumeType, self).get_parser(prog_name)
         parser.add_argument(
-            "volume_type",
+            "volume_types",
             metavar="<volume-type>",
-            help=_("Volume type to delete (name or ID)")
+            nargs="+",
+            help=_("Volume type(s) to delete (name or ID)")
         )
         return parser
 
     def take_action(self, parsed_args):
         volume_client = self.app.client_manager.volume
-        volume_type = utils.find_resource(
-            volume_client.volume_types, parsed_args.volume_type)
-        volume_client.volume_types.delete(volume_type.id)
+        result = 0
+
+        for volume_type in parsed_args.volume_types:
+            try:
+                vol_type = utils.find_resource(volume_client.volume_types,
+                                               volume_type)
+
+                volume_client.volume_types.delete(vol_type)
+            except Exception as e:
+                result += 1
+                LOG.error(_("Failed to delete volume type with "
+                            "name or ID '%(volume_type)s': %(e)s")
+                          % {'volume_type': volume_type, 'e': e})
+
+        if result > 0:
+            total = len(parsed_args.volume_types)
+            msg = (_("%(result)s of %(total)s volume types failed "
+                   "to delete.") % {'result': result, 'total': total})
+            raise exceptions.CommandError(msg)
 
 
 class ListVolumeType(command.Lister):
@@ -115,6 +160,17 @@ class ListVolumeType(command.Lister):
             action='store_true',
             default=False,
             help=_('List additional fields in output'))
+        public_group = parser.add_mutually_exclusive_group()
+        public_group.add_argument(
+            "--public",
+            action="store_true",
+            help=_("List only public types")
+        )
+        public_group.add_argument(
+            "--private",
+            action="store_true",
+            help=_("List only private types (admin only)")
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -124,7 +180,14 @@ class ListVolumeType(command.Lister):
         else:
             columns = ['ID', 'Name']
             column_headers = columns
-        data = self.app.client_manager.volume.volume_types.list()
+
+        is_public = None
+        if parsed_args.public:
+            is_public = True
+        if parsed_args.private:
+            is_public = False
+        data = self.app.client_manager.volume.volume_types.list(
+            is_public=is_public)
         return (column_headers,
                 (utils.get_item_properties(
                     s, columns,
@@ -190,16 +253,15 @@ class SetVolumeType(command.Command):
                     **kwargs
                 )
             except Exception as e:
-                self.app.log.error(_("Failed to update volume type name or"
-                                     " description: %s") % str(e))
+                LOG.error(_("Failed to update volume type name or"
+                            " description: %s"), e)
                 result += 1
 
         if parsed_args.property:
             try:
                 volume_type.set_keys(parsed_args.property)
             except Exception as e:
-                self.app.log.error(_("Failed to set volume type"
-                                     " property: %s") % str(e))
+                LOG.error(_("Failed to set volume type property: %s"), e)
                 result += 1
 
         if parsed_args.project:
@@ -213,13 +275,13 @@ class SetVolumeType(command.Command):
                 volume_client.volume_type_access.add_project_access(
                     volume_type.id, project_info.id)
             except Exception as e:
-                self.app.log.error(_("Failed to set volume type access to"
-                                     " project: %s") % str(e))
+                LOG.error(_("Failed to set volume type access to "
+                            "project: %s"), e)
                 result += 1
 
         if result > 0:
             raise exceptions.CommandError(_("Command Failed: One or more of"
-                                          " the operations failed"))
+                                            " the operations failed"))
 
 
 class ShowVolumeType(command.ShowOne):
@@ -238,8 +300,24 @@ class ShowVolumeType(command.ShowOne):
         volume_client = self.app.client_manager.volume
         volume_type = utils.find_resource(
             volume_client.volume_types, parsed_args.volume_type)
-        properties = utils.format_dict(volume_type._info.pop('extra_specs'))
+        properties = utils.format_dict(
+            volume_type._info.pop('extra_specs', {}))
         volume_type._info.update({'properties': properties})
+        access_project_ids = None
+        if not volume_type.is_public:
+            try:
+                volume_type_access = volume_client.volume_type_access.list(
+                    volume_type.id)
+                project_ids = [utils.get_field(item, 'project_id')
+                               for item in volume_type_access]
+                # TODO(Rui Chen): This format list case can be removed after
+                # patch https://review.openstack.org/#/c/330223/ merged.
+                access_project_ids = utils.format_list(project_ids)
+            except Exception as e:
+                msg = _('Failed to get access project list for volume type '
+                        '%(type)s: %(e)s')
+                LOG.error(msg % {'type': volume_type.id, 'e': e})
+        volume_type._info.update({'access_project_ids': access_project_ids})
         return zip(*sorted(six.iteritems(volume_type._info)))
 
 
@@ -284,8 +362,7 @@ class UnsetVolumeType(command.Command):
             try:
                 volume_type.unset_keys(parsed_args.property)
             except Exception as e:
-                self.app.log.error(_("Failed to unset volume type property: %s"
-                                     ) % str(e))
+                LOG.error(_("Failed to unset volume type property: %s"), e)
                 result += 1
 
         if parsed_args.project:
@@ -299,8 +376,8 @@ class UnsetVolumeType(command.Command):
                 volume_client.volume_type_access.remove_project_access(
                     volume_type.id, project_info.id)
             except Exception as e:
-                self.app.log.error(_("Failed to remove volume type access from"
-                                   " project: %s") % str(e))
+                LOG.error(_("Failed to remove volume type access from "
+                            "project: %s"), e)
                 result += 1
 
         if result > 0:
