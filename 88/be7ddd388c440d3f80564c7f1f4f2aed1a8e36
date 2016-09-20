@@ -1,0 +1,10 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Tang Chen <chen.tang@easystack.cn>
+Workflow+1: Tang Chen <chen.tang@easystack.cn>
+Code-Review+1: Reedip <reedip.banerjee@nectechnologies.in>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 20 Sep 2016 06:55:29 +0000
+Reviewed-on: https://review.openstack.org/372777
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
