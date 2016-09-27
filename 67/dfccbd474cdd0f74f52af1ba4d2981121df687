@@ -1,0 +1,9 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Doug Hellmann <doug@doughellmann.com>
+Workflow+1: Doug Hellmann <doug@doughellmann.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 23 Sep 2016 16:34:22 +0000
+Reviewed-on: https://review.openstack.org/373311
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/stable/newton
