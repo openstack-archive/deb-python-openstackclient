@@ -109,6 +109,8 @@ def _get_attrs(client_manager, parsed_args):
             'The --host-id option is deprecated, '
             'please use --host instead.'
         ))
+    if parsed_args.extra_dhcp_opts is not None:
+        attrs['extra_dhcp_opts'] = parsed_args.extra_dhcp_opts
     if parsed_args.fixed_ip is not None:
         attrs['fixed_ips'] = parsed_args.fixed_ip
     if parsed_args.device:
@@ -158,7 +160,6 @@ def _prepare_fixed_ips(client_manager, parsed_args):
     """
     client = client_manager.network
     ips = []
-
     if parsed_args.fixed_ip:
         for ip_spec in parsed_args.fixed_ip:
             if 'subnet' in ip_spec:
@@ -177,6 +178,23 @@ def _prepare_fixed_ips(client_manager, parsed_args):
 
     if ips:
         parsed_args.fixed_ip = ips
+
+
+def _prepare_extra_dhcp_opts(client_manager, parsed_args):
+    opts = []
+    LOG.debug(("*******************8PARSED_ARGS IS %s") % parsed_args)
+    if parsed_args.extra_dhcp_opts:
+        opt_ele = {}
+        for opt in parsed_args.extra_dhcp_opts:
+            if ('opt_name' in opt and 'opt_value' in opt and 'ip_version'):
+                opt_ele['opt_name'] = opt['opt_name']
+                opt_ele['opt_value'] = opt['opt_value']
+                opt_ele['ip_version'] = opt['ip_version']
+            if opt_ele:
+                opts.append(opt_ele)
+                opt_ele = {}
+    if opts:
+        parsed_args.extra_dhcp_opts = opts
 
 
 def _add_updatable_args(parser):
@@ -297,6 +315,15 @@ class CreatePort(command.ShowOne):
             action='store_true',
             help=_("Associate no security groups with this port")
         )
+        parser.add_argument(
+            '--extra-dhcp-opts',
+            metavar='opt_name=<name>,opt_value=<value>,ip_version={4,6}',
+            action=parseractions.MultiKeyValueAction,
+            optional_keys=['opt_name', 'opt_value', 'ip_version'],
+            help=_('Extra dhcp options to be assigned to this port: '
+                   'opt_name=<dhcp_option_name>,opt_value=<value>,'
+                   'ip_version={4,6}. You can repeat this option.')
+            )
 
         return parser
 
@@ -306,6 +333,7 @@ class CreatePort(command.ShowOne):
                                        ignore_missing=False)
         parsed_args.network = _network.id
         _prepare_fixed_ips(self.app.client_manager, parsed_args)
+        _prepare_extra_dhcp_opts(self.app.client_manager, parsed_args)
         attrs = _get_attrs(self.app.client_manager, parsed_args)
 
         if parsed_args.security_groups:
@@ -314,6 +342,8 @@ class CreatePort(command.ShowOne):
                                         for sg in parsed_args.security_groups]
         if parsed_args.no_security_group:
             attrs['security_groups'] = []
+        if parsed_args.extra_dhcp_opts:
+            _prepare_extra_dhcp_opts(self.app.client_manager, parsed_args)
 
         obj = client.create_port(**attrs)
         columns = _get_columns(obj)
