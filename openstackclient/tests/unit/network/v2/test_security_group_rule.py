@@ -112,8 +112,8 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
     def test_create_all_source_options(self):
         arglist = [
-            '--src-ip', '10.10.0.0/24',
-            '--src-group', self._security_group.id,
+            '--remote-ip', '10.10.0.0/24',
+            '--remote-group', self._security_group.id,
             self._security_group.id,
         ]
         self.assertRaises(tests_utils.ParserException,
@@ -138,13 +138,13 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
 
     def test_create_all_port_range_options(self):
         arglist = [
-            '--dst-port', '80:80',
+            '--remote-port', '80:80',
             '--icmp-type', '3',
             '--icmp-code', '1',
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (80, 80)),
+            ('remote_port', (80, 80)),
             ('icmp_type', 3),
             ('icmp_code', 1),
             ('group', self._security_group.id),
@@ -159,11 +159,11 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             'port_range_min': 443,
         })
         arglist = [
-            '--dst-port', str(self._security_group_rule.port_range_min),
+            '--remote-port', str(self._security_group_rule.port_range_min),
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (self._security_group_rule.port_range_min,
+            ('remote_port', (self._security_group_rule.port_range_min,
                           self._security_group_rule.port_range_max)),
             ('group', self._security_group.id),
         ]
@@ -190,13 +190,13 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
         })
         arglist = [
             '--proto', self._security_group_rule.protocol,
-            '--src-ip', self._security_group_rule.remote_ip_prefix,
+            '--remote-ip', self._security_group_rule.remote_ip_prefix,
             self._security_group.id,
         ]
         verifylist = [
             ('proto', self._security_group_rule.protocol),
             ('protocol', None),
-            ('src_ip', self._security_group_rule.remote_ip_prefix),
+            ('remote_ip', self._security_group_rule.remote_ip_prefix),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -220,16 +220,16 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             'remote_group_id': self._security_group.id,
         })
         arglist = [
-            '--dst-port', str(self._security_group_rule.port_range_min),
+            '--remote-port', str(self._security_group_rule.port_range_min),
             '--ingress',
-            '--src-group', self._security_group.name,
+            '--remote-group', self._security_group.name,
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (self._security_group_rule.port_range_min,
+            ('remote_port', (self._security_group_rule.port_range_min,
                           self._security_group_rule.port_range_max)),
             ('ingress', True),
-            ('src_group', self._security_group.name),
+            ('remote_group', self._security_group.name),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -255,12 +255,12 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
         })
         arglist = [
             '--protocol', self._security_group_rule.protocol,
-            '--src-ip', self._security_group_rule.remote_ip_prefix,
+            '--remote-ip', self._security_group_rule.remote_ip_prefix,
             self._security_group.id,
         ]
         verifylist = [
             ('protocol', self._security_group_rule.protocol),
-            ('src_ip', self._security_group_rule.remote_ip_prefix),
+            ('remote_ip', self._security_group_rule.remote_ip_prefix),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -288,7 +288,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             'remote_ip_prefix': None,
         })
         arglist = [
-            '--dst-port', str(self._security_group_rule.port_range_min),
+            '--remote-port', str(self._security_group_rule.port_range_min),
             '--egress',
             '--ethertype', self._security_group_rule.ethertype,
             '--project', self.project.name,
@@ -297,7 +297,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (self._security_group_rule.port_range_min,
+            ('remote_port', (self._security_group_rule.port_range_min,
                           self._security_group_rule.port_range_max)),
             ('egress', True),
             ('ethertype', self._security_group_rule.ethertype),
@@ -364,7 +364,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', None),
+            ('remote_port', None),
             ('icmp_type', self._security_group_rule.port_range_min),
             ('icmp_code', None),
             ('protocol', self._security_group_rule.protocol),
@@ -399,7 +399,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', None),
+            ('remote_port', None),
             ('icmp_type', self._security_group_rule.port_range_min),
             ('icmp_code', self._security_group_rule.port_range_max),
             ('protocol', self._security_group_rule.protocol),
@@ -432,7 +432,7 @@ class TestCreateSecurityGroupRuleNetwork(TestSecurityGroupRuleNetwork):
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', None),
+            ('remote_port', None),
             ('icmp_type', self._security_group_rule.port_range_min),
             ('icmp_code', None),
             ('protocol', self._security_group_rule.protocol),
@@ -491,8 +491,8 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
     def test_create_all_source_options(self):
         arglist = [
-            '--src-ip', '10.10.0.0/24',
-            '--src-group', self._security_group.id,
+            '--remote-ip', '10.10.0.0/24',
+            '--remote-group', self._security_group.id,
             self._security_group.id,
         ]
         self.assertRaises(tests_utils.ParserException,
@@ -530,14 +530,14 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
 
     def test_create_default_rule(self):
         expected_columns, expected_data = self._setup_security_group_rule()
-        dst_port = str(self._security_group_rule.from_port) + ':' + \
+        remote_port = str(self._security_group_rule.from_port) + ':' + \
             str(self._security_group_rule.to_port)
         arglist = [
-            '--dst-port', dst_port,
+            '--remote-port', remote_port,
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (self._security_group_rule.from_port,
+            ('remote_port', (self._security_group_rule.from_port,
                           self._security_group_rule.to_port)),
             ('group', self._security_group.id),
         ]
@@ -563,14 +563,14 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
             'group': {'name': self._security_group.name},
         })
         arglist = [
-            '--dst-port', str(self._security_group_rule.from_port),
-            '--src-group', self._security_group.name,
+            '--remote-port', str(self._security_group_rule.from_port),
+            '--remote-group', self._security_group.name,
             self._security_group.id,
         ]
         verifylist = [
-            ('dst_port', (self._security_group_rule.from_port,
+            ('remote_port', (self._security_group_rule.from_port,
                           self._security_group_rule.to_port)),
-            ('src_group', self._security_group.name),
+            ('remote_group', self._security_group.name),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -597,12 +597,12 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
         })
         arglist = [
             '--protocol', self._security_group_rule.ip_protocol,
-            '--src-ip', self._security_group_rule.ip_range['cidr'],
+            '--remote-ip', self._security_group_rule.ip_range['cidr'],
             self._security_group.id,
         ]
         verifylist = [
             ('protocol', self._security_group_rule.ip_protocol),
-            ('src_ip', self._security_group_rule.ip_range['cidr']),
+            ('remote_ip', self._security_group_rule.ip_range['cidr']),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
@@ -629,13 +629,13 @@ class TestCreateSecurityGroupRuleCompute(TestSecurityGroupRuleCompute):
         })
         arglist = [
             '--proto', self._security_group_rule.ip_protocol,
-            '--src-ip', self._security_group_rule.ip_range['cidr'],
+            '--remote-ip', self._security_group_rule.ip_range['cidr'],
             self._security_group.id,
         ]
         verifylist = [
             ('proto', self._security_group_rule.ip_protocol),
             ('protocol', None),
-            ('src_ip', self._security_group_rule.ip_range['cidr']),
+            ('remote_ip', self._security_group_rule.ip_range['cidr']),
             ('group', self._security_group.id),
         ]
         parsed_args = self.check_parser(self.cmd, arglist, verifylist)
