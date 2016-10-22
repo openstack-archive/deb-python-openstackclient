@@ -136,6 +136,7 @@ class TestCreatePort(TestPort):
             '--vnic-type', 'macvtap',
             '--binding-profile', 'foo=bar',
             '--binding-profile', 'foo2=bar2',
+            '--extra-dhcp-opts', 'opt_name=mtu,opt_value=1000,ip_version=4'
             '--network', self._port.network_id,
             'test-port',
 
@@ -151,6 +152,10 @@ class TestCreatePort(TestPort):
             ('disable', True),
             ('vnic_type', 'macvtap'),
             ('binding_profile', {'foo': 'bar', 'foo2': 'bar2'}),
+            (
+                'extra_dhcp_opts',
+                [{'opt_name':'mtu', 'opt_value':'1000', 'ip_version':'4'}]
+            ),
             ('network', self._port.network_id),
             ('name', 'test-port'),
 
@@ -168,6 +173,9 @@ class TestCreatePort(TestPort):
             'admin_state_up': False,
             'binding:vnic_type': 'macvtap',
             'binding:profile': {'foo': 'bar', 'foo2': 'bar2'},
+            'extra_dhcp_opts': [{'opt_name': 'mtu',
+                                 'opt_value': '1000',
+                                 'ip_version': '4'}],
             'network_id': self._port.network_id,
             'name': 'test-port',
         })

@@ -27,6 +27,7 @@ Create new port
         [--enable | --disable]
         [--mac-address <mac-address>]
         [--security-group <security-group> | --no-security-group]
+        [--extra_dhcp_opts opt_name=<opt_name>,opt_value=<opt_value>,ip_version={4,6}]
         [--project <project> [--project-domain <project-domain>]]
         <name>
 
@@ -84,6 +85,13 @@ Create new port
 .. option::  --no-security-group
 
     Associate no security groups with this port
+
+.. option::  --extra_dhcp_opts opt_name=<opt_name>,opt_value=<opt_value>,ip_version={4,6}
+
+    Extra dhcp options to be assigned to this port: 
+    opt_name=<dhcp_option_name>,opt_value=<value>,
+    ip_version={4,6}.
+    (repeat option to set multiple extra dhcp opts)
 
 .. option:: --project <project>
 
@@ -171,6 +179,7 @@ Set port properties
         [--name <name>]
         [--security-group <security-group>]
         [--no-security-group]
+        [--extra_dhcp_opts opt_name=<opt_name>,opt_value=<opt_value>,ip_version={4,6}]
         <port>
 
 .. option:: --fixed-ip subnet=<subnet>,ip-address=<ip-address>
@@ -235,6 +244,13 @@ Set port properties
 .. option::  --no-security-group
 
     Clear existing security groups associated with this port
+
+.. option::  --extra_dhcp_opts opt_name=<opt_name>,opt_value=<opt_value>,ip_version={4,6}
+
+    Extra dhcp options to be assigned to this port: 
+    opt_name=<dhcp_option_name>,opt_value=<value>,
+    ip_version={4,6}.
+    (repeat option to set multiple extra dhcp opts)
 
 .. _port_set-port:
 .. describe:: <port>
