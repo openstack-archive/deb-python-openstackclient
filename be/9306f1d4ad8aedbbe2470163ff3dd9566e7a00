@@ -1,0 +1,9 @@
+Code-Review+1: venkatamahesh <Venkata.Kotha@infinite.com>
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Workflow+1: Richard Theis <rtheis@us.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Sat, 22 Oct 2016 17:59:51 +0000
+Reviewed-on: https://review.openstack.org/389943
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
