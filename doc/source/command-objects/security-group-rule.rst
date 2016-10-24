@@ -16,26 +16,26 @@ Create a new security group rule
 .. code:: bash
 
     os security group rule create
-        [--src-ip <ip-address> | --src-group <group>]
-        [--dst-port <port-range> | [--icmp-type <icmp-type> [--icmp-code <icmp-code>]]]
+        [--remote-ip <ip-address> | --remote-group <group>]
+        [--remote-port <port-range> | [--icmp-type <icmp-type> [--icmp-code <icmp-code>]]]
         [--protocol <protocol>]
         [--ingress | --egress]
         [--ethertype <ethertype>]
         [--project <project> [--project-domain <project-domain>]]
         <group>
 
-.. option:: --src-ip <ip-address>
+.. option:: --remote-ip <ip-address>
 
-    Source IP address block
+    Remote IP address block
     (may use CIDR notation; default for IPv4 rule: 0.0.0.0/0)
 
-.. option:: --src-group <group>
+.. option:: --remote-group <group>
 
-    Source security group (name or ID)
+    Remote security group (name or ID)
 
-.. option:: --dst-port <port-range>
+.. option:: --remote-port <port-range>
 
-    Destination port, may be a single port or a starting and
+    Remote port, may be a single port or a starting and
     ending port range: 137:139. Required for IP protocols TCP
     and UDP. Ignored for ICMP IP protocols.
 

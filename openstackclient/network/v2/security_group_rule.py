@@ -96,24 +96,24 @@ class CreateSecurityGroupRule(common.NetworkAndComputeShowOne):
         )
         source_group = parser.add_mutually_exclusive_group()
         source_group.add_argument(
-            "--src-ip",
+            "--remote-ip",
             metavar="<ip-address>",
-            help=_("Source IP address block (may use CIDR notation; "
+            help=_("Remote IP address block (may use CIDR notation; "
                    "default for IPv4 rule: 0.0.0.0/0)")
         )
         source_group.add_argument(
-            "--src-group",
+            "--remote-group",
             metavar="<group>",
-            help=_("Source security group (name or ID)")
+            help=_("Remote security group (name or ID)")
         )
         return parser
 
     def update_parser_network(self, parser):
         parser.add_argument(
-            '--dst-port',
+            '--remote-port',
             metavar='<port-range>',
             action=parseractions.RangeAction,
-            help=_("Destination port, may be a single port or a starting and "
+            help=_("Remote port, may be a single port or a starting and "
                    "ending port range: 137:139. Required for IP protocols TCP "
                    "and UDP. Ignored for ICMP IP protocols.")
         )
@@ -177,7 +177,7 @@ class CreateSecurityGroupRule(common.NetworkAndComputeShowOne):
 
     def update_parser_compute(self, parser):
         parser.add_argument(
-            '--dst-port',
+            '--remote-port',
             metavar='<port-range>',
             default=(0, 0),
             action=parseractions.RangeAction,
@@ -253,9 +253,9 @@ class CreateSecurityGroupRule(common.NetworkAndComputeShowOne):
 
         # NOTE(rtheis): Validate the port range and ICMP type and code.
         # It would be ideal if argparse could do this.
-        if parsed_args.dst_port and (parsed_args.icmp_type or
-                                     parsed_args.icmp_code):
-            msg = _('Argument --dst-port not allowed with arguments '
+        if parsed_args.remote_port and (parsed_args.icmp_type or
+                                        parsed_args.icmp_code):
+            msg = _('Argument --remote-port not allowed with arguments '
                     '--icmp-type and --icmp-code')
             raise exceptions.CommandError(msg)
         if parsed_args.icmp_type is None and parsed_args.icmp_code is not None:
@@ -269,21 +269,21 @@ class CreateSecurityGroupRule(common.NetworkAndComputeShowOne):
             raise exceptions.CommandError(msg)
         # NOTE(rtheis): For backwards compatibility, continue ignoring
         # the destination port range when an ICMP IP protocol is specified.
-        if parsed_args.dst_port and not is_icmp_protocol:
-            attrs['port_range_min'] = parsed_args.dst_port[0]
-            attrs['port_range_max'] = parsed_args.dst_port[1]
+        if parsed_args.remote_port and not is_icmp_protocol:
+            attrs['port_range_min'] = parsed_args.remote_port[0]
+            attrs['port_range_max'] = parsed_args.remote_port[1]
         if parsed_args.icmp_type:
             attrs['port_range_min'] = parsed_args.icmp_type
         if parsed_args.icmp_code:
             attrs['port_range_max'] = parsed_args.icmp_code
 
-        if parsed_args.src_group is not None:
+        if parsed_args.remote_group is not None:
             attrs['remote_group_id'] = client.find_security_group(
-                parsed_args.src_group,
+                parsed_args.remote_group,
                 ignore_missing=False
             ).id
-        elif parsed_args.src_ip is not None:
-            attrs['remote_ip_prefix'] = parsed_args.src_ip
+        elif parsed_args.remote_ip is not None:
+            attrs['remote_ip_prefix'] = parsed_args.remote_ip
         elif attrs['ethertype'] == 'IPv4':
             attrs['remote_ip_prefix'] = '0.0.0.0/0'
         attrs['security_group_id'] = security_group_id
@@ -311,24 +311,24 @@ class CreateSecurityGroupRule(common.NetworkAndComputeShowOne):
         if protocol == 'icmp':
             from_port, to_port = -1, -1
         else:
-            from_port, to_port = parsed_args.dst_port
-        src_ip = None
-        if parsed_args.src_group is not None:
-            parsed_args.src_group = utils.find_resource(
+            from_port, to_port = parsed_args.remote_port
+        remote_ip = None
+        if parsed_args.remote_group is not None:
+            parsed_args.remote_group = utils.find_resource(
                 client.security_groups,
-                parsed_args.src_group,
+                parsed_args.remote_group,
             ).id
-        if parsed_args.src_ip is not None:
-            src_ip = parsed_args.src_ip
+        if parsed_args.remote_ip is not None:
+            remote_ip = parsed_args.remote_ip
         else:
-            src_ip = '0.0.0.0/0'
+            remote_ip = '0.0.0.0/0'
         obj = client.security_group_rules.create(
             group.id,
             protocol,
             from_port,
             to_port,
-            src_ip,
-            parsed_args.src_group,
+            remote_ip,
+            parsed_args.remote_group,
         )
         return _format_security_group_rule_show(obj._info)
 
