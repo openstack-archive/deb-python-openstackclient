@@ -1,0 +1,13 @@
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Code-Review+1: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Code-Review+1: Yu Jie <yujie@cmss.chinamobile.com>
+Code-Review+1: Yi Zhao <zhaoyi@cmss.chinamobile.com>
+Code-Review+1: Lv Jiawei <zhangoic@163.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 10 Nov 2016 18:09:14 +0000
+Reviewed-on: https://review.openstack.org/387795
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
