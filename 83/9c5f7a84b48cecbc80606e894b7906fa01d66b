@@ -1,0 +1,17 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Mike Perez <thingee@gmail.com>
+Code-Review+1: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Code-Review+1: Yan Xing an <yanxingan@cmss.chinamobile.com>
+Code-Review+1: Reedip <reedip.banerjee@nectechnologies.in>
+Code-Review+1: howard lee <lihongweibj@inspur.com>
+Code-Review+1: gentle wu <wujiangtao@cmss.chinamobile.com>
+Code-Review+1: Zhou Zhihong <zhouzhihong@cmss.chinamobile.com>
+Code-Review+1: Yi Zhao <zhaoyi@cmss.chinamobile.com>
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Workflow+1: Richard Theis <rtheis@us.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 18 Nov 2016 23:08:20 +0000
+Reviewed-on: https://review.openstack.org/395472
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
