@@ -1,0 +1,9 @@
+Code-Review+2: Richard Theis <rtheis@us.ibm.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 02 Dec 2016 18:50:37 +0000
+Reviewed-on: https://review.openstack.org/405025
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
