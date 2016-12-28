@@ -1,8 +1,12 @@
-python-openstackclient (3.2.0-3) UNRELEASED; urgency=medium
+python-openstackclient (3.2.1-1) unstable; urgency=medium
 
+  * Team upload.
+  * New upstream release
   * Bumped debhelper compat version to 10
+  * Bump required version of python{,3}-openstacksdk and
+    python{,3}-saharaclient
 
- -- Ondřej Nový <onovy@debian.org>  Thu, 24 Nov 2016 00:08:24 +0100
+ -- Ondřej Nový <onovy@debian.org>  Wed, 28 Dec 2016 23:46:01 +0100
 
 python-openstackclient (3.2.0-2) unstable; urgency=medium
 
