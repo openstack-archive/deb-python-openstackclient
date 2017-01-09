@@ -1,0 +1,8 @@
+Code-Review+2: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Workflow+1: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Sat, 07 Jan 2017 07:29:54 +0000
+Reviewed-on: https://review.openstack.org/417576
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
