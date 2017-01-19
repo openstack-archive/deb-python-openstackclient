@@ -1,0 +1,10 @@
+Code-Review+1: Reedip <reedip.banerjee@gmail.com>
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 18 Jan 2017 21:10:19 +0000
+Reviewed-on: https://review.openstack.org/421705
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
