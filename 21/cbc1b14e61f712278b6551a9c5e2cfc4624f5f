@@ -1,0 +1,12 @@
+Code-Review+1: Pablo Iranzo Gómez <Pablo.Iranzo@redhat.com>
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Juan Antonio Osorio Robles <jaosorior@redhat.com>
+Code-Review+1: Jordan Pittier <jordan.pittier@scality.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 27 Jan 2017 19:51:26 +0000
+Reviewed-on: https://review.openstack.org/363818
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/stable/mitaka
