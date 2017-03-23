@@ -1,0 +1,14 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Ankur <ankur.gupta@intel.com>
+Code-Review+1: Abhishek Raut <rauta@vmware.com>
+Code-Review+1: Reedip <reedip.banerjee@gmail.com>
+Code-Review+1: Akihiro Motoki <amotoki@gmail.com>
+Code-Review+1: Rui Chen <chenrui.momo@gmail.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 23 Mar 2017 20:30:15 +0000
+Reviewed-on: https://review.openstack.org/382023
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
