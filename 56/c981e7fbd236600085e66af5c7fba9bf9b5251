@@ -1,0 +1,10 @@
+Code-Review+1: Ankur <ankur.gupta@intel.com>
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Workflow+1: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Reedip <reedip.banerjee@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 01 Mar 2017 02:22:21 +0000
+Reviewed-on: https://review.openstack.org/439142
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
