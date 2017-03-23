@@ -1,0 +1,10 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Julie Pichon <jpichon@redhat.com>
+Code-Review+2: Alan Pevec <alan.pevec@redhat.com>
+Workflow+1: Alan Pevec <alan.pevec@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 03 Mar 2017 19:11:28 +0000
+Reviewed-on: https://review.openstack.org/429772
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/stable/newton
