@@ -1,0 +1,9 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Workflow+1: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 28 Mar 2017 17:33:25 +0000
+Reviewed-on: https://review.openstack.org/386770
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
