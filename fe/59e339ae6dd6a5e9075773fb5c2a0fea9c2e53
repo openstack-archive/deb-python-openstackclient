@@ -1,0 +1,13 @@
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Code-Review+1: Reedip <reedip.banerjee@gmail.com>
+Code-Review+1: Brian Haley <haleyb.dev@gmail.com>
+Code-Review+1: Akihiro Motoki <amotoki@gmail.com>
+Code-Review+1: Cedric Brandily <zzelle@gmail.com>
+Code-Review+1: Kevin Benton <kevin@benton.pub>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 17 Apr 2017 15:18:20 +0000
+Reviewed-on: https://review.openstack.org/433442
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
