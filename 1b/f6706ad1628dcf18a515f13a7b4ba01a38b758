@@ -1,0 +1,9 @@
+Code-Review+2: Huanxuan Ao <huanxuan.ao@easystack.cn>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 17 Apr 2017 19:40:34 +0000
+Reviewed-on: https://review.openstack.org/454939
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
