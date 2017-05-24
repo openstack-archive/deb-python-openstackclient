@@ -1,0 +1,10 @@
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+2: Dean Troyer <dtroyer@gmail.com>
+Workflow+1: Dean Troyer <dtroyer@gmail.com>
+Code-Review+1: Erik Olof Gunnar Andersson <eandersson@blizzard.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 24 May 2017 19:17:03 +0000
+Reviewed-on: https://review.openstack.org/464684
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
