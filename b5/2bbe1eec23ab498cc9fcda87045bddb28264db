@@ -1,0 +1,10 @@
+Code-Review+1: Tovin Seven <vinhnt@vn.fujitsu.com>
+Code-Review+2: Steve Martinelli <s.martinelli@gmail.com>
+Workflow+1: Steve Martinelli <s.martinelli@gmail.com>
+Code-Review+1: Nguyen Phuong An <AnNP@vn.fujitsu.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 31 May 2017 09:46:47 +0000
+Reviewed-on: https://review.openstack.org/469027
+Project: openstack/deb-python-openstackclient
+Branch: refs/heads/master
