@@ -1,6 +1,0 @@
----
-features:
-  - |
-    Add ``--project``, ``--project-domain``, ``--network``, ``--gateway``,
-    ``--name`` and ``--subnet-range`` options to the ``subnet list``  command.
-    [Bug `1610883 <https://bugs.launchpad.net/bugs/1610883>`_]

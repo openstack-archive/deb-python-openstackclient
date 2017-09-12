@@ -1,4 +1,0 @@
----
-features:
-  - |
-    ``rbac_object`` parameter in ``network rbac create`` command now can be a QoS policy name.

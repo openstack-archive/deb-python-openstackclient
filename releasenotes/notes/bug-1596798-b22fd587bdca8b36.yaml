@@ -1,4 +1,0 @@
----
-features:
-  - Add ``--property`` option to ``flavor create`` command.
-    [Bug `1596798 <https://bugs.launchpad.net/bugs/1596798>`_]

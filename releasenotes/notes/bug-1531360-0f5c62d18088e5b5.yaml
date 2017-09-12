@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Support non-interactive user password update
-    [Bug `1531360 <https://bugs.launchpad.net/bugs/1531360>`_]

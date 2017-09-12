@@ -1,5 +1,0 @@
----
-features:
-  - Support bulk deletion and error handling for ``aggregate delete``,
-    ``flavor delete``, ``keypair delete`` and ``service delete`` commands.
-    [Blueprint `multi-argument-compute <https://blueprints.launchpad.net/python-openstackclient/+spec/multi-argument-compute>`_]

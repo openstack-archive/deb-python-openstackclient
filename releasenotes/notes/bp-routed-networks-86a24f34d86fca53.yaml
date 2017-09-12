@@ -1,6 +1,0 @@
----
-features:
-  - Add ``--network-segment`` option to the ``subnet create`` command.
-    This is a beta command option and subject to change. Use global option
-    ``--os-beta-command`` to enable this option.
-    [Blueprint `routed-networks <https://blueprints.launchpad.net/neutron/+spec/routed-networks>`_]

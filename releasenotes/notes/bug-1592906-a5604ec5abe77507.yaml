@@ -1,5 +1,0 @@
----
-features:
-  - Support bulk deletion for ``ec2 credentials delete``, ``endpoint delete``,
-    ``service delete`` in identity V2.0 .
-    [Bug `1592906 <https://bugs.launchpad.net/bugs/1592906>`_]

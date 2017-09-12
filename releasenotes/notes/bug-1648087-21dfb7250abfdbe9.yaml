@@ -1,6 +1,0 @@
----
-features:
-  - |
-    Add ``--project`` and ``--project-domain`` filtering options
-    to ``port list`` command.
-    [Bug `1648087 <https://bugs.launchpad.net/bugs/1648087>`_]

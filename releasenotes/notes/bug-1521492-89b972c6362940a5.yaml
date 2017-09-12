@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Change ``server list --flavor`` to now accept flavor ID or name
-    [Bug `1521492 <https://bugs.launchpad.net/bugs/1521492>`_]

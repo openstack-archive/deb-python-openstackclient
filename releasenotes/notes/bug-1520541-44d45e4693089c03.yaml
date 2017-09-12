@@ -1,6 +1,0 @@
----
-fixes:
-  - |
-    Fix ``volume delete`` command to delete all specified volumes rather
-    than only the last volume
-    [Bug `1520541 <https://bugs.launchpad.net/bugs/1520541>`_]

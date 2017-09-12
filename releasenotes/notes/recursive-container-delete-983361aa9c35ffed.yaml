@@ -1,5 +1,0 @@
----
-features:
-  - |
-    Add support for recursive container delete.
-    [Bug `1542718 <https://bugs.launchpad.net/bugs/1542718>`_]

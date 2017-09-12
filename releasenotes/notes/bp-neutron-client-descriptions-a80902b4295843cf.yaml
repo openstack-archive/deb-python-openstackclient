@@ -1,9 +1,0 @@
----
-features:
-  - |
-    Add ``--description`` option to ``floating ip create`` command.
-    [Blueprint :oscbp:`neutron-client-descriptions`]
-  - |
-    Add ``--description`` option to ``router set`` and
-    ``router create`` commands.
-    [Blueprint :oscbp:`network-commands-options`]

@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Some compute quotas were not being set
-    [Bug `1475831 <https://bugs.launchpad.net/bugs/1475831>`_]

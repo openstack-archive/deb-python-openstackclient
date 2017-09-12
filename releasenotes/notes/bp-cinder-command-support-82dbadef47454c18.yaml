@@ -1,7 +1,0 @@
----
-features:
-  - |
-    Add ``--default`` option to ``volume type list`` command, in
-    order to show which volume type the volume sets as it's
-    default.
-    [Blueprint :oscbp:`cinder-command-support`]

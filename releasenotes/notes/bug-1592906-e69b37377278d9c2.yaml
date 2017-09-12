@@ -1,5 +1,0 @@
----
-features:
-  - Support bulk deletion for ``volume type delete``.
-    [Bug `1592906 <https://bugs.launchpad.net/bugs/1592906>`_]
-

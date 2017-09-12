@@ -1,5 +1,0 @@
----
-fixes:
-  - |
-    Update novaclient ``DEFAULT_API_VERSION`` from 2.0 to 2.1
-    [Bug `1588171 <https://bugs.launchpad.net/bugs/1588171>`_]

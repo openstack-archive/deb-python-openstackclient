@@ -1,6 +1,0 @@
----
-features:
-  - |
-    Add ``--project`` and ``--project-domain`` option to
-    ``volume snapshot list`` command, in order to filter list result
-    by different project.

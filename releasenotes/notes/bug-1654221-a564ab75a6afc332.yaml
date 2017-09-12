@@ -1,6 +1,0 @@
----
-fixes:
-  - |
-    Fix ``--project`` option for ``flavor create`` command when the
-    ID for the new flavor is auto generated.
-    [Bug `1654221 <https://bugs.launchpad.net/bugs/1654221>`_]

@@ -1,8 +1,0 @@
----
-fixes:
-  - |
-    Clarify the ``--block-device-mapping`` option of the ``server create``
-    command: fix ValueError when the ``--block-device-mapping`` option's
-    argument is in the wrong format; support creating a block device from
-    a snapshot; add details to the help output about the option format.
-    [Bug `1667266 <https://bugs.launchpad.net/python-openstackclient/+bug/1667266>`_]
